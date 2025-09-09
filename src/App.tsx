@@ -1,12 +1,10 @@
 // src/App.tsx
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { buildFairSchedule, type Player as P0, type Game } from './lib/fairPairing'
 import { updateEloDoubles } from './lib/elo'
 
-// Player-type som i fairPairing
 export type Player = P0;
 
-// En simpel kamp-post til dashboardet
 type MatchRec = {
   id: string;
   when: string;          // ISO string
@@ -27,26 +25,46 @@ const INITIAL_PLAYERS: Player[] = [
   { id: 'p8', name: 'Nikolaj Friis', elo: 1350 }
 ];
 
-type Page = 'Dashboard'|'Fredagspadel'|'Admin';
+type Page = 'Dashboard'|'Fredagspadel'|'Ranglisten'|'Admin';
+
+const LS_PLAYERS = 'padel.players.v1';
+const LS_MATCHES = 'padel.matches.v1';
 
 export default function App(){
-  // Løft state op, så Dashboard kan se data
   const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
   const [matches, setMatches] = useState<MatchRec[]>([]);
   const [page, setPage] = useState<Page>('Fredagspadel');
+
+  // --- localStorage: load once on mount ---
+  useEffect(()=>{
+    try {
+      const P = localStorage.getItem(LS_PLAYERS);
+      const M = localStorage.getItem(LS_MATCHES);
+      if (P) setPlayers(JSON.parse(P));
+      if (M) setMatches(JSON.parse(M));
+    } catch {}
+  }, []);
+
+  // --- localStorage: save on changes ---
+  useEffect(()=>{
+    try { localStorage.setItem(LS_PLAYERS, JSON.stringify(players)); } catch {}
+  }, [players]);
+  useEffect(()=>{
+    try { localStorage.setItem(LS_MATCHES, JSON.stringify(matches)); } catch {}
+  }, [matches]);
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand">PadelApp</div>
         <nav className="nav">
-          {(['Dashboard','Fredagspadel','Admin'] as Page[]).map(p=>(
+          {(['Dashboard','Fredagspadel','Ranglisten','Admin'] as Page[]).map(p=>(
             <button key={p} onClick={()=>setPage(p)} className={page===p?'active':''}>{p}</button>
           ))}
         </nav>
       </aside>
       <main>
-        {page==='Dashboard' && <Dashboard matches={matches} />}
+        {page==='Dashboard'   && <Dashboard matches={matches} />}
         {page==='Fredagspadel' && (
           <FridayPadel
             players={players}
@@ -54,7 +72,8 @@ export default function App(){
             onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,50))}
           />
         )}
-        {page==='Admin' && <Admin />}
+        {page==='Ranglisten'  && <Ranking players={players} />}
+        {page==='Admin'       && <Admin />}
       </main>
     </div>
   );
@@ -103,6 +122,31 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
   )
 }
 
+/* ---------------- Ranglisten ---------------- */
+function Ranking({ players }:{ players: Player[] }){
+  const sorted = [...players].sort((a,b)=>b.elo - a.elo);
+  return (
+    <div className="grid">
+      <Card title="Ranglisten">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Spiller</th><th>ELO</th></tr>
+          </thead>
+          <tbody>
+            {sorted.map((p,idx)=>(
+              <tr key={p.id}>
+                <td>{idx+1}</td>
+                <td>{p.name}</td>
+                <td>{p.elo}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+    </div>
+  );
+}
+
 /* --------------- Fredagspadel --------------- */
 type Result = { a: number; b: number; saved?: boolean };
 
@@ -139,7 +183,6 @@ function FridayPadel({
     const [A1, A2] = g.teams[0];
     const [B1, B2] = g.teams[1];
 
-    // ELO beregning på aktuel spiller-elo
     const newMap = updateEloDoubles(
       { id: A1.id, elo: players.find(p=>p.id===A1.id)!.elo },
       { id: A2.id, elo: players.find(p=>p.id===A2.id)!.elo },
@@ -151,7 +194,6 @@ function FridayPadel({
     setPlayers(prev => prev.map(p => newMap[p.id] != null ? {...p, elo: newMap[p.id]} : p));
     setResults(prev => ({...prev, [g.id]: {...r, saved: true}}));
 
-    // Send kamp til Dashboard
     onSaveMatch({
       id: `${g.id}-${Date.now()}`,
       when: new Date().toISOString(),
