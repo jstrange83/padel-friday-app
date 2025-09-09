@@ -3,8 +3,18 @@ import React, { useState } from 'react'
 import { buildFairSchedule, type Player as P0, type Game } from './lib/fairPairing'
 import { updateEloDoubles } from './lib/elo'
 
-// Udvid Player til state-styring
+// Player-type som i fairPairing
 export type Player = P0;
+
+// En simpel kamp-post til dashboardet
+type MatchRec = {
+  id: string;
+  when: string;          // ISO string
+  aNames: string[];
+  bNames: string[];
+  scoreA: number;
+  scoreB: number;
+};
 
 const INITIAL_PLAYERS: Player[] = [
   { id: 'p1', name: 'Emma Christensen', elo: 1520 },
@@ -20,7 +30,11 @@ const INITIAL_PLAYERS: Player[] = [
 type Page = 'Dashboard'|'Fredagspadel'|'Admin';
 
 export default function App(){
+  // Løft state op, så Dashboard kan se data
+  const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
+  const [matches, setMatches] = useState<MatchRec[]>([]);
   const [page, setPage] = useState<Page>('Fredagspadel');
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -32,8 +46,14 @@ export default function App(){
         </nav>
       </aside>
       <main>
-        {page==='Dashboard' && <Dashboard />}
-        {page==='Fredagspadel' && <FridayPadel initialPlayers={INITIAL_PLAYERS}/>}
+        {page==='Dashboard' && <Dashboard matches={matches} />}
+        {page==='Fredagspadel' && (
+          <FridayPadel
+            players={players}
+            setPlayers={setPlayers}
+            onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,50))}
+          />
+        )}
         {page==='Admin' && <Admin />}
       </main>
     </div>
@@ -52,19 +72,43 @@ function Card(props: {title?: string, children: React.ReactNode, right?: React.R
   )
 }
 
-function Dashboard(){
+/* ---------------- Dashboard ---------------- */
+function Dashboard({ matches }:{ matches: MatchRec[] }){
   return (
     <div className="grid grid-2">
       <Card title="Kommende kampe">(dummy)</Card>
-      <Card title="Seneste kampe">(dummy)</Card>
+
+      <Card title="Seneste kampe" right={<span className="pill">{matches.length}</span>}>
+        {matches.length===0 ? (
+          <div style={{color:'var(--muted)'}}>Ingen kampe endnu.</div>
+        ) : (
+          <table>
+            <thead>
+              <tr><th>Dato</th><th>Hold A</th><th>Hold B</th><th>Resultat</th></tr>
+            </thead>
+            <tbody>
+              {matches.slice(0,8).map(m=>(
+                <tr key={m.id}>
+                  <td>{new Date(m.when).toLocaleString('da-DK')}</td>
+                  <td>{m.aNames.join(' & ')}</td>
+                  <td>{m.bNames.join(' & ')}</td>
+                  <td>{m.scoreA} – {m.scoreB}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
     </div>
   )
 }
 
+/* --------------- Fredagspadel --------------- */
 type Result = { a: number; b: number; saved?: boolean };
 
-function FridayPadel({ initialPlayers }:{ initialPlayers: Player[] }){
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+function FridayPadel({
+  players, setPlayers, onSaveMatch
+}:{ players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; onSaveMatch:(m:MatchRec)=>void }){
   const [signedUp, setSignedUp] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<Game[]>([]);
   const [results, setResults] = useState<Record<string, Result>>({}); // game.id -> result
@@ -80,7 +124,7 @@ function FridayPadel({ initialPlayers }:{ initialPlayers: Player[] }){
     }
     const games = buildFairSchedule(list);
     setSchedule(games);
-    setResults({}); // nulstil tidligere
+    setResults({});
   }
 
   function setScore(gid: string, side: 'a'|'b', val: number){
@@ -91,10 +135,11 @@ function FridayPadel({ initialPlayers }:{ initialPlayers: Player[] }){
     const r = results[g.id];
     if (!r || r.a == null || r.b == null) { alert('Vælg score for begge hold (0–7)'); return; }
     if (r.a === r.b) { alert('Uafgjort er ikke tilladt – ét sæt skal have vinder'); return; }
-    // find spillere
+
     const [A1, A2] = g.teams[0];
     const [B1, B2] = g.teams[1];
-    // apply elo
+
+    // ELO beregning på aktuel spiller-elo
     const newMap = updateEloDoubles(
       { id: A1.id, elo: players.find(p=>p.id===A1.id)!.elo },
       { id: A2.id, elo: players.find(p=>p.id===A2.id)!.elo },
@@ -102,8 +147,19 @@ function FridayPadel({ initialPlayers }:{ initialPlayers: Player[] }){
       { id: B2.id, elo: players.find(p=>p.id===B2.id)!.elo },
       r.a, r.b
     );
+
     setPlayers(prev => prev.map(p => newMap[p.id] != null ? {...p, elo: newMap[p.id]} : p));
     setResults(prev => ({...prev, [g.id]: {...r, saved: true}}));
+
+    // Send kamp til Dashboard
+    onSaveMatch({
+      id: `${g.id}-${Date.now()}`,
+      when: new Date().toISOString(),
+      aNames: [A1.name, A2.name],
+      bNames: [B1.name, B2.name],
+      scoreA: r.a,
+      scoreB: r.b
+    });
   }
 
   const playerById = (id:string)=>players.find(p=>p.id===id)!;
