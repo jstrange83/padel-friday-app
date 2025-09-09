@@ -1,19 +1,14 @@
 // src/App.tsx
 import React, { useEffect, useMemo, useState } from 'react'
-import { buildFairSchedule, type Player as P0, type Game } from './lib/fairPairing'
+import { buildFairSchedule, type Player as PlayerBase, type Game } from './lib/fairPairing'
 import { updateEloDoubles } from './lib/elo'
+import type { MatchRec, FineType, FineDraft } from './lib/types'
+import { defaultFineTypes, LS_FINE_DRAFTS, LS_FINE_TYPES } from './lib/fines'
+import { load, save } from './lib/storage'
+import ProfilePage from './pages/Profile'
+import FinesPage from './pages/Fines'
 
-export type Player = P0;
-
-type MatchRec = {
-  id: string;
-  when: string;          // ISO string
-  aNames: string[];
-  bNames: string[];
-  scoreA: number;
-  scoreB: number;
-  points?: { id: string; name: string; value: number }[]; // ELO-point pr. spiller i kampen
-};
+export type Player = PlayerBase;
 
 const INITIAL_PLAYERS: Player[] = [
   { id: 'p1', name: 'Emma Christensen', elo: 1520 },
@@ -26,55 +21,45 @@ const INITIAL_PLAYERS: Player[] = [
   { id: 'p8', name: 'Nikolaj Friis', elo: 1350 }
 ];
 
-type Page = 'Dashboard'|'Fredagspadel'|'Ranglisten'|'Admin';
+type Page = 'Dashboard'|'Fredagspadel'|'Ranglisten'|'Bøder'|'Profil'|'Admin';
 
-const LS_PLAYERS = 'padel.players.v1';
-const LS_MATCHES = 'padel.matches.v1';
+const LS_PLAYERS   = 'padel.players.v1';
+const LS_MATCHES   = 'padel.matches.v1';
 
 export default function App(){
-  const [players, setPlayers] = useState<Player[]>(INITIAL_PLAYERS);
-  const [matches, setMatches] = useState<MatchRec[]>([]);
-  const [page, setPage] = useState<Page>('Fredagspadel');
+  const [players, setPlayers]   = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS));
+  const [matches, setMatches]   = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]));
+  const [fineTypes, setFineTypes] = useState<FineType[]>(() => load(LS_FINE_TYPES, defaultFineTypes()));
+  const [drafts, setDrafts]     = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]));
+  const [page, setPage]         = useState<Page>('Fredagspadel');
 
-  // --- localStorage: load once on mount ---
-  useEffect(()=>{
-    try {
-      const P = localStorage.getItem(LS_PLAYERS);
-      const M = localStorage.getItem(LS_MATCHES);
-      if (P) setPlayers(JSON.parse(P));
-      if (M) setMatches(JSON.parse(M));
-    } catch {}
-  }, []);
+  useEffect(()=>{ save(LS_PLAYERS, players) }, [players]);
+  useEffect(()=>{ save(LS_MATCHES, matches) }, [matches]);
+  useEffect(()=>{ save(LS_FINE_TYPES, fineTypes) }, [fineTypes]);
+  useEffect(()=>{ save(LS_FINE_DRAFTS, drafts) }, [drafts]);
 
-  // --- localStorage: save on changes ---
-  useEffect(()=>{
-    try { localStorage.setItem(LS_PLAYERS, JSON.stringify(players)); } catch {}
-  }, [players]);
-  useEffect(()=>{
-    try { localStorage.setItem(LS_MATCHES, JSON.stringify(matches)); } catch {}
-  }, [matches]);
+  function resetAll(){
+    localStorage.clear();
+    location.reload();
+  }
 
   return (
     <div className="app">
       <aside className="sidebar">
         <div className="brand">PadelApp</div>
         <nav className="nav">
-          {(['Dashboard','Fredagspadel','Ranglisten','Admin'] as Page[]).map(p=>(
+          {(['Dashboard','Fredagspadel','Ranglisten','Bøder','Profil','Admin'] as Page[]).map(p=>(
             <button key={p} onClick={()=>setPage(p)} className={page===p?'active':''}>{p}</button>
           ))}
         </nav>
       </aside>
       <main>
-        {page==='Dashboard'   && <Dashboard matches={matches} />}
-        {page==='Fredagspadel' && (
-          <FridayPadel
-            players={players}
-            setPlayers={setPlayers}
-            onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,50))}
-          />
-        )}
-        {page==='Ranglisten'  && <Ranking players={players} matches={matches} />}
-        {page==='Admin'       && <Admin onReset={()=>{localStorage.clear(); location.reload();}} />}
+        {page==='Dashboard'     && <Dashboard matches={matches} />}
+        {page==='Fredagspadel'  && <FridayPadel players={players} setPlayers={setPlayers} onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,100))} />}
+        {page==='Ranglisten'    && <Ranking players={players} matches={matches} />}
+        {page==='Bøder'         && <FinesPage players={players} matches={matches} fineTypes={fineTypes} setFineTypes={setFineTypes} drafts={drafts} setDrafts={setDrafts} />}
+        {page==='Profil'        && <ProfilePage players={players} setPlayers={setPlayers} />}
+        {page==='Admin'         && <Admin onReset={resetAll} />}
       </main>
     </div>
   );
@@ -150,11 +135,10 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
 }
 
 /* ---------------- Ranglisten ---------------- */
-/** Find seneste point-ændring for hver spiller baseret på matches (nyeste først). */
 function useLastPointsByPlayer(matches: MatchRec[]){
   return useMemo(()=>{
-    const map = new Map<string, number>(); // playerId -> last delta
-    for (const m of matches){ // matches er nyeste først i vores app
+    const map = new Map<string, number>();
+    for (const m of matches){ // antager matches er nyeste først
       if (!m.points) continue;
       for (const p of m.points){
         if (!map.has(p.id)) map.set(p.id, p.value);
@@ -238,7 +222,6 @@ function FridayPadel({
     const [A1, A2] = g.teams[0];
     const [B1, B2] = g.teams[1];
 
-    // Nye ratings beregnes ud fra aktuelle ELO
     const newMap = updateEloDoubles(
       { id: A1.id, elo: players.find(p=>p.id===A1.id)!.elo },
       { id: A2.id, elo: players.find(p=>p.id===A2.id)!.elo },
@@ -247,7 +230,6 @@ function FridayPadel({
       r.a, r.b
     );
 
-    // Points (delta) pr. spiller
     const oldRatings: Record<string, number> = {
       [A1.id]: players.find(p=>p.id===A1.id)!.elo,
       [A2.id]: players.find(p=>p.id===A2.id)!.elo,
@@ -261,11 +243,9 @@ function FridayPadel({
       { id: B2.id, name: B2.name, value: newMap[B2.id] - oldRatings[B2.id] },
     ];
 
-    // Opdater spillere i state
     setPlayers(prev => prev.map(p => newMap[p.id] != null ? {...p, elo: newMap[p.id]} : p));
     setResults(prev => ({...prev, [g.id]: {...r, saved: true}}));
 
-    // Gem kamp til Dashboard + localStorage
     onSaveMatch({
       id: `${g.id}-${Date.now()}`,
       when: new Date().toISOString(),
@@ -357,7 +337,7 @@ function ScorePicker({ value, onChange }:{ value:number; onChange:(v:number)=>vo
   )
 }
 
-/* ---------------- Admin (med reset) ---------------- */
+/* ---------------- Admin (reset) ---------------- */
 function Admin({ onReset }:{ onReset:()=>void }){
   return (
     <div className="grid">
@@ -366,7 +346,7 @@ function Admin({ onReset }:{ onReset:()=>void }){
           <button className="btn ghost" onClick={onReset}>Nulstil localStorage (alle data)</button>
         </div>
         <div style={{marginTop:8, color:'var(--muted)'}}>
-          Når vi kobler på database (Supabase), flytter vi data væk fra localStorage.
+          Når vi kobler database på, flytter vi data væk fra localStorage (f.eks. Supabase).
         </div>
       </Card>
     </div>
