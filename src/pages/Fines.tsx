@@ -1,3 +1,4 @@
+// src/pages/Fines.tsx
 import React, { useMemo, useState } from 'react'
 import type { FineDraft, FineType, MatchRec, Player } from '../lib/types'
 import {
@@ -8,6 +9,17 @@ import { load, save } from '../lib/storage'
 
 const CURRENT_PLAYER_ID = 'me';
 const IS_ADMIN = true; // demo: vis admin-funktioner
+
+// --- Helper der holder status som literal union ---
+function applyStatus(d: FineDraft, status: FineDraft['status']): FineDraft {
+  if (status === 'approved') {
+    return { ...d, status, approvedAt: new Date().toISOString() }
+  }
+  if (status === 'paid') {
+    return { ...d, status, paidAt: new Date().toISOString() }
+  }
+  return { ...d, status }
+}
 
 export default function FinesPage({
   players, matches,
@@ -42,30 +54,24 @@ export default function FinesPage({
     setAssignList([{ toPlayerId:'', matchId:'', fineCode:'' }]);
   }
 
-  // ADMIN: approve/mark paid — sørg for literal types med `as const`
+  // --- ADMIN: approve / reject / mark paid ---
   function approve(id: string){
     setDrafts(prev => {
-      const next: FineDraft[] = prev.map(d =>
-        d.id===id ? { ...d, status: 'approved' as const, approvedAt: new Date().toISOString() } : d
-      );
+      const next: FineDraft[] = prev.map(d => d.id===id ? applyStatus(d, 'approved') : d);
       save(LS_FINE_DRAFTS, next);
       return next;
     })
   }
   function reject(id: string){
     setDrafts(prev => {
-      const next: FineDraft[] = prev.map(d =>
-        d.id===id ? { ...d, status: 'rejected' as const } : d
-      );
+      const next: FineDraft[] = prev.map(d => d.id===id ? applyStatus(d, 'rejected') : d);
       save(LS_FINE_DRAFTS, next);
       return next;
     })
   }
   function markPaid(id: string){
     setDrafts(prev => {
-      const next: FineDraft[] = prev.map(d =>
-        d.id===id ? { ...d, status: 'paid' as const, paidAt: new Date().toISOString() } : d
-      );
+      const next: FineDraft[] = prev.map(d => d.id===id ? applyStatus(d, 'paid') : d);
       save(LS_FINE_DRAFTS, next);
       return next;
     })
