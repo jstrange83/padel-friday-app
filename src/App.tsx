@@ -27,7 +27,8 @@ const LS_PLAYERS   = 'padel.players.v1';
 const LS_MATCHES   = 'padel.matches.v1';
 
 export default function App(){
-  const [players, setPlayers]   = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS));
+  // KORREKT:
+  const [players, setPlayers] = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS))
   const [matches, setMatches]   = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]));
   const [fineTypes, setFineTypes] = useState<FineType[]>(() => load(LS_FINE_TYPES, defaultFineTypes()));
   const [drafts, setDrafts]     = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]));
