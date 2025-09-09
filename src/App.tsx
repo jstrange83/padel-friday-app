@@ -12,6 +12,7 @@ type MatchRec = {
   bNames: string[];
   scoreA: number;
   scoreB: number;
+  deltas?: { id: string; name: string; delta: number }[]; // ELO-ændring pr. spiller
 };
 
 const INITIAL_PLAYERS: Player[] = [
@@ -73,7 +74,7 @@ export default function App(){
           />
         )}
         {page==='Ranglisten'  && <Ranking players={players} />}
-        {page==='Admin'       && <Admin />}
+        {page==='Admin'       && <Admin onReset={()=>{localStorage.clear(); location.reload();}} />}
       </main>
     </div>
   );
@@ -103,7 +104,13 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
         ) : (
           <table>
             <thead>
-              <tr><th>Dato</th><th>Hold A</th><th>Hold B</th><th>Resultat</th></tr>
+              <tr>
+                <th>Dato</th>
+                <th>Hold A</th>
+                <th>Hold B</th>
+                <th>Resultat</th>
+                <th>Δ pr. spiller</th>
+              </tr>
             </thead>
             <tbody>
               {matches.slice(0,8).map(m=>(
@@ -112,6 +119,26 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
                   <td>{m.aNames.join(' & ')}</td>
                   <td>{m.bNames.join(' & ')}</td>
                   <td>{m.scoreA} – {m.scoreB}</td>
+                  <td>
+                    {m.deltas && m.deltas.length ? (
+                      <div className="row" style={{gap:6, flexWrap:'wrap'}}>
+                        {m.deltas.map(pd => {
+                          const pos = pd.delta >= 0;
+                          const bg  = pos ? '#eaffea' : '#ffeaea';
+                          const fg  = pos ? '#166534' : '#991b1b';
+                          const sign = pd.delta > 0 ? `+${pd.delta}` : `${pd.delta}`;
+                          const first = pd.name.split(' ')[0];
+                          return (
+                            <span key={pd.id} className="pill" style={{background:bg, color:fg}}>
+                              {first} {sign}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span style={{color:'var(--muted)'}}>—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -183,6 +210,7 @@ function FridayPadel({
     const [A1, A2] = g.teams[0];
     const [B1, B2] = g.teams[1];
 
+    // Nye ratings beregnes ud fra aktuelle ELO
     const newMap = updateEloDoubles(
       { id: A1.id, elo: players.find(p=>p.id===A1.id)!.elo },
       { id: A2.id, elo: players.find(p=>p.id===A2.id)!.elo },
@@ -191,16 +219,33 @@ function FridayPadel({
       r.a, r.b
     );
 
+    // Deltas pr. spiller (ny - gammel)
+    const oldRatings: Record<string, number> = {
+      [A1.id]: players.find(p=>p.id===A1.id)!.elo,
+      [A2.id]: players.find(p=>p.id===A2.id)!.elo,
+      [B1.id]: players.find(p=>p.id===B1.id)!.elo,
+      [B2.id]: players.find(p=>p.id===B2.id)!.elo,
+    };
+    const deltas = [
+      { id: A1.id, name: A1.name, delta: newMap[A1.id] - oldRatings[A1.id] },
+      { id: A2.id, name: A2.name, delta: newMap[A2.id] - oldRatings[A2.id] },
+      { id: B1.id, name: B1.name, delta: newMap[B1.id] - oldRatings[B1.id] },
+      { id: B2.id, name: B2.name, delta: newMap[B2.id] - oldRatings[B2.id] },
+    ];
+
+    // Opdater spillere i state
     setPlayers(prev => prev.map(p => newMap[p.id] != null ? {...p, elo: newMap[p.id]} : p));
     setResults(prev => ({...prev, [g.id]: {...r, saved: true}}));
 
+    // Gem kamp til Dashboard + localStorage
     onSaveMatch({
       id: `${g.id}-${Date.now()}`,
       when: new Date().toISOString(),
       aNames: [A1.name, A2.name],
       bNames: [B1.name, B2.name],
       scoreA: r.a,
-      scoreB: r.b
+      scoreB: r.b,
+      deltas
     });
   }
 
@@ -284,6 +329,18 @@ function ScorePicker({ value, onChange }:{ value:number; onChange:(v:number)=>vo
   )
 }
 
-function Admin(){
-  return <Card title="Admin">(dummy)</Card>
+/* ---------------- Admin (med reset) ---------------- */
+function Admin({ onReset }:{ onReset:()=>void }){
+  return (
+    <div className="grid">
+      <Card title="Admin">
+        <div className="row" style={{gap:10, flexWrap:'wrap'}}>
+          <button className="btn ghost" onClick={onReset}>Nulstil localStorage (alle data)</button>
+        </div>
+        <div style={{marginTop:8, color:'var(--muted)'}}>
+          Når vi kobler på database (Supabase), flytter vi data væk fra localStorage.
+        </div>
+      </Card>
+    </div>
+  )
 }
