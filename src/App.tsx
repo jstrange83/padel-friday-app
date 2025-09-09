@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { buildFairSchedule, type Player as P0, type Game } from './lib/fairPairing'
 import { updateEloDoubles } from './lib/elo'
 
@@ -12,7 +12,7 @@ type MatchRec = {
   bNames: string[];
   scoreA: number;
   scoreB: number;
-  deltas?: { id: string; name: string; delta: number }[]; // ELO-ændring pr. spiller
+  points?: { id: string; name: string; value: number }[]; // ELO-point pr. spiller i kampen
 };
 
 const INITIAL_PLAYERS: Player[] = [
@@ -73,7 +73,7 @@ export default function App(){
             onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,50))}
           />
         )}
-        {page==='Ranglisten'  && <Ranking players={players} />}
+        {page==='Ranglisten'  && <Ranking players={players} matches={matches} />}
         {page==='Admin'       && <Admin onReset={()=>{localStorage.clear(); location.reload();}} />}
       </main>
     </div>
@@ -109,7 +109,7 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
                 <th>Hold A</th>
                 <th>Hold B</th>
                 <th>Resultat</th>
-                <th>Δ pr. spiller</th>
+                <th>Point</th>
               </tr>
             </thead>
             <tbody>
@@ -120,13 +120,13 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
                   <td>{m.bNames.join(' & ')}</td>
                   <td>{m.scoreA} – {m.scoreB}</td>
                   <td>
-                    {m.deltas && m.deltas.length ? (
+                    {m.points && m.points.length ? (
                       <div className="row" style={{gap:6, flexWrap:'wrap'}}>
-                        {m.deltas.map(pd => {
-                          const pos = pd.delta >= 0;
+                        {m.points.map(pd => {
+                          const pos = pd.value >= 0;
                           const bg  = pos ? '#eaffea' : '#ffeaea';
                           const fg  = pos ? '#166534' : '#991b1b';
-                          const sign = pd.delta > 0 ? `+${pd.delta}` : `${pd.delta}`;
+                          const sign = pd.value > 0 ? `+${pd.value}` : `${pd.value}`;
                           const first = pd.name.split(' ')[0];
                           return (
                             <span key={pd.id} className="pill" style={{background:bg, color:fg}}>
@@ -150,8 +150,24 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
 }
 
 /* ---------------- Ranglisten ---------------- */
-function Ranking({ players }:{ players: Player[] }){
+/** Find seneste point-ændring for hver spiller baseret på matches (nyeste først). */
+function useLastPointsByPlayer(matches: MatchRec[]){
+  return useMemo(()=>{
+    const map = new Map<string, number>(); // playerId -> last delta
+    for (const m of matches){ // matches er nyeste først i vores app
+      if (!m.points) continue;
+      for (const p of m.points){
+        if (!map.has(p.id)) map.set(p.id, p.value);
+      }
+    }
+    return map;
+  }, [matches]);
+}
+
+function Ranking({ players, matches }:{ players: Player[]; matches: MatchRec[] }){
+  const lastPoints = useLastPointsByPlayer(matches);
   const sorted = [...players].sort((a,b)=>b.elo - a.elo);
+
   return (
     <div className="grid">
       <Card title="Ranglisten">
@@ -160,13 +176,25 @@ function Ranking({ players }:{ players: Player[] }){
             <tr><th>#</th><th>Spiller</th><th>ELO</th></tr>
           </thead>
           <tbody>
-            {sorted.map((p,idx)=>(
-              <tr key={p.id}>
-                <td>{idx+1}</td>
-                <td>{p.name}</td>
-                <td>{p.elo}</td>
-              </tr>
-            ))}
+            {sorted.map((p,idx)=>{
+              const delta = lastPoints.get(p.id);
+              const hasDelta = typeof delta === 'number' && !Number.isNaN(delta);
+              const pos = (delta ?? 0) >= 0;
+              const color = hasDelta ? (pos ? '#166534' : '#991b1b') : 'var(--muted)';
+              const sign = hasDelta ? (delta! > 0 ? `+${delta}` : `${delta}`) : '';
+              return (
+                <tr key={p.id}>
+                  <td>{idx+1}</td>
+                  <td>{p.name}</td>
+                  <td>
+                    {p.elo}
+                    <span style={{marginLeft:8, color, fontSize:12}}>
+                      {hasDelta ? `(${sign})` : ''}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </Card>
@@ -182,7 +210,7 @@ function FridayPadel({
 }:{ players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; onSaveMatch:(m:MatchRec)=>void }){
   const [signedUp, setSignedUp] = useState<string[]>([]);
   const [schedule, setSchedule] = useState<Game[]>([]);
-  const [results, setResults] = useState<Record<string, Result>>({}); // game.id -> result
+  const [results, setResults] = useState<Record<string, Result>>({});
 
   function toggle(pid: string){
     setSignedUp(prev => prev.includes(pid) ? prev.filter(x=>x!==pid) : [...prev, pid]);
@@ -219,18 +247,18 @@ function FridayPadel({
       r.a, r.b
     );
 
-    // Deltas pr. spiller (ny - gammel)
+    // Points (delta) pr. spiller
     const oldRatings: Record<string, number> = {
       [A1.id]: players.find(p=>p.id===A1.id)!.elo,
       [A2.id]: players.find(p=>p.id===A2.id)!.elo,
       [B1.id]: players.find(p=>p.id===B1.id)!.elo,
       [B2.id]: players.find(p=>p.id===B2.id)!.elo,
     };
-    const deltas = [
-      { id: A1.id, name: A1.name, delta: newMap[A1.id] - oldRatings[A1.id] },
-      { id: A2.id, name: A2.name, delta: newMap[A2.id] - oldRatings[A2.id] },
-      { id: B1.id, name: B1.name, delta: newMap[B1.id] - oldRatings[B1.id] },
-      { id: B2.id, name: B2.name, delta: newMap[B2.id] - oldRatings[B2.id] },
+    const points = [
+      { id: A1.id, name: A1.name, value: newMap[A1.id] - oldRatings[A1.id] },
+      { id: A2.id, name: A2.name, value: newMap[A2.id] - oldRatings[A2.id] },
+      { id: B1.id, name: B1.name, value: newMap[B1.id] - oldRatings[B1.id] },
+      { id: B2.id, name: B2.name, value: newMap[B2.id] - oldRatings[B2.id] },
     ];
 
     // Opdater spillere i state
@@ -245,7 +273,7 @@ function FridayPadel({
       bNames: [B1.name, B2.name],
       scoreA: r.a,
       scoreB: r.b,
-      deltas
+      points
     });
   }
 
