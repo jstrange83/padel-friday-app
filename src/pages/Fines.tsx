@@ -1,6 +1,9 @@
 import React, { useMemo, useState } from 'react'
 import type { FineDraft, FineType, MatchRec, Player } from '../lib/types'
-import { defaultFineTypes, LS_FINE_DRAFTS, LS_FINE_TYPES, humanFineLabel, matchLabel, buildFine, calcOutstandingForPlayer, playerName } from '../lib/fines'
+import {
+  defaultFineTypes, LS_FINE_DRAFTS, LS_FINE_TYPES,
+  humanFineLabel, matchLabel, buildFine, calcOutstandingForPlayer, playerName
+} from '../lib/fines'
 import { load, save } from '../lib/storage'
 
 const CURRENT_PLAYER_ID = 'me';
@@ -10,9 +13,11 @@ export default function FinesPage({
   players, matches,
   fineTypes, setFineTypes,
   drafts, setDrafts
-}:{ players: Player[]; matches: MatchRec[];
-   fineTypes: FineType[]; setFineTypes: React.Dispatch<React.SetStateAction<FineType[]>>;
-   drafts: FineDraft[]; setDrafts: React.Dispatch<React.SetStateAction<FineDraft[]>> }) {
+}:{
+  players: Player[]; matches: MatchRec[];
+  fineTypes: FineType[]; setFineTypes: React.Dispatch<React.SetStateAction<FineType[]>>;
+  drafts: FineDraft[]; setDrafts: React.Dispatch<React.SetStateAction<FineDraft[]>>;
+}) {
 
   const [assignList, setAssignList] = useState<Array<{toPlayerId:string; matchId:string; fineCode:string; note?:string}>>([
     { toPlayerId:'', matchId:'', fineCode:'' }
@@ -25,9 +30,11 @@ export default function FinesPage({
   function submitAssign(){
     const cleaned = assignList.filter(r => r.toPlayerId && r.matchId && r.fineCode);
     if (cleaned.length===0) { alert('Vælg mindst én bøde (modtager, kamp og type)'); return; }
-    const newOnes: FineDraft[] = cleaned.map(r => buildFine(`fd_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, CURRENT_PLAYER_ID, r.toPlayerId, r.matchId, r.fineCode, r.note));
+    const newOnes: FineDraft[] = cleaned.map(r =>
+      buildFine(`fd_${Date.now()}_${Math.random().toString(36).slice(2,7)}`, CURRENT_PLAYER_ID, r.toPlayerId, r.matchId, r.fineCode, r.note)
+    );
     setDrafts(prev => {
-      const next = [...newOnes, ...prev];
+      const next: FineDraft[] = [...newOnes, ...prev];
       save(LS_FINE_DRAFTS, next);
       return next;
     });
@@ -35,10 +42,34 @@ export default function FinesPage({
     setAssignList([{ toPlayerId:'', matchId:'', fineCode:'' }]);
   }
 
-  // ADMIN: approve/mark paid
-  function approve(id: string){ setDrafts(prev => { const next = prev.map(d => d.id===id ? {...d, status:'approved', approvedAt:new Date().toISOString()} : d); save(LS_FINE_DRAFTS, next); return next; }) }
-  function reject(id: string){ setDrafts(prev => { const next = prev.map(d => d.id===id ? {...d, status:'rejected'} : d); save(LS_FINE_DRAFTS, next); return next; }) }
-  function markPaid(id: string){ setDrafts(prev => { const next = prev.map(d => d.id===id ? {...d, status:'paid', paidAt:new Date().toISOString()} : d); save(LS_FINE_DRAFTS, next); return next; }) }
+  // ADMIN: approve/mark paid — sørg for literal types med `as const`
+  function approve(id: string){
+    setDrafts(prev => {
+      const next: FineDraft[] = prev.map(d =>
+        d.id===id ? { ...d, status: 'approved' as const, approvedAt: new Date().toISOString() } : d
+      );
+      save(LS_FINE_DRAFTS, next);
+      return next;
+    })
+  }
+  function reject(id: string){
+    setDrafts(prev => {
+      const next: FineDraft[] = prev.map(d =>
+        d.id===id ? { ...d, status: 'rejected' as const } : d
+      );
+      save(LS_FINE_DRAFTS, next);
+      return next;
+    })
+  }
+  function markPaid(id: string){
+    setDrafts(prev => {
+      const next: FineDraft[] = prev.map(d =>
+        d.id===id ? { ...d, status: 'paid' as const, paidAt: new Date().toISOString() } : d
+      );
+      save(LS_FINE_DRAFTS, next);
+      return next;
+    })
+  }
 
   const outstandingMe = useMemo(()=>calcOutstandingForPlayer(CURRENT_PLAYER_ID, drafts, fineTypes), [drafts, fineTypes]);
   const outstandingAll = useMemo(()=>{
@@ -67,7 +98,9 @@ export default function FinesPage({
             <select className="chip" style={{padding:'8px 10px', minWidth:300}} value={row.matchId} onChange={e=>updateAssign(i, {matchId:e.target.value})}>
               <option value="">Vælg kamp</option>
               {matches.map(m=>(
-                <option key={m.id} value={m.id}>{matchLabel(m)}</option>
+                <option key={m.id} value={m.id}>
+                  {new Date(m.when).toLocaleString('da-DK')}: {m.aNames.join(' & ')} vs {m.bNames.join(' & ')} ({m.scoreA}–{m.scoreB})
+                </option>
               ))}
             </select>
 
@@ -124,12 +157,17 @@ export default function FinesPage({
                       <td>{new Date(d.createdAt).toLocaleString('da-DK')}</td>
                       <td>{playerName(players,d.fromPlayerId)}</td>
                       <td>{playerName(players,d.toPlayerId)}</td>
-                      <td>{m ? matchLabel(m) : d.matchId}</td>
+                      <td>{m ? `${new Date(m.when).toLocaleString('da-DK')}: ${m.aNames.join(' & ')} vs ${m.bNames.join(' & ')} (${m.scoreA}–${m.scoreB})` : d.matchId}</td>
                       <td>{humanFineLabel(d.fineCode, fineTypes)}</td>
                       <td>{d.status}</td>
                       <td className="row" style={{gap:6}}>
-                        {d.status==='pending'  && (<><button className="btn primary" onClick={()=>approve(d.id)}>Godkend</button><button className="btn ghost" onClick={()=>reject(d.id)}>Afvis</button></>)}
-                        {d.status==='approved' && (<button className="btn ghost" onClick={()=>markPaid(d.id)}>Marker betalt</button>)}
+                        {d.status==='pending'  && (<>
+                          <button className="btn primary" onClick={()=>approve(d.id)}>Godkend</button>
+                          <button className="btn ghost" onClick={()=>reject(d.id)}>Afvis</button>
+                        </>)}
+                        {d.status==='approved' && (
+                          <button className="btn ghost" onClick={()=>markPaid(d.id)}>Marker betalt</button>
+                        )}
                       </td>
                     </tr>
                   )
@@ -150,7 +188,9 @@ export default function FinesPage({
   )
 }
 
-function FineTypesEditor({ fineTypes, setFineTypes }:{ fineTypes: FineType[]; setFineTypes: React.Dispatch<React.SetStateAction<FineType[]>> }){
+function FineTypesEditor({ fineTypes, setFineTypes }:{
+  fineTypes: FineType[]; setFineTypes: React.Dispatch<React.SetStateAction<FineType[]>>;
+}){
   const [draft, setDraft] = useState<{code:string;label:string;amount:number}>({code:'',label:'',amount:0});
 
   function saveTypes(next: FineType[]){
@@ -172,9 +212,12 @@ function FineTypesEditor({ fineTypes, setFineTypes }:{ fineTypes: FineType[]; se
   return (
     <>
       <div className="row" style={{gap:8, flexWrap:'wrap', marginBottom:10}}>
-        <input className="chip" style={{padding:'8px 10px'}} placeholder="Kode (eks. no_show)" value={draft.code} onChange={e=>setDraft({...draft, code:e.target.value})}/>
-        <input className="chip" style={{padding:'8px 10px', minWidth:240}} placeholder="Label" value={draft.label} onChange={e=>setDraft({...draft, label:e.target.value})}/>
-        <input type="number" className="chip" style={{padding:'8px 10px', width:140}} placeholder="Beløb (kr)" value={draft.amount} onChange={e=>setDraft({...draft, amount:Number(e.target.value)})}/>
+        <input className="chip" style={{padding:'8px 10px'}} placeholder="Kode (eks. no_show)"
+               value={draft.code} onChange={e=>setDraft({...draft, code:e.target.value})}/>
+        <input className="chip" style={{padding:'8px 10px', minWidth:240}} placeholder="Label"
+               value={draft.label} onChange={e=>setDraft({...draft, label:e.target.value})}/>
+        <input type="number" className="chip" style={{padding:'8px 10px', width:140}} placeholder="Beløb (kr)"
+               value={draft.amount} onChange={e=>setDraft({...draft, amount:Number(e.target.value)})}/>
         <button className="btn primary" onClick={addType}>Tilføj</button>
       </div>
       <table>
