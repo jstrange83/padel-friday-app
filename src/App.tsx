@@ -8,9 +8,7 @@ import { load, save } from './lib/storage'
 import ProfilePage from './pages/Profile'
 import FinesPage from './pages/Fines'
 
-/** Hvem er den aktuelle bruger (til små beregninger på dashboard) */
 const CURRENT_PLAYER_ID = 'me'
-
 export type Player = PlayerBase
 
 const INITIAL_PLAYERS: Player[] = [
@@ -25,23 +23,17 @@ const INITIAL_PLAYERS: Player[] = [
   { id: 'me', name: 'Demo Bruger', elo: 1480 },
 ]
 
-type Page =
-  | 'Dashboard'
-  | 'Fredagspadel'
-  | 'Ranglisten'
-  | 'Bøder'
-  | 'Profil'
-  | 'Admin'
+type Page = 'Dashboard'|'Fredagspadel'|'Ranglisten'|'Bøder'|'Profil'|'Admin'
 
 const LS_PLAYERS = 'padel.players.v1'
 const LS_MATCHES = 'padel.matches.v1'
 
 export default function App() {
-  const [players, setPlayers]   = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS))
-  const [matches, setMatches]   = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]))
+  const [players, setPlayers]     = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS))
+  const [matches, setMatches]     = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]))
   const [fineTypes, setFineTypes] = useState<FineType[]>(() => load(LS_FINE_TYPES, defaultFineTypes()))
-  const [drafts, setDrafts]     = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]))
-  const [page, setPage]         = useState<Page>('Dashboard')
+  const [drafts, setDrafts]       = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]))
+  const [page, setPage]           = useState<Page>('Dashboard')
 
   useEffect(()=>{ save(LS_PLAYERS, players) }, [players])
   useEffect(()=>{ save(LS_MATCHES, matches) }, [matches])
@@ -138,14 +130,26 @@ function StatCard({
   )
 }
 
-/* ---------------- Dashboard (flere kort + farver) ---------------- */
+function Hero({title, subtitle}:{title:string;subtitle:string}){
+  return (
+    <div className="card" style={{
+      background:'linear-gradient(135deg,#0B63F6,#3B82F6)',
+      color:'#fff'
+    }}>
+      <div style={{fontSize:26, fontWeight:800, marginBottom:6}}>{title} 👋</div>
+      <div style={{opacity:0.95, fontSize:16}}>{subtitle}</div>
+    </div>
+  )
+}
+
+/* ---------------- Dashboard ---------------- */
 function Dashboard({
   players, matches, drafts, fineTypes
 }:{
   players: Player[]; matches: MatchRec[]; drafts: FineDraft[]; fineTypes: FineType[];
 }){
-  // --- Beregninger til små kort ---
   const me = players.find(p=>p.id===CURRENT_PLAYER_ID)
+
   const myMatches = useMemo(()=>matches.filter(m=>{
     const names = [...m.aNames,...m.bNames]
     return me ? names.some(n=>n===me.name) : false
@@ -156,11 +160,10 @@ function Dashboard({
     return aHasMe ? m.scoreA > m.scoreB : m.scoreB > m.scoreA
   }).length
   const winPct = myMatches.length ? Math.round((wins/myMatches.length)*100) : 0
-
   const playedCount = myMatches.length
 
-  const sorted = [...players].sort((a,b)=>b.elo-a.elo)
-  const myRank = me ? (sorted.findIndex(p=>p.id===me.id)+1 || '-') : '-'
+  const sortedByElo = [...players].sort((a,b)=>b.elo-a.elo)
+  const myRank = me ? (sortedByElo.findIndex(p=>p.id===me.id)+1 || '-') : '-'
 
   const outstanding = drafts
     .filter(d=>d.status!=='paid' && d.status!=='rejected' && (!!me ? d.toPlayerId===me.id : true))
@@ -169,16 +172,83 @@ function Dashboard({
       return sum + (t?.amount ?? 0)
     },0)
 
+  // --- Mest aktive (flest kampe i alt) ---
+  const mostActive = useMemo(()=>{
+    const counts = new Map<string, number>()
+    for (const m of matches){
+      for (const n of m.aNames.concat(m.bNames)){
+        const p = players.find(x=>x.name===n)
+        if (!p) continue
+        counts.set(p.id, (counts.get(p.id) || 0) + 1)
+      }
+    }
+    return [...counts.entries()]
+      .map(([id,cnt])=>({ id, name: players.find(p=>p.id===id)?.name || id, count: cnt }))
+      .sort((a,b)=>b.count-a.count)
+      .slice(0,5)
+  },[matches, players])
+
+  // --- Flest fredage i træk (AKTUEL streak) ---
+  const fridayStreaks = useMemo(()=>{
+    // Hjælpere: klip tid væk + seneste fredag i denne uge
+    const dayOnly = (d:Date)=> new Date(d.getFullYear(), d.getMonth(), d.getDate())
+    const fridayFloor = (d:Date)=>{
+      const dd = dayOnly(d)
+      const diff = (dd.getDay() + 7 - 5) % 7 // 5 = fredag
+      return new Date(dd.getFullYear(), dd.getMonth(), dd.getDate()-diff)
+    }
+    const thisFriday = fridayFloor(new Date())
+    const WEEK = 7*24*3600*1000
+
+    const byId: Record<string, Date[]> = {}
+    for (const m of matches){
+      const d = new Date(m.when)
+      if (d.getDay() !== 5) continue
+      const f = dayOnly(d)
+      for (const n of m.aNames.concat(m.bNames)){
+        const p = players.find(x=>x.name===n)
+        if (!p) continue
+        if (!byId[p.id]) byId[p.id] = []
+        if (!byId[p.id].some(x=>x.getTime()===f.getTime())) byId[p.id].push(f)
+      }
+    }
+
+    const res = Object.entries(byId).map(([id,dates])=>{
+      dates.sort((a,b)=>a.getTime()-b.getTime())
+      if (dates.length===0) return { id, name: players.find(p=>p.id===id)?.name || id, streak: 0 }
+      const last = dates[dates.length-1]
+      // Aktuel streak: kræver at spilleren HAR spillet denne uges fredag.
+      if (last.getTime() !== thisFriday.getTime()) return { id, name: players.find(p=>p.id===id)?.name || id, streak: 0 }
+
+      // Tæl baglæns i hop á præcis 7 dage.
+      let cur = 1
+      for (let i=dates.length-1; i>0; i--){
+        const gap = dates[i].getTime() - dates[i-1].getTime()
+        if (gap === WEEK) cur += 1
+        else break
+      }
+      return { id, name: players.find(p=>p.id===id)?.name || id, streak: cur }
+    }).filter(x=>x.streak>0).sort((a,b)=>b.streak-a.streak).slice(0,5)
+
+    return res
+  },[matches, players])
+
   return (
     <div className="grid" style={{gap:16}}>
-      {/* Øverste række: Kommende kampe (bred) */}
+      {/* HERO øverst */}
+      <Hero
+        title={`Velkommen tilbage, ${me?.name?.split(' ')[0] || 'spiller'}!`}
+        subtitle={`Du har spillet ${playedCount} kamp${playedCount===1?'':'e'} og vundet ${wins} af dem. Fortsæt den gode udvikling!`}
+      />
+
+      {/* Bredt: Kommende kampe */}
       <div className="grid grid-1" style={{gap:16}}>
         <Card title="Kommende kampe">
           <div style={{color:'var(--muted)'}}>Ingen planlagte endnu.</div>
         </Card>
       </div>
 
-      {/* Midterste række: Bøder (bred) */}
+      {/* Bredt: Bøder */}
       <div className="grid grid-1" style={{gap:16}}>
         <Card title="Bøder" right={<span className="pill">{outstanding ? 'ubetalt' : 'ok'}</span>}>
           <div className="row" style={{gap:8, alignItems:'baseline'}}>
@@ -188,7 +258,7 @@ function Dashboard({
         </Card>
       </div>
 
-      {/* Smalle kort side om side */}
+      {/* Smalle kort */}
       <div className="grid grid-2" style={{gap:16}}>
         <StatCard title="Ranking" value={`#${myRank || '-'}`} sub="din aktuelle placering" color="purple" />
         <StatCard title="Næste kamp" value="—" sub="ingen planlagte kampe" color="orange" />
@@ -199,7 +269,38 @@ function Dashboard({
         <StatCard title="Kampe spillet" value={playedCount} sub="+0 denne måned" color="green" />
       </div>
 
-      {/* Seneste kampe (bred) */}
+      {/* NYT: Mest aktive + Aktuel fredag-streak */}
+      <div className="grid grid-2" style={{gap:16}}>
+        <Card title="Mest aktive" right={<span className="pill">{mostActive.length}</span>}>
+          {mostActive.length===0 ? (
+            <div style={{color:'var(--muted)'}}>Ingen data endnu.</div>
+          ) : (
+            <ol style={{paddingLeft:18, margin:0}}>
+              {mostActive.map((r)=>(
+                <li key={r.id} style={{margin:'6px 0'}}>
+                  <strong>{r.name}</strong> – {r.count} kampe
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+
+        <Card title="Flest fredage i træk (aktuel)" right={<span className="pill">{fridayStreaks.length}</span>}>
+          {fridayStreaks.length===0 ? (
+            <div style={{color:'var(--muted)'}}>Ingen aktuelle streaks.</div>
+          ) : (
+            <ol style={{paddingLeft:18, margin:0}}>
+              {fridayStreaks.map((r)=>(
+                <li key={r.id} style={{margin:'6px 0'}}>
+                  <strong>{r.name}</strong> – {r.streak} fredage
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+      </div>
+
+      {/* Bredt: Seneste kampe */}
       <div className="grid grid-1" style={{gap:16}}>
         <Card title="Seneste kampe" right={<span className="pill">{matches.length}</span>}>
           {matches.length===0 ? (
@@ -275,22 +376,22 @@ function Ranking({ players, matches }:{ players:Player[]; matches:MatchRec[] }){
           <thead>
             <tr><th>#</th><th>Spiller</th><th>ELO</th></tr>
           </thead>
-        <tbody>
-          {sorted.map((p,idx)=>{
-            const delta = lastPoints.get(p.id)
-            const hasDelta = typeof delta==='number' && !Number.isNaN(delta)
-            const pos = (delta ?? 0) >= 0
-            const color = hasDelta ? (pos ? '#166534' : '#991b1b') : 'var(--muted)'
-            const sign = hasDelta ? (delta! > 0 ? `+${delta}` : `${delta}`) : ''
-            return (
-              <tr key={p.id}>
-                <td>{idx+1}</td>
-                <td>{p.name}</td>
-                <td>{p.elo}<span style={{marginLeft:8, color, fontSize:12}}>{hasDelta?`(${sign})`:''}</span></td>
-              </tr>
-            )
-          })}
-        </tbody>
+          <tbody>
+            {sorted.map((p,idx)=>{
+              const delta = lastPoints.get(p.id)
+              const hasDelta = typeof delta==='number' && !Number.isNaN(delta)
+              const pos = (delta ?? 0) >= 0
+              const color = hasDelta ? (pos ? '#166534' : '#991b1b') : 'var(--muted)'
+              const sign = hasDelta ? (delta! > 0 ? `+${delta}` : `${delta}`) : ''
+              return (
+                <tr key={p.id}>
+                  <td>{idx+1}</td>
+                  <td>{p.name}</td>
+                  <td>{p.elo}<span style={{marginLeft:8, color, fontSize:12}}>{hasDelta?`(${sign})`:''}</span></td>
+                </tr>
+              )
+            })}
+          </tbody>
         </table>
       </Card>
     </div>
@@ -445,7 +546,7 @@ function ScorePicker({ value, onChange }:{ value:number; onChange:(v:number)=>vo
   )
 }
 
-/* ---------------- Admin (reset) ---------------- */
+/* ---------------- Admin ---------------- */
 function Admin({ onReset }:{ onReset:()=>void }){
   return (
     <div className="grid">
