@@ -83,7 +83,6 @@ const byNewest = (a: Match, b: Match) => new Date(b.when).getTime() - new Date(a
    ELO (dobbelt) — individuelt med margin & underdog bonus
    ======================================================= */
 /**
- * Regler vi bruger (enkle & stabile):
  * - Team ELO = gennemsnit af to spillere
  * - Forventning E = 1 / (1 + 10^((opp - team)/400))
  * - K_base = 24
@@ -140,7 +139,7 @@ function updateEloAfterMatch(
 }
 
 /* =========================================================
-   UI Components (Card/Badge)
+   Reusable UI
    ======================================================= */
 function Card({children, title, icon, tone}:{children:React.ReactNode; title?:React.ReactNode; icon?:React.ReactNode; tone?:'blue'|'green'|'purple'|'yellow'|'red'|'none'}){
   return (
@@ -160,16 +159,61 @@ function Card({children, title, icon, tone}:{children:React.ReactNode; title?:Re
 function Badge({children}:{children:React.ReactNode}){ return <span className="badge">{children}</span> }
 
 /* =========================================================
+   Cirkulær score-picker 0..7
+   ======================================================= */
+function ScorePicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const options = Array.from({ length: 8 }, (_, i) => i); // 0..7
+  return (
+    <div className="scorepick">
+      <div className="lbl">{label}</div>
+      <div className="scorepick__row" role="radiogroup" aria-label={label}>
+        {options.map((n) => {
+          const selected = value === n;
+          return (
+            <button
+              key={n}
+              type="button"
+              className={`scorebtn ${selected ? "is-selected" : ""}`}
+              aria-pressed={selected}
+              onClick={() => onChange(n)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  onChange(Math.min(7, value + 1));
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+                  e.preventDefault();
+                  onChange(Math.max(0, value - 1));
+                }
+              }}
+            >
+              {n}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
    App shell
    ======================================================= */
 type Page = "Dashboard"|"Resultater"|"Ranglisten"|"Bøder"|"Admin";
 
 export default function App(){
-  const [players, setPlayers] = useState<Player[]>(() => load(LS_PLAYERS, DEMO_PLAYERS));
+  const [players, setPlayers] = useState<Player>(() => load(LS_PLAYERS, DEMO_PLAYERS) as any);
   const [matches, setMatches] = useState<Match[]>(() => load(LS_MATCHES, DEMO_MATCHES));
   const [page,setPage] = useState<Page>("Dashboard");
 
-  useEffect(()=>{ save(LS_PLAYERS, players); }, [players]);
+  useEffect(()=>{ save(LS_PLAYERS, players as any); }, [players]);
   useEffect(()=>{ save(LS_MATCHES, matches); }, [matches]);
 
   const fines = DEMO_FINES; // (vi flytter disse til storage senere)
@@ -189,18 +233,18 @@ export default function App(){
           ))}
         </nav>
         <div className="user">
-          <div className="user__avatar">{players.find(p=>p.id===CURRENT_PLAYER_ID)?.initials ?? "ME"}</div>
+          <div className="user__avatar">{(players as any).find?.((p:Player)=>p.id===CURRENT_PLAYER_ID)?.initials ?? "ME"}</div>
           <div className="user__meta">
-            <div className="user__name">{players.find(p=>p.id===CURRENT_PLAYER_ID)?.name ?? "Demo"}</div>
-            <div className="user__sub">ELO {Math.round(players.find(p=>p.id===CURRENT_PLAYER_ID)?.elo ?? 0)}</div>
+            <div className="user__name">{(players as any).find?.((p:Player)=>p.id===CURRENT_PLAYER_ID)?.name ?? "Demo"}</div>
+            <div className="user__sub">ELO {Math.round((players as any).find?.((p:Player)=>p.id===CURRENT_PLAYER_ID)?.elo ?? 0)}</div>
           </div>
         </div>
       </aside>
 
       <main className="main">
-        {page==="Dashboard"   && <Dashboard players={players} matches={matches} outstanding={outstanding} />}
-        {page==="Resultater"  && <ResultsPage players={players} setPlayers={setPlayers} matches={matches} setMatches={setMatches} />}
-        {page==="Ranglisten"  && <RankingPage players={players} />}
+        {page==="Dashboard"   && <Dashboard players={players as any} matches={matches} outstanding={outstanding} />}
+        {page==="Resultater"  && <ResultsPage players={players as any} setPlayers={setPlayers as any} matches={matches} setMatches={setMatches} />}
+        {page==="Ranglisten"  && <RankingPage players={players as any} />}
         {page==="Bøder"       && <FinesPage outstanding={outstanding} />}
         {page==="Admin"       && <Placeholder title="Admin" />}
       </main>
@@ -259,7 +303,9 @@ function Dashboard({ players, matches, outstanding }:{
   return (
     <>
       <div className="welcome">
-        <div className="welcome__title">Velkommen tilbage, {players.find(p=>p.id===CURRENT_PLAYER_ID)?.name?.split(" ")[0] ?? "Demo"}! 👋</div>
+        <div className="welcome__title">
+          Velkommen tilbage, {players.find(p=>p.id===CURRENT_PLAYER_ID)?.name?.split(" ")[0] ?? "Demo"}! 👋
+        </div>
         <div className="welcome__text">
           Du har spillet <b>{kpi.total}</b> kampe og vundet <b>{kpi.wins}</b> af dem.
         </div>
@@ -380,7 +426,7 @@ function Dashboard({ players, matches, outstanding }:{
 }
 
 /* =========================================================
-   Resultater (indtast kamp)
+   Resultater (indtast kamp) – med runde scoreknapper 0..7
    ======================================================= */
 function ResultsPage({
   players, setPlayers, matches, setMatches
@@ -468,21 +514,27 @@ function ResultsPage({
           </div>
         </div>
 
+        {/* Runde scoreknapper 0..7 */}
         <div className="form__row">
           <div className="form__col">
-            <label className="lbl">Score (A–B)</label>
-            <div className="grid2">
-              <input type="number" min={0} max={7} value={scoreA} onChange={e=>setScoreA(Number(e.target.value))} />
-              <input type="number" min={0} max={7} value={scoreB} onChange={e=>setScoreB(Number(e.target.value))} />
-            </div>
+            <ScorePicker label="Score til Hold A" value={scoreA} onChange={setScoreA} />
           </div>
+          <div className="form__col">
+            <ScorePicker label="Score til Hold B" value={scoreB} onChange={setScoreB} />
+          </div>
+        </div>
+
+        <div className="form__row">
           <div className="form__col">
             <label className="lbl">Hvornår / Bane</label>
             <div className="grid2">
               <input type="datetime-local" value={when} onChange={e=>setWhen(e.target.value)} />
-              <input type="text" value={court} onChange={e=>setCourt(e.target.value)} />
+              <input type="text" value={court} onChange={e=>setCourt(e.target.value)} placeholder="Bane 1" />
             </div>
-            <label className="chk"><input type="checkbox" checked={isFriday} onChange={e=>setIsFriday(e.target.checked)} /> Dette var en fredagskamp</label>
+            <label className="chk">
+              <input type="checkbox" checked={isFriday} onChange={e=>setIsFriday(e.target.checked)} />
+              Dette var en fredagskamp
+            </label>
           </div>
         </div>
 
