@@ -8,7 +8,7 @@ import { load, save } from './lib/storage'
 import ProfilePage from './pages/Profile'
 import FinesPage from './pages/Fines'
 
-export type Player = PlayerBase;
+export type Player = PlayerBase
 
 const INITIAL_PLAYERS: Player[] = [
   { id: 'p1', name: 'Emma Christensen', elo: 1520 },
@@ -18,30 +18,29 @@ const INITIAL_PLAYERS: Player[] = [
   { id: 'p5', name: 'Mette Hansen', elo: 1430 },
   { id: 'p6', name: 'Jonas Mikkelsen', elo: 1400 },
   { id: 'p7', name: 'Camilla Falk', elo: 1380 },
-  { id: 'p8', name: 'Nikolaj Friis', elo: 1350 }
-];
+  { id: 'p8', name: 'Nikolaj Friis', elo: 1350 },
+]
 
-type Page = 'Dashboard'|'Fredagspadel'|'Ranglisten'|'Bøder'|'Profil'|'Admin';
+type Page = 'Dashboard' | 'Fredagspadel' | 'Ranglisten' | 'Bøder' | 'Profil' | 'Admin'
 
-const LS_PLAYERS   = 'padel.players.v1';
-const LS_MATCHES   = 'padel.matches.v1';
+const LS_PLAYERS = 'padel.players.v1'
+const LS_MATCHES = 'padel.matches.v1'
 
-export default function App(){
-  // KORREKT:
+export default function App() {
   const [players, setPlayers] = useState<Player[]>(() => load(LS_PLAYERS, INITIAL_PLAYERS))
-  const [matches, setMatches]   = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]));
-  const [fineTypes, setFineTypes] = useState<FineType[]>(() => load(LS_FINE_TYPES, defaultFineTypes()));
-  const [drafts, setDrafts]     = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]));
-  const [page, setPage]         = useState<Page>('Fredagspadel');
+  const [matches, setMatches] = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]))
+  const [fineTypes, setFineTypes] = useState<FineType[]>(() => load(LS_FINE_TYPES, defaultFineTypes()))
+  const [drafts, setDrafts] = useState<FineDraft[]>(() => load(LS_FINE_DRAFTS, [] as FineDraft[]))
+  const [page, setPage] = useState<Page>('Fredagspadel')
 
-  useEffect(()=>{ save(LS_PLAYERS, players) }, [players]);
-  useEffect(()=>{ save(LS_MATCHES, matches) }, [matches]);
-  useEffect(()=>{ save(LS_FINE_TYPES, fineTypes) }, [fineTypes]);
-  useEffect(()=>{ save(LS_FINE_DRAFTS, drafts) }, [drafts]);
+  useEffect(() => { save(LS_PLAYERS, players) }, [players])
+  useEffect(() => { save(LS_MATCHES, matches) }, [matches])
+  useEffect(() => { save(LS_FINE_TYPES, fineTypes) }, [fineTypes])
+  useEffect(() => { save(LS_FINE_DRAFTS, drafts) }, [drafts])
 
-  function resetAll(){
-    localStorage.clear();
-    location.reload();
+  function resetAll() {
+    localStorage.clear()
+    location.reload()
   }
 
   return (
@@ -49,27 +48,42 @@ export default function App(){
       <aside className="sidebar">
         <div className="brand">PadelApp</div>
         <nav className="nav">
-          {(['Dashboard','Fredagspadel','Ranglisten','Bøder','Profil','Admin'] as Page[]).map(p=>(
-            <button key={p} onClick={()=>setPage(p)} className={page===p?'active':''}>{p}</button>
+          {(['Dashboard', 'Fredagspadel', 'Ranglisten', 'Bøder', 'Profil', 'Admin'] as Page[]).map(p => (
+            <button key={p} onClick={() => setPage(p)} className={page === p ? 'active' : ''}>{p}</button>
           ))}
         </nav>
       </aside>
       <main>
-        {page==='Dashboard'     && <Dashboard matches={matches} />}
-        {page==='Fredagspadel'  && <FridayPadel players={players} setPlayers={setPlayers} onSaveMatch={(m)=>setMatches(prev=>[m, ...prev].slice(0,100))} />}
-        {page==='Ranglisten'    && <Ranking players={players} matches={matches} />}
-        {page==='Bøder'         && <FinesPage players={players} matches={matches} fineTypes={fineTypes} setFineTypes={setFineTypes} drafts={drafts} setDrafts={setDrafts} />}
-        {page==='Profil'        && <ProfilePage players={players} setPlayers={setPlayers} />}
-        {page==='Admin'         && <Admin onReset={resetAll} />}
+        {page === 'Dashboard' && <Dashboard matches={matches} />}
+        {page === 'Fredagspadel' && (
+          <FridayPadel
+            players={players}
+            setPlayers={setPlayers}
+            onSaveMatch={(m) => setMatches(prev => [m, ...prev].slice(0, 100))}
+          />
+        )}
+        {page === 'Ranglisten' && <Ranking players={players} matches={matches} />}
+        {page === 'Bøder' && (
+          <FinesPage
+            players={players}
+            matches={matches}
+            fineTypes={fineTypes}
+            setFineTypes={setFineTypes}
+            drafts={drafts}
+            setDrafts={setDrafts}
+          />
+        )}
+        {page === 'Profil' && <ProfilePage players={players} setPlayers={setPlayers} />}
+        {page === 'Admin' && <Admin onReset={resetAll} />}
       </main>
     </div>
-  );
+  )
 }
 
-function Card(props: {title?: string, children: React.ReactNode, right?: React.ReactNode}){
+function Card(props: { title?: string, children: React.ReactNode, right?: React.ReactNode }) {
   return (
     <div className="card">
-      <div className="row spread" style={{marginBottom:8}}>
+      <div className="row spread" style={{ marginBottom: 8 }}>
         {props.title ? <h2>{props.title}</h2> : <div />}
         {props.right}
       </div>
@@ -78,57 +92,60 @@ function Card(props: {title?: string, children: React.ReactNode, right?: React.R
   )
 }
 
-/* ---------------- Dashboard ---------------- */
-function Dashboard({ matches }:{ matches: MatchRec[] }){
+/* ---------------- Dashboard (som i starten) ---------------- */
+function Dashboard({ matches }: { matches: MatchRec[] }) {
   return (
-    <div className="grid grid-2">
-      <Card title="Kommende kampe">(dummy)</Card>
+    <div className="grid grid-2" style={{ gap: 16 }}>
+      <Card title="Kommende kampe">
+        <div style={{ color: 'var(--muted)' }}>Ingen planlagte endnu.</div>
+      </Card>
 
       <Card title="Seneste kampe" right={<span className="pill">{matches.length}</span>}>
-        {matches.length===0 ? (
-          <div style={{color:'var(--muted)'}}>Ingen kampe endnu.</div>
+        {matches.length === 0 ? (
+          <div style={{ color: 'var(--muted)' }}>Ingen kampe endnu.</div>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Dato</th>
-                <th>Hold A</th>
-                <th>Hold B</th>
-                <th>Resultat</th>
-                <th>Point</th>
-              </tr>
-            </thead>
-            <tbody>
-              {matches.slice(0,8).map(m=>(
-                <tr key={m.id}>
-                  <td>{new Date(m.when).toLocaleString('da-DK')}</td>
-                  <td>{m.aNames.join(' & ')}</td>
-                  <td>{m.bNames.join(' & ')}</td>
-                  <td>{m.scoreA} – {m.scoreB}</td>
-                  <td>
-                    {m.points && m.points.length ? (
-                      <div className="row" style={{gap:6, flexWrap:'wrap'}}>
-                        {m.points.map(pd => {
-                          const pos = pd.value >= 0;
-                          const bg  = pos ? '#eaffea' : '#ffeaea';
-                          const fg  = pos ? '#166534' : '#991b1b';
-                          const sign = pd.value > 0 ? `+${pd.value}` : `${pd.value}`;
-                          const first = pd.name.split(' ')[0];
-                          return (
-                            <span key={pd.id} className="pill" style={{background:bg, color:fg}}>
-                              {first} {sign}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <span style={{color:'var(--muted)'}}>—</span>
-                    )}
-                  </td>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Dato</th>
+                  <th>Hold A</th>
+                  <th>Hold B</th>
+                  <th>Resultat</th>
+                  <th>Point</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {matches.slice(0, 8).map(m => (
+                  <tr key={m.id}>
+                    <td>{new Date(m.when).toLocaleString('da-DK')}</td>
+                    <td>{m.aNames.join(' & ')}</td>
+                    <td>{m.bNames.join(' & ')}</td>
+                    <td>{m.scoreA} – {m.scoreB}</td>
+                    <td>
+                      {m.points?.length ? (
+                        <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
+                          {m.points.map(pd => {
+                            const pos = pd.value >= 0
+                            const bg = pos ? '#eaffea' : '#ffeaea'
+                            const fg = pos ? '#166534' : '#991b1b'
+                            const sign = pd.value > 0 ? `+${pd.value}` : `${pd.value}`
+                            const first = pd.name.split(' ')[0]
+                            return (
+                              <span key={pd.id} className="pill" style={{ background: bg, color: fg }}>
+                                {first} {sign}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      ) : <span style={{ color: 'var(--muted)' }}>—</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 4 }} />
+          </div>
         )}
       </Card>
     </div>
@@ -136,22 +153,22 @@ function Dashboard({ matches }:{ matches: MatchRec[] }){
 }
 
 /* ---------------- Ranglisten ---------------- */
-function useLastPointsByPlayer(matches: MatchRec[]){
-  return useMemo(()=>{
-    const map = new Map<string, number>();
-    for (const m of matches){ // antager matches er nyeste først
-      if (!m.points) continue;
-      for (const p of m.points){
-        if (!map.has(p.id)) map.set(p.id, p.value);
+function useLastPointsByPlayer(matches: MatchRec[]) {
+  return useMemo(() => {
+    const map = new Map<string, number>()
+    for (const m of matches) {
+      if (!m.points) continue
+      for (const p of m.points) {
+        if (!map.has(p.id)) map.set(p.id, p.value)
       }
     }
-    return map;
-  }, [matches]);
+    return map
+  }, [matches])
 }
 
-function Ranking({ players, matches }:{ players: Player[]; matches: MatchRec[] }){
-  const lastPoints = useLastPointsByPlayer(matches);
-  const sorted = [...players].sort((a,b)=>b.elo - a.elo);
+function Ranking({ players, matches }: { players: Player[]; matches: MatchRec[] }) {
+  const lastPoints = useLastPointsByPlayer(matches)
+  const sorted = [...players].sort((a, b) => b.elo - a.elo)
 
   return (
     <div className="grid">
@@ -161,19 +178,19 @@ function Ranking({ players, matches }:{ players: Player[]; matches: MatchRec[] }
             <tr><th>#</th><th>Spiller</th><th>ELO</th></tr>
           </thead>
           <tbody>
-            {sorted.map((p,idx)=>{
-              const delta = lastPoints.get(p.id);
-              const hasDelta = typeof delta === 'number' && !Number.isNaN(delta);
-              const pos = (delta ?? 0) >= 0;
-              const color = hasDelta ? (pos ? '#166534' : '#991b1b') : 'var(--muted)';
-              const sign = hasDelta ? (delta! > 0 ? `+${delta}` : `${delta}`) : '';
+            {sorted.map((p, idx) => {
+              const delta = lastPoints.get(p.id)
+              const hasDelta = typeof delta === 'number' && !Number.isNaN(delta)
+              const pos = (delta ?? 0) >= 0
+              const color = hasDelta ? (pos ? '#166534' : '#991b1b') : 'var(--muted)'
+              const sign = hasDelta ? (delta! > 0 ? `+${delta}` : `${delta}`) : ''
               return (
                 <tr key={p.id}>
-                  <td>{idx+1}</td>
+                  <td>{idx + 1}</td>
                   <td>{p.name}</td>
                   <td>
                     {p.elo}
-                    <span style={{marginLeft:8, color, fontSize:12}}>
+                    <span style={{ marginLeft: 8, color, fontSize: 12 }}>
                       {hasDelta ? `(${sign})` : ''}
                     </span>
                   </td>
@@ -184,68 +201,72 @@ function Ranking({ players, matches }:{ players: Player[]; matches: MatchRec[] }
         </table>
       </Card>
     </div>
-  );
+  )
 }
 
 /* --------------- Fredagspadel --------------- */
-type Result = { a: number; b: number; saved?: boolean };
+type Result = { a: number; b: number; saved?: boolean }
 
 function FridayPadel({
   players, setPlayers, onSaveMatch
-}:{ players: Player[]; setPlayers: React.Dispatch<React.SetStateAction<Player[]>>; onSaveMatch:(m:MatchRec)=>void }){
-  const [signedUp, setSignedUp] = useState<string[]>([]);
-  const [schedule, setSchedule] = useState<Game[]>([]);
-  const [results, setResults] = useState<Record<string, Result>>({});
+}: {
+  players: Player[];
+  setPlayers: React.Dispatch<React.SetStateAction<Player[]>>;
+  onSaveMatch: (m: MatchRec) => void
+}) {
+  const [signedUp, setSignedUp] = useState<string[]>([])
+  const [schedule, setSchedule] = useState<Game[]>([])
+  const [results, setResults] = useState<Record<string, Result>>({})
 
-  function toggle(pid: string){
-    setSignedUp(prev => prev.includes(pid) ? prev.filter(x=>x!==pid) : [...prev, pid]);
+  function toggle(pid: string) {
+    setSignedUp(prev => prev.includes(pid) ? prev.filter(x => x !== pid) : [...prev, pid])
   }
-  function generate(){
-    const list = players.filter(p => signedUp.includes(p.id));
-    if (list.length < 4){
-      alert('Minimum 4 spillere kræves');
-      return;
+  function generate() {
+    const list = players.filter(p => signedUp.includes(p.id))
+    if (list.length < 4) {
+      alert('Minimum 4 spillere kræves')
+      return
     }
-    const games = buildFairSchedule(list);
-    setSchedule(games);
-    setResults({});
+    const games = buildFairSchedule(list)
+    setSchedule(games)
+    setResults({})
   }
 
-  function setScore(gid: string, side: 'a'|'b', val: number){
-    setResults(prev => ({...prev, [gid]: {...prev[gid], [side]: val} as Result}));
+  function setScore(gid: string, side: 'a' | 'b', val: number) {
+    setResults(prev => ({ ...prev, [gid]: { ...prev[gid], [side]: val } as Result }))
   }
 
-  function saveResult(g: Game){
-    const r = results[g.id];
-    if (!r || r.a == null || r.b == null) { alert('Vælg score for begge hold (0–7)'); return; }
-    if (r.a === r.b) { alert('Uafgjort er ikke tilladt – ét sæt skal have vinder'); return; }
+  function saveResult(g: Game) {
+    const r = results[g.id]
+    if (!r || r.a == null || r.b == null) { alert('Vælg score for begge hold (0–7)'); return }
+    if (r.a === r.b) { alert('Uafgjort er ikke tilladt – ét sæt skal have vinder'); return }
 
-    const [A1, A2] = g.teams[0];
-    const [B1, B2] = g.teams[1];
+    const [A1, A2] = g.teams[0]
+    const [B1, B2] = g.teams[1]
 
     const newMap = updateEloDoubles(
-      { id: A1.id, elo: players.find(p=>p.id===A1.id)!.elo },
-      { id: A2.id, elo: players.find(p=>p.id===A2.id)!.elo },
-      { id: B1.id, elo: players.find(p=>p.id===B1.id)!.elo },
-      { id: B2.id, elo: players.find(p=>p.id===B2.id)!.elo },
+      { id: A1.id, elo: players.find(p => p.id === A1.id)!.elo },
+      { id: A2.id, elo: players.find(p => p.id === A2.id)!.elo },
+      { id: B1.id, elo: players.find(p => p.id === B1.id)!.elo },
+      { id: B2.id, elo: players.find(p => p.id === B2.id)!.elo },
       r.a, r.b
-    );
+    )
 
     const oldRatings: Record<string, number> = {
-      [A1.id]: players.find(p=>p.id===A1.id)!.elo,
-      [A2.id]: players.find(p=>p.id===A2.id)!.elo,
-      [B1.id]: players.find(p=>p.id===B1.id)!.elo,
-      [B2.id]: players.find(p=>p.id===B2.id)!.elo,
-    };
+      [A1.id]: players.find(p => p.id === A1.id)!.elo,
+      [A2.id]: players.find(p => p.id === A2.id)!.elo,
+      [B1.id]: players.find(p => p.id === B1.id)!.elo,
+      [B2.id]: players.find(p => p.id === B2.id)!.elo,
+    }
     const points = [
       { id: A1.id, name: A1.name, value: newMap[A1.id] - oldRatings[A1.id] },
       { id: A2.id, name: A2.name, value: newMap[A2.id] - oldRatings[A2.id] },
       { id: B1.id, name: B1.name, value: newMap[B1.id] - oldRatings[B1.id] },
       { id: B2.id, name: B2.name, value: newMap[B2.id] - oldRatings[B2.id] },
-    ];
+    ]
 
-    setPlayers(prev => prev.map(p => newMap[p.id] != null ? {...p, elo: newMap[p.id]} : p));
-    setResults(prev => ({...prev, [g.id]: {...r, saved: true}}));
+    setPlayers(prev => prev.map(p => newMap[p.id] != null ? { ...p, elo: newMap[p.id] } : p))
+    setResults(prev => ({ ...prev, [g.id]: { ...r, saved: true } }))
 
     onSaveMatch({
       id: `${g.id}-${Date.now()}`,
@@ -254,62 +275,62 @@ function FridayPadel({
       bNames: [B1.name, B2.name],
       scoreA: r.a,
       scoreB: r.b,
-      points
-    });
+      points,
+    })
   }
 
-  const playerById = (id:string)=>players.find(p=>p.id===id)!;
+  const playerById = (id: string) => players.find(p => p.id === id)!
 
   return (
-    <div className="grid grid-2">
+    <div className="grid grid-2" style={{ gap: 16 }}>
       <Card title="Tilmeldte spillere" right={<span className="pill">{signedUp.length} valgt</span>}>
         <div className="chips">
-          {players.map(p=>{
-            const on = signedUp.includes(p.id);
+          {players.map(p => {
+            const on = signedUp.includes(p.id)
             return (
-              <button key={p.id} className={"chip "+(on?'active':'')} onClick={()=>toggle(p.id)}>
+              <button key={p.id} className={'chip ' + (on ? 'active' : '')} onClick={() => toggle(p.id)}>
                 {p.name} ({p.elo})
               </button>
             )
           })}
         </div>
-        <div style={{marginTop:12}} className="row">
+        <div style={{ marginTop: 12 }} className="row">
           <button className="btn primary" onClick={generate}>Generér kampprogram</button>
-          {schedule.length>0 && <button className="btn ghost" onClick={()=>{setSchedule([]);setResults({});}}>Nulstil</button>}
+          {schedule.length > 0 && <button className="btn ghost" onClick={() => { setSchedule([]); setResults({}); }}>Nulstil</button>}
         </div>
-        <div style={{marginTop:8, color:'var(--muted)'}}>Tip: vælg spillere ved at klikke på deres navne.</div>
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>Tip: vælg spillere ved at klikke på deres navne.</div>
       </Card>
 
       <Card title="Kampprogram">
-        {schedule.length===0 ? <div style={{color:'var(--muted)'}}>Ingen kampe genereret endnu.</div> : (
-          <div className="grid" style={{gap:12}}>
-            {schedule.map(g=>{
-              const sumA = g.teams[0].reduce((s,p)=>s+playerById(p.id).elo,0);
-              const sumB = g.teams[1].reduce((s,p)=>s+playerById(p.id).elo,0);
-              const r = results[g.id] ?? {a:0,b:0};
+        {schedule.length === 0 ? <div style={{ color: 'var(--muted)' }}>Ingen kampe genereret endnu.</div> : (
+          <div className="grid" style={{ gap: 12 }}>
+            {schedule.map(g => {
+              const sumA = g.teams[0].reduce((s, p) => s + playerById(p.id).elo, 0)
+              const sumB = g.teams[1].reduce((s, p) => s + playerById(p.id).elo, 0)
+              const r = results[g.id] ?? { a: 0, b: 0 }
 
               return (
                 <div key={g.id} className="card">
-                  <div className="row spread" style={{marginBottom:8}}>
+                  <div className="row spread" style={{ marginBottom: 8 }}>
                     <strong>{g.id}</strong>
                     <span className="pill">{sumA} – {sumB} ELO</span>
                   </div>
 
-                  <div className="row" style={{flexWrap:'wrap', gap:16}}>
-                    <div style={{minWidth:260}}>
-                      <div style={{fontWeight:600, marginBottom:6}}>Hold A</div>
-                      <div>{g.teams[0].map(p=>playerById(p.id).name).join(' & ')}</div>
-                      <ScorePicker value={r.a ?? 0} onChange={v=>setScore(g.id,'a',v)} />
+                  <div className="row" style={{ flexWrap: 'wrap', gap: 16 }}>
+                    <div style={{ minWidth: 260 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>Hold A</div>
+                      <div>{g.teams[0].map(p => playerById(p.id).name).join(' & ')}</div>
+                      <ScorePicker value={r.a ?? 0} onChange={v => setScore(g.id, 'a', v)} />
                     </div>
-                    <div style={{minWidth:260}}>
-                      <div style={{fontWeight:600, marginBottom:6}}>Hold B</div>
-                      <div>{g.teams[1].map(p=>playerById(p.id).name).join(' & ')}</div>
-                      <ScorePicker value={r.b ?? 0} onChange={v=>setScore(g.id,'b',v)} />
+                    <div style={{ minWidth: 260 }}>
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>Hold B</div>
+                      <div>{g.teams[1].map(p => playerById(p.id).name).join(' & ')}</div>
+                      <ScorePicker value={r.b ?? 0} onChange={v => setScore(g.id, 'b', v)} />
                     </div>
                   </div>
 
-                  <div className="row" style={{marginTop:10}}>
-                    <button className="btn primary" onClick={()=>saveResult(g)} disabled={r.saved}>
+                  <div className="row" style={{ marginTop: 10 }}>
+                    <button className="btn primary" onClick={() => saveResult(g)} disabled={r.saved}>
                       {r.saved ? 'Resultat gemt' : 'Gem resultat & opdatér ELO'}
                     </button>
                   </div>
