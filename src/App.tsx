@@ -6,10 +6,10 @@ import React, { useMemo, useState } from "react";
 type Player = { id: string; name: string; elo: number; initials: string };
 type Match = {
   id: string;
-  when: string; // ISO
-  court: string; // "Bane 1"
+  when: string;
+  court: string;
   isFriday: boolean;
-  a: string[]; // player ids
+  a: string[];
   b: string[];
   scoreA: number;
   scoreB: number;
@@ -17,7 +17,7 @@ type Match = {
 type Fine = { id: string; toPlayerId: string; amount: number; status: "unpaid"|"paid"; matchId?: string };
 
 /* =========================
-   Demo-data (så dashboardet ser levende ud)
+   Demo-data
    ======================= */
 const PLAYERS: Player[] = [
   { id: "p1", name: "Emma Christensen", elo: 1520, initials: "EC" },
@@ -36,20 +36,15 @@ const start = new Date(); start.setMonth(start.getMonth()-1); start.setHours(19,
 const plusDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate()+n); return x.toISOString(); };
 
 const MATCHES: Match[] = [
-  // Kommende
   { id:"u1", when: plusDays(start, 2), court:"Bane 3", isFriday:false, a:["p1","me"], b:["p3","p4"], scoreA:0, scoreB:0 },
   { id:"u2", when: plusDays(start, 5), court:"Bane 2", isFriday:false, a:["p1","p2"], b:["me","p3"], scoreA:0, scoreB:0 },
   { id:"u3", when: plusDays(start, 7), court:"Bane 1", isFriday:false, a:["p1","p2"], b:["p3","p4"], scoreA:0, scoreB:0 },
-  // Fredage (spillede)
   { id:"f1", when: plusDays(start,-2),  court:"Bane 1", isFriday:true,  a:["p1","p2"], b:["p3","p4"], scoreA:6, scoreB:3 },
   { id:"f2", when: plusDays(start,-9),  court:"Bane 2", isFriday:true,  a:["p1","p3"], b:["p2","p4"], scoreA:7, scoreB:6 },
   { id:"f3", when: plusDays(start,-16), court:"Bane 2", isFriday:true,  a:["p1","me"], b:["p3","p2"], scoreA:6, scoreB:2 },
-  // Øvrige
   { id:"m1", when: plusDays(start,-1),  court:"Bane 1", isFriday:false, a:["p1","p3"], b:["p2","me"], scoreA:6, scoreB:4 },
   { id:"m2", when: plusDays(start,-3),  court:"Bane 3", isFriday:false, a:["p1","p2"], b:["me","p5"], scoreA:2, scoreB:6 },
   { id:"m3", when: plusDays(start,-6),  court:"Bane 1", isFriday:false, a:["me","p1"], b:["p2","p3"], scoreA:6, scoreB:5 },
-  { id:"m4", when: plusDays(start,-10), court:"Bane 1", isFriday:false, a:["p1","p2"], b:["p3","me"], scoreA:3, scoreB:6 },
-  { id:"m5", when: plusDays(start,-12), court:"Bane 2", isFriday:false, a:["p1","p5"], b:["p2","me"], scoreA:6, scoreB:1 },
 ];
 
 const FINES: Fine[] = [
@@ -59,7 +54,7 @@ const FINES: Fine[] = [
 ];
 
 /* =========================
-   Udregninger til dashboardet
+   Udregninger
    ======================= */
 function useKpis(){
   return useMemo(()=>({ total:55, wins:48, percent:Math.round(48/55*100), thisMonthDelta:3 }),[]);
@@ -101,7 +96,7 @@ function useOutstandingFines(){
 }
 
 /* =========================
-   Reusable UI
+   UI Components
    ======================= */
 function Card({children, title, icon, tone}:{children:React.ReactNode; title?:React.ReactNode; icon?:React.ReactNode; tone?:'blue'|'green'|'purple'|'yellow'|'red'|'none'}){
   return (
@@ -121,7 +116,7 @@ function Card({children, title, icon, tone}:{children:React.ReactNode; title?:Re
 function Badge({children}:{children:React.ReactNode}){ return <span className="badge">{children}</span> }
 
 /* =========================
-   App shell
+   App
    ======================= */
 type Page = "Dashboard"|"Fredagspadel"|"Ranglisten"|"Bøder"|"Admin";
 
@@ -169,21 +164,35 @@ function Dashboard(){
     .sort((a,b)=>new Date(a.when).getTime()-new Date(b.when).getTime())
     .slice(0,3);
 
-  const recent = MATCHES.filter(m=>m.scoreA>0 || m.scoreB>0)
-    .sort(byNewest)
-    .slice(0,5);
-
   return (
     <>
-      {/* Velkomst */}
       <div className="welcome">
         <div className="welcome__title">Velkommen tilbage, Demo! 👋</div>
         <div className="welcome__text">
-          Du har spillet <b>{kpi.total}</b> kampe og vundet <b>{kpi.wins}</b> af dem. Fortsæt den gode udvikling!
+          Du har spillet <b>{kpi.total}</b> kampe og vundet <b>{kpi.wins}</b> af dem.
         </div>
       </div>
 
       <div className="grid grid--2">
+        {/* Bøder øverst */}
+        <Card title="Bøder" icon={<span>💸</span>}>
+          <div className="fines">
+            <div>
+              Manglende betaling:{" "}
+              <b>{outstanding.amount.toLocaleString("da-DK",{style:"currency",currency:"DKK"})}</b>{" "}
+              <span className="muted">({outstanding.count} ubetalt)</span>
+            </div>
+            <div className="fines__actions">
+              <a className="btn btn--ghost" href="#" onClick={(e)=>e.preventDefault()}>Se dine bøder</a>
+              <a className="btn btn--primary"
+                 href="https://qr.mobilepay.dk/box/ad9ee90d-789f-42e9-aad8-b3b3e6ba7a5a/pay-in"
+                 target="_blank">
+                Betal med MobilePay
+              </a>
+            </div>
+          </div>
+        </Card>
+
         <Card title="Kommende kampe" icon={<span>📅</span>} tone="blue">
           <ul className="events">
             {upcoming.map(m=>(
@@ -250,38 +259,6 @@ function Dashboard(){
             <div className="kpi__value">{kpi.total}</div>
             <div className="muted">+{kpi.thisMonthDelta} denne måned</div>
           </div>
-        </Card>
-
-        <Card title="Bøder" icon={<span>💸</span>}>
-          <div className="fines">
-            <div>
-              Manglende betaling:{" "}
-              <b>{outstanding.amount.toLocaleString("da-DK",{style:"currency",currency:"DKK"})}</b>{" "}
-              <span className="muted">({outstanding.count} ubetalt)</span>
-            </div>
-            <div className="fines__actions">
-              <a className="btn btn--ghost" href="#" onClick={(e)=>e.preventDefault()}>Se dine bøder</a>
-              <a className="btn btn--primary"
-                 href={`https://mobilepay.dk/erhverv/betalingslink?phone=12345678&amount=${outstanding.amount}&comment=B%C3%B8der`}
-                 target="_blank">
-                Betal med MobilePay
-              </a>
-            </div>
-          </div>
-        </Card>
-
-        <Card title="Seneste kampe" icon={<span>🕓</span>}>
-          <ul className="recent">
-            {recent.map(m=>(
-              <li key={m.id} className="recent__row">
-                <div>
-                  <div className="muted">{new Date(m.when).toISOString().slice(0,10)} · {m.court}</div>
-                  <div className="recent__who">{nameOf(m.a[0])} & {nameOf(m.a[1])} vs {nameOf(m.b[0])} & {nameOf(m.b[1])}</div>
-                </div>
-                <div className="recent__score"><b>{m.scoreA}-{m.scoreB}</b></div>
-              </li>
-            ))}
-          </ul>
         </Card>
       </div>
     </>
