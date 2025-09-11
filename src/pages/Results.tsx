@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import Results from "./pages/Results"
+import Results from "./Results"
 
 const LS_PLAYERS = "padel.players.v1";
 const LS_MATCHES = "padel.matches.v1";
