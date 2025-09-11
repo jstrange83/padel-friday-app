@@ -134,7 +134,8 @@ function SubCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function Results() {
+export default function ResultsPage() {
+  // Hent spillere + kampe fra localStorage
   const [players] = useState<Player[]>(() => {
     try {
       const raw = localStorage.getItem(LS_PLAYERS);
@@ -153,11 +154,11 @@ export default function Results() {
     }
   });
 
-  // Formular
+  // Formular-state
   const [a1, setA1] = useState<string>("");
   const [a2, setA2] = useState<string>("");
   const [b1, setB1] = useState<string>("");
-  const [b2, setB2] = useState<string>(""); // generisk string
+  const [b2, setB2] = useState<string>("");
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
   const [when, setWhen] = useState<string>(() => {
@@ -169,6 +170,7 @@ export default function Results() {
   const [isFriday, setIsFriday] = useState<boolean>(false);
   const [savedMsg, setSavedMsg] = useState<string>("");
 
+  // Forfyld spillere
   useEffect(() => {
     if (players.length >= 4) {
       setA1(players[0].id);
@@ -217,7 +219,7 @@ export default function Results() {
     setScoreB(0);
   }
 
-  // Lister
+  // Lister til visning
   const me = players.find((p) => p.id === CURRENT_PLAYER_ID);
   const myName = me?.name;
 
@@ -229,7 +231,8 @@ export default function Results() {
   }, [matches, myName]);
 
   return (
-    <div style={{ padding: 16, display: "grid", gap: 16 }}>
+    <div style={{ display: "grid", gap: 16 }}>
+      {/* Formular */}
       <SectionCard title="Indtast resultat" icon="📝" tag="v2">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 8 }}>
           <div>
@@ -324,10 +327,12 @@ export default function Results() {
         )}
       </SectionCard>
 
+      {/* Mine resultater */}
       <SectionCard title="Mine resultater" icon="🙋">
         {groupedMine.length === 0 ? <EmptyState text="Ingen kampe endnu for din profil." /> : <DateGroups groups={groupedMine} myName={myName} />}
       </SectionCard>
 
+      {/* Alle resultater */}
       <SectionCard title="Alle resultater" icon="📅">
         {groupedAll.length === 0 ? <EmptyState text="Der er endnu ikke registreret kampe." /> : <DateGroups groups={groupedAll} />}
       </SectionCard>
@@ -404,9 +409,7 @@ function MatchRow({ m, myName }: { m: MatchRec; myName?: string }) {
       <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#6B7280", fontSize: 12, marginBottom: 6 }}>
         <span>{time}</span>
         <span>·</span>
-        <span>{m.isFriday ? "Fredagspadel" : "Træningskamp"}
-          {court}
-        </span>
+        <span>{m.isFriday ? "Fredagspadel" : "Træningskamp"}{court}</span>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: 10 }}>
