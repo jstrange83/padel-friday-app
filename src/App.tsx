@@ -1,64 +1,67 @@
-import React, { useEffect, useState } from "react";
-import ResultsPage from "./pages/Results";
+// src/App.tsx
+import React, { useState } from "react";
+import Dashboard from "./pages/Dashboard";
+import Results from "./pages/Results";
 
 type Page = "Dashboard" | "Resultater" | "Ranglisten" | "Bøder" | "Admin";
 
 export default function App() {
-  const [page, setPage] = useState<Page>("Resultater");
+  const [page, setPage] = useState<Page>(
+    () => (localStorage.getItem("padel.page") as Page) || "Dashboard"
+  );
+
+  function goto(p: Page) {
+    setPage(p);
+    try {
+      localStorage.setItem("padel.page", p);
+    } catch {}
+  }
 
   return (
-    <div style={{ minHeight: "100vh", background: "#F3F4F6", color: "#111827" }}>
-      <div style={{ display: "flex" }}>
-        <aside
-          style={{
-            width: 220,
-            background: "#FFFFFF",
-            borderRight: "1px solid #E5E7EB",
-            padding: 16,
-            minHeight: "100vh",
-          }}
-        >
-          <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 16 }}>PadelApp</div>
-          {(["Dashboard", "Resultater", "Ranglisten", "Bøder", "Admin"] as Page[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: "10px 12px",
-                borderRadius: 10,
-                marginBottom: 6,
-                border: "1px solid #E5E7EB",
-                background: page === p ? "#EEF2FF" : "#fff",
-                color: page === p ? "#3730A3" : "#111827",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {p}
-            </button>
-          ))}
-        </aside>
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          {/* Sidebar */}
+          <aside className="w-56 shrink-0">
+            <div className="text-xl font-semibold mb-4">PadelApp</div>
+            <nav className="flex flex-col gap-2">
+              {(["Dashboard", "Resultater", "Ranglisten", "Bøder", "Admin"] as Page[]).map(
+                (p) => (
+                  <button
+                    key={p}
+                    onClick={() => goto(p)}
+                    className={`text-left rounded-xl px-3 py-2 border transition ${
+                      page === p
+                        ? "border-gray-900/20 bg-white shadow-sm"
+                        : "border-gray-200 bg-white hover:bg-gray-100"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+            </nav>
+          </aside>
 
-        <main style={{ flex: 1, padding: 24 }}>
-          {page === "Resultater" && <ResultsPage />}
-          {page !== "Resultater" && (
-            <div
-              style={{
-                padding: 24,
-                background: "#fff",
-                border: "1px solid #E5E7EB",
-                borderRadius: 16,
-                boxShadow: "0 2px 10px rgba(16,24,40,.06)",
-              }}
-            >
-              <div style={{ fontSize: 18, fontWeight: 700 }}>{page}</div>
-              <div style={{ marginTop: 8, color: "#6B7280" }}>Denne side er ikke implementeret endnu.</div>
-            </div>
-          )}
-        </main>
+          {/* Main content */}
+          <main className="flex-1">
+            {page === "Dashboard" && <Dashboard />}
+            {page === "Resultater" && <Results />}
+            {page === "Ranglisten" && <Stub title="Ranglisten" />}
+            {page === "Bøder" && <Stub title="Bøder" />}
+            {page === "Admin" && <Stub title="Admin" />}
+          </main>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function Stub({ title }: { title: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
+      <h2 className="text-xl font-semibold mb-2">{title}</h2>
+      <p className="text-gray-600">Denne side er ikke implementeret endnu.</p>
     </div>
   );
 }
