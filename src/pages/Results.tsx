@@ -136,7 +136,7 @@ export default function ResultsPage() {
   const [a1, setA1] = useState<string>("");
   const [a2, setA2] = useState<string>("");
   const [b1, setB1] = useState<string>("");
-  const [b2, setB2] = useState<string>("");   // <-- fix: useState<string>()
+  const [b2, setB2] = useState<string>("");   // korrekt generisk syntaks
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
   const [when, setWhen] = useState<string>(() => {
@@ -146,6 +146,7 @@ export default function ResultsPage() {
   });
   const [court, setCourt] = useState<string>("Bane 1");
   const [isFriday, setIsFriday] = useState<boolean>(false);
+  const [savedMsg, setSavedMsg] = useState<string>("");
 
   useEffect(() => {
     if (players.length >= 4) {
@@ -189,6 +190,8 @@ export default function ResultsPage() {
       return nxt;
     });
 
+    setSavedMsg("Resultat gemt ✅ — se det herunder, på Dashboard og Ranglisten.");
+    setTimeout(() => setSavedMsg(""), 4000);
     setScoreA(0);
     setScoreB(0);
   }
@@ -275,6 +278,12 @@ export default function ResultsPage() {
             </button>
           </div>
         </div>
+
+        {savedMsg && (
+          <div style={{ marginTop: 12, border: "1px dashed #BFDBFE", background: "#EFF6FF", color: "#1D4ED8", padding: 10, borderRadius: 10 }}>
+            {savedMsg}
+          </div>
+        )}
       </SectionCard>
 
       {/* Mine resultater */}
