@@ -149,10 +149,16 @@ function DayCard({
                 <div
                   className={classNames(
                     "text-sm font-semibold",
-                    d.value > 0 ? "text-green-600" : d.value < 0 ? "text-rose-600" : "text-gray-500"
+                    d.value > 0
+                      ? "text-green-600"
+                      : d.value < 0
+                      ? "text-rose-600"
+                      : "text-gray-500"
                   )}
                 >
-                  {d.value > 0 ? `(+${Math.round(d.value)})` : `(${Math.round(d.value)})`}
+                  {d.value > 0
+                    ? `(+${Math.round(d.value)})`
+                    : `(${Math.round(d.value)})`}
                 </div>
               </div>
             ))}
@@ -190,56 +196,76 @@ export default function Results() {
     () => load<MatchRec[]>(LS_MATCHES, [])
   );
 
-  // --------- Formular state (et sæt pr. gem) ----------
+  // --------- Formular state ----------
   const [a1, setA1] = useState(players[0]?.id ?? "");
   const [a2, setA2] = useState(players[1]?.id ?? "");
   const [b1, setB1] = useState(players[2]?.id ?? "");
   const [b2, setB2] = useState(players[3]?.id ?? "");
-  const [scoreA, setScoreA] = useState(6);
-  const [scoreB, setScoreB] = useState(3);
   const [when, setWhen] = useState(() =>
     new Date().toISOString().slice(0, 16)
   ); // input[type=datetime-local]
   const [court, setCourt] = useState("Bane 1");
   const [isFriday, setIsFriday] = useState(false);
+
+  // Flere sæt (mindst 1)
+  type SetRow = { id: string; scoreA: number; scoreB: number };
+  const [sets, setSets] = useState<SetRow[]>([
+    { id: "s_1", scoreA: 6, scoreB: 3 },
+  ]);
+
   const [saved, setSaved] = useState<string | null>(null);
 
   function idToName(id: string) {
     return players.find((p) => p.id === id)?.name ?? id;
   }
 
+  function addSet() {
+    const id = `s_${cryptoRandom()}`;
+    setSets((prev) => [...prev, { id, scoreA: 6, scoreB: 3 }]);
+  }
+  function removeSet(id: string) {
+    setSets((prev) => (prev.length <= 1 ? prev : prev.filter((s) => s.id !== id)));
+  }
+  function updateSet(id: string, field: "scoreA" | "scoreB", value: number) {
+    setSets((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+    );
+  }
+
   function onSave() {
     const aNames = [idToName(a1), idToName(a2)];
     const bNames = [idToName(b1), idToName(b2)];
 
-    // (Dummy) fordeling af ELO-deltaer – indtil vi kobler rigtig ELO på
-    const delta = Math.max(-20, Math.min(20, (scoreA - scoreB) * 2)); // bare en visuel indikator
-    const points = [
-      { name: aNames[0], value: delta / 2 },
-      { name: aNames[1], value: delta / 2 },
-      { name: bNames[0], value: -delta / 2 },
-      { name: bNames[1], value: -delta / 2 },
-    ];
+    // Opret ét MatchRec per sæt (med lille tidsforskydning, så sortering er stabil)
+    const baseTime = new Date(when);
+    const newRecs: MatchRec[] = sets.map((s, idx) => {
+      const dt = new Date(baseTime.getTime() + idx * 60000); // +1 minut pr. sæt
+      const delta = Math.max(-20, Math.min(20, (s.scoreA - s.scoreB) * 2)); // visuel indikator
 
-    const rec: MatchRec = {
-      id: `m_${Date.now()}`,
-      when: new Date(when).toISOString(),
-      court,
-      isFriday,
-      aNames,
-      bNames,
-      scoreA,
-      scoreB,
-      points,
-    };
+      return {
+        id: `m_${Date.now()}_${idx}`,
+        when: dt.toISOString(),
+        court,
+        isFriday,
+        aNames,
+        bNames,
+        scoreA: s.scoreA,
+        scoreB: s.scoreB,
+        points: [
+          { name: aNames[0], value: delta / 2 },
+          { name: aNames[1], value: delta / 2 },
+          { name: bNames[0], value: -delta / 2 },
+          { name: bNames[1], value: -delta / 2 },
+        ],
+      };
+    });
 
-    const next = [rec, ...matches].slice(0, 200); // hold lidt historik
+    const next = [...newRecs, ...matches].slice(0, 300);
     setMatches(next);
     save(LS_MATCHES, next);
-    setSaved("Resultat gemt ✅ — se det på Dashboard og Ranglisten.");
-
-    // (valgfrit) nulstil kun scores
-    // setScoreA(0); setScoreB(0);
+    setSaved(
+      `${newRecs.length} sæt gemt ✅ — se dem på Dashboard og Ranglisten.`
+    );
   }
 
   // --------- “Mine resultater” / “Alle resultater” ----------
@@ -298,9 +324,6 @@ export default function Results() {
                 ))}
               </select>
             </div>
-
-            <div className="mt-3 text-[13px] text-gray-600">Score til Hold A</div>
-            <ScorePicker value={scoreA} onChange={setScoreA} ariaLabel="Score A" />
           </div>
 
           <div>
@@ -329,14 +352,68 @@ export default function Results() {
                 ))}
               </select>
             </div>
+          </div>
+        </div>
 
-            <div className="mt-3 text-[13px] text-gray-600">Score til Hold B</div>
-            <ScorePicker value={scoreB} onChange={setScoreB} ariaLabel="Score B" />
+        {/* Sæt-liste */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-medium text-gray-700">Sæt</div>
+            <button
+              type="button"
+              onClick={addSet}
+              className="rounded-lg border border-blue-600 text-blue-600 px-3 py-1 text-sm hover:bg-blue-50"
+            >
+              + Tilføj sæt
+            </button>
+          </div>
+
+          <div className="mt-2 space-y-2">
+            {sets.map((s, ix) => (
+              <div
+                key={s.id}
+                className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2"
+              >
+                <div className="text-[13px] text-gray-600">Sæt {ix + 1}</div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-gray-600">A</span>
+                    <ScorePicker
+                      value={s.scoreA}
+                      onChange={(v) => updateSet(s.id, "scoreA", v)}
+                      ariaLabel={`Sæt ${ix + 1} score A`}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] text-gray-600">B</span>
+                    <ScorePicker
+                      value={s.scoreB}
+                      onChange={(v) => updateSet(s.id, "scoreB", v)}
+                      ariaLabel={`Sæt ${ix + 1} score B`}
+                    />
+                  </div>
+                  {sets.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSet(s.id)}
+                      className="ml-2 text-[13px] text-rose-600 hover:underline"
+                      title="Fjern sæt"
+                    >
+                      Fjern
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-2 text-[12.5px] text-gray-500">
+            {sets.length} sæt klar til gem.
           </div>
         </div>
 
         {/* Tid, bane, fredag */}
-        <div className="mt-3 grid md:grid-cols-3 gap-2">
+        <div className="mt-4 grid md:grid-cols-3 gap-2">
           <div>
             <div className="text-[13px] text-gray-600 mb-1">Hvornår</div>
             <input
@@ -443,4 +520,17 @@ function groupByDate(ms: MatchRec[]): [string, MatchRec[]][] {
     arr.sort((a, b) => (a.when < b.when ? 1 : -1));
   }
   return out;
+}
+
+/** lille random helper, så SetRow-id'er er unikke */
+function cryptoRandom() {
+  try {
+    // @ts-ignore
+    const buf = new Uint32Array(1);
+    // @ts-ignore
+    (globalThis.crypto || ({} as any)).getRandomValues?.(buf);
+    return (buf[0] >>> 0).toString(36);
+  } catch {
+    return Math.random().toString(36).slice(2);
+  }
 }
