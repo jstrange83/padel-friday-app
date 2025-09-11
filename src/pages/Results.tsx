@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import Results from "./pages/Results"
-import Results from "./Results"
 
 const LS_PLAYERS = "padel.players.v1";
 const LS_MATCHES = "padel.matches.v1";
@@ -28,7 +26,7 @@ function SectionCard({
 }: {
   title: string;
   icon?: React.ReactNode;
-  tag?: React.ReactNode; // fx "v2"
+  tag?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -136,7 +134,7 @@ function SubCard({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ResultsPage() {
+export default function Results() {
   const [players] = useState<Player[]>(() => {
     try {
       const raw = localStorage.getItem(LS_PLAYERS);
@@ -159,7 +157,7 @@ export default function ResultsPage() {
   const [a1, setA1] = useState<string>("");
   const [a2, setA2] = useState<string>("");
   const [b1, setB1] = useState<string>("");
-  const [b2, setB2] = useState<string>(""); // <— generisk string
+  const [b2, setB2] = useState<string>(""); // generisk string
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
   const [when, setWhen] = useState<string>(() => {
