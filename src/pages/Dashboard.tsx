@@ -1,23 +1,21 @@
 // src/pages/Dashboard.tsx
-import React, {useMemo} from "react";
+import React, { useMemo } from "react";
+import "./dashboard.css"; // <- NY: giver det rigtige design
 
-/** Datatyper som vi allerede bruger andre steder */
 type MatchRec = {
   id: string;
-  when: string;          // ISO string
+  when: string;
   aNames: string[];
   bNames: string[];
   scoreA: number;
   scoreB: number;
   points?: { id: string; name: string; value: number }[];
 };
-
 type Player = { id: string; name: string; elo: number };
 
 const LS_PLAYERS = "padel.players.v1";
 const LS_MATCHES = "padel.matches.v1";
 
-// Utils
 function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -34,12 +32,15 @@ function formatDateShort(iso: string) {
     return iso;
   }
 }
+function initials(name: string) {
+  const parts = name.split(" ").filter(Boolean);
+  return ((parts[0]?.[0] || "") + (parts[parts.length - 1]?.[0] || "")).toUpperCase();
+}
 
 export default function Dashboard() {
   const players = load<Player[]>(LS_PLAYERS, []);
   const matches = load<MatchRec[]>(LS_MATCHES, []);
 
-  // Aggreger data til kortene
   const {
     welcomeName,
     totalGames,
@@ -51,21 +52,17 @@ export default function Dashboard() {
     fridaysTop3,
     playerOfMonth,
   } = useMemo(() => {
-    const name = "Demo"; // (senere fra login/profil)
+    const name = "Demo";
     const total = matches.length;
-    const wins = matches.filter((m) => m.scoreA !== m.scoreB && m.scoreA > m.scoreB).length; // place­holder
+    const wins = matches.filter((m) => m.scoreA !== m.scoreB && m.scoreA > m.scoreB).length;
     const pct = total ? Math.round((wins / total) * 100) : 0;
 
     const now = new Date();
     const ym = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`;
     const inMonth = matches.filter((m) => (m.when || "").startsWith(ym)).length;
 
-    // Kommende kampe (vi bruger future dates, hvis du senere laver booking-kalender)
-    const up = matches
-      .filter((m) => new Date(m.when) > new Date())
-      .slice(0, 3);
+    const up = matches.filter((m) => new Date(m.when) > new Date()).slice(0, 3);
 
-    // Mest aktive – tæl pr. spiller i hele datasættet
     const counts = new Map<string, number>();
     for (const m of matches) {
       for (const n of [...m.aNames, ...m.bNames]) {
@@ -77,7 +74,6 @@ export default function Dashboard() {
       .slice(0, 3)
       .map(([name, c]) => ({ name, c }));
 
-    // Fredags-streak (place­holder: sortér på hvem der har spillet flest kampe med weekday=5)
     const fridayCounts = new Map<string, number>();
     for (const m of matches) {
       const d = new Date(m.when);
@@ -92,7 +88,6 @@ export default function Dashboard() {
       .slice(0, 3)
       .map(([name, c]) => ({ name, c }));
 
-    // Månedens spiller – tag den med flest sejre i denne måned (simpel placeholder)
     const winsByName = new Map<string, number>();
     const monthMatches = matches.filter((m) => (m.when || "").startsWith(ym));
     for (const m of monthMatches) {
@@ -101,7 +96,7 @@ export default function Dashboard() {
     }
     const best = [...winsByName.entries()].sort((a, b) => b[1] - a[1])[0];
     const playerOfMonth =
-      best ? { name: best[0], wins: best[1] } : { name: "Emma Christensen", wins: 2 }; // demo default
+      best ? { name: best[0], wins: best[1] } : { name: "Emma Christensen", wins: 2 };
 
     return {
       welcomeName: name,
@@ -118,7 +113,6 @@ export default function Dashboard() {
 
   return (
     <div className="page">
-      {/* Blå velkomst-card */}
       <div className="card hero gradient">
         <div className="hero-title">Velkommen tilbage, {welcomeName}! 👋</div>
         <div className="hero-sub">
@@ -126,7 +120,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Øverste række: kommende kampe + månedens spiller */}
       <div className="grid grid-2">
         <div className="card">
           <div className="card-title">
@@ -162,7 +155,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Midterste række: mest aktive + fredag-streak */}
       <div className="grid grid-2">
         <div className="card">
           <div className="card-title">
@@ -203,7 +195,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Nederste række: vinderprocent + kampe spillet + bøder (med blå knap) */}
       <div className="grid grid-3">
         <div className="card kpi">
           <div className="card-title">🏆 Vinderprocent</div>
@@ -234,10 +225,4 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
-
-// små UI helpers (genbruger eksisterende classes fra appens css)
-function initials(name: string) {
-  const parts = name.split(" ").filter(Boolean);
-  return ((parts[0]?.[0] || "") + (parts[parts.length - 1]?.[0] || "")).toUpperCase();
 }
