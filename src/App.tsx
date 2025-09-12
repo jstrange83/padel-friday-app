@@ -2,6 +2,12 @@
 import React, { useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
+import Admin from "./pages/Admin"; // <-- make sure this line exists
+
+// ...inside your component's render:
+{page === "Admin" && <Admin />}
+
+
 
 type Page = "Dashboard" | "Resultater" | "Ranglisten" | "Bøder" | "Admin";
 
