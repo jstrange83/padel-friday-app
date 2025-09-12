@@ -1,576 +1,490 @@
-// src/pages/Results.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 
-/** ========== Types & LS helpers ========== */
-type Player = { id: string; name: string; elo: number };
-
-type SetDraft = {
+// ====== Types (holdt kompatible med app'en) ======
+export type Player = {
   id: string;
-  whenISO: string;   // ISO datetime for sættet
-  a1?: string;       // playerId
-  a2?: string;       // playerId
-  b1?: string;       // playerId
-  b2?: string;       // playerId
-  scoreA: number;    // 0..7
-  scoreB: number;    // 0..7
-  court?: string;
-  isFriday?: boolean;
+  name: string;
+  elo: number;
 };
 
-type MatchRec = {
+export type MatchRec = {
   id: string;
-  when: string;               // ISO datetime
-  aNames: string[];           // hold A navne
-  bNames: string[];           // hold B navne
+  when: string;           // ISO string
+  aNames: string[];
+  bNames: string[];
   scoreA: number;
   scoreB: number;
-  court?: string;
+  // pr. spiller ELO-delta for denne kamp (positiv/negativ)
+  points?: { id: string; name: string; value: number }[];
+  // valgfrit snapshot, hvis vi begynder at gemme det fremover
+  eloBefore?: { [playerId: string]: number };
+  eloAfter?:  { [playerId: string]: number };
   isFriday?: boolean;
 };
 
-const LS_PLAYERS = "padel.players.v1";
-const LS_MATCHES = "padel.matches.v1";
+const LS_PLAYERS = 'padel.players.v1';
+const LS_MATCHES = 'padel.matches.v1';
+const LS_REPORTS = 'padel.reports.v1';
 
-function load<T>(key: string, fallback: T): T {
+// ====== Små helpers ======
+function load<T>(k: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(k);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
   }
 }
-function save<T>(key: string, value: T) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
+function save<T>(k: string, v: T) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
 }
 
-function dateInputValueFromISO(iso: string) {
-  const d = new Date(iso);
-  const pad = (x: number) => x.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
+function fmtDate(dIso: string) {
+  const d = new Date(dIso);
+  return d.toLocaleDateString('da-DK', { day:'2-digit', month:'2-digit', year:'numeric' });
 }
-function isoFromDateInputValue(v: string) {
-  const d = new Date(v);
-  return d.toISOString();
+function sameDay(a: string, b: string) {
+  const da = new Date(a), db = new Date(b);
+  return da.getFullYear()===db.getFullYear() &&
+         da.getMonth()===db.getMonth() &&
+         da.getDate()===db.getDate();
 }
-function fmtDateKey(iso: string) {
-  return new Date(iso).toISOString().slice(0, 10); // yyyy-mm-dd
+function uniq<T>(arr: T[]) { return Array.from(new Set(arr)); }
+
+// ====== “Rapportér fejl” gemmes i localStorage ======
+type Report = {
+  id: string;          // report id
+  matchId: string;
+  message: string;
+  createdAt: string;   // ISO
+  reporterName?: string;
+};
+
+function useReports() {
+  const [reports, setReports] = useState<Report[]>(() => load(LS_REPORTS, [] as Report[]));
+  const add = (r: Report) => {
+    const next = [r, ...reports];
+    setReports(next);
+    save(LS_REPORTS, next);
+  };
+  return { reports, add };
 }
 
-/** ========== Små UI helpers ========== */
-function SectionCard(props: React.PropsWithChildren<{ title?: string; icon?: React.ReactNode }>) {
+// ====== Result cards ======
+function ResultCards({
+  players,
+  matches,
+  currentUserName,
+}:{
+  players: Player[];
+  matches: MatchRec[];
+  currentUserName?: string;
+}) {
+
+  // Sortér nyeste først
+  const sorted = useMemo(() =>
+    [...matches].sort((a,b)=> new Date(b.when).getTime() - new Date(a.when).getTime())
+  , [matches]);
+
+  // Gruppér på dato
+  const groups = useMemo(()=>{
+    const out: { dateIso: string; list: MatchRec[] }[] = [];
+    for (const m of sorted) {
+      const g = out.find(x => sameDay(x.dateIso, m.when));
+      if (g) g.list.push(m);
+      else out.push({ dateIso: m.when, list:[m] });
+    }
+    return out;
+  }, [sorted]);
+
+  // Find spiller-objekt
+  const pMap = useMemo(()=> new Map(players.map(p=>[p.id, p])), [players]);
+
+  // Hjælp til at udlede eloBefore/after når det ikke findes
+  function calcEloBeforeAfter(m: MatchRec) {
+    // hvis vi allerede har snapshots, brug dem
+    if (m.eloBefore || m.eloAfter) return { before: m.eloBefore ?? {}, after: m.eloAfter ?? {} };
+
+    const before: Record<string, number> = {};
+    const after:  Record<string, number> = {};
+    if (!m.points || m.points.length === 0) return { before, after };
+
+    for (const pt of m.points) {
+      const curr = pMap.get(pt.id)?.elo;
+      if (typeof curr === 'number') {
+        const b = curr - pt.value; // naive-estimat
+        before[pt.id] = b;
+        after[pt.id]  = curr;
+      }
+    }
+    return { before, after };
+  }
+
+  // UI
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 14,
-        boxShadow: "0 6px 20px rgba(15, 23, 42, 0.06)",
-        border: "1px solid rgba(2, 6, 23, 0.06)",
-        padding: 18,
-      }}
-    >
-      {props.title && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-          {props.icon}
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{props.title}</h3>
-        </div>
-      )}
-      {props.children}
+    <div className="result-cards">
+      {groups.map(group => {
+        // saml alle involverede spillere (til header med ELO før)
+        const involvedIds = uniq(group.list.flatMap(m => m.points?.map(p=>p.id) ?? []));
+        const { before, after } = (() => {
+          // for headeren giver det mening at vise “før” pr. spiller ud fra første match i gruppen
+          const first = group.list[group.list.length-1]; // ældste i gruppen
+          return calcEloBeforeAfter(first);
+        })();
+
+        return (
+          <div key={group.dateIso} className="res-card">
+            <div className="res-card__hdr">
+              <div className="res-card__date">
+                <span className="ico">📅</span> {fmtDate(group.dateIso)}
+              </div>
+              {involvedIds.length>0 && (
+                <div className="res-card__players">
+                  {involvedIds.map(pid=>{
+                    const p = pMap.get(pid);
+                    if (!p) return null;
+                    const eloFør = before[pid];
+                    return (
+                      <div key={pid} className="res-card__playerRow">
+                        <span className="ico">🔎</span>
+                        <strong>{p.name}</strong>
+                        <span className="muted">ELO før: {typeof eloFør==='number' ? eloFør.toFixed(1) : '—'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Sætlinjer */}
+            <div className="res-card__sets">
+              {group.list.map(m=>(
+                <div key={m.id} className="res-card__setRow">
+                  <div className="line">
+                    <span className="teams">
+                      {m.aNames.join(' & ')} <span className="muted">vs.</span> {m.bNames.join(' & ')}
+                    </span>
+                    <span className="score">
+                      {m.scoreA} - {m.scoreB}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ELO efter + delta */}
+            <div className="res-card__after">
+              {involvedIds.map(pid=>{
+                const p = pMap.get(pid);
+                if (!p) return null;
+
+                // beregn samlet delta for gruppens matcher til visning
+                let delta = 0;
+                for (const m of group.list) {
+                  const hit = m.points?.find(x=>x.id===pid);
+                  if (hit) delta += hit.value;
+                }
+                const bef = (before[pid] ?? (p.elo - delta));
+                const aft = bef + delta;
+
+                return (
+                  <div key={pid} className="afterRow">
+                    <span className="ico">{delta >= 0 ? '🏆' : '🧯'}</span>
+                    <strong>{p.name}</strong>
+                    <span className="muted">Elo: {aft.toFixed(1)}</span>
+                    <span className={`delta ${delta>=0?'pos':'neg'}`}>
+                      ({delta>=0?'+':''}{delta.toFixed(1)})
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Indberet fejl */}
+            <ReportBox matchIds={group.list.map(m=>m.id)} currentUserName={currentUserName}/>
+          </div>
+        );
+      })}
     </div>
   );
 }
-function FieldLabel({ children }: { children: React.ReactNode }) {
+
+// ====== Report component ======
+function ReportBox({ matchIds, currentUserName }:{ matchIds:string[]; currentUserName?:string }) {
+  const { add } = useReports();
+  const [open, setOpen] = useState(false);
+  const [txt, setTxt] = useState('');
+
+  function send() {
+    if (!txt.trim()) return;
+    add({
+      id: 'r_' + Date.now(),
+      matchId: matchIds.join(','),
+      message: txt.trim(),
+      createdAt: new Date().toISOString(),
+      reporterName: currentUserName || 'Ukendt',
+    });
+    setTxt('');
+    setOpen(false);
+    alert('Tak! Din besked er gemt til admin.');
+  }
+
   return (
-    <label
-      style={{
-        fontSize: 12,
-        fontWeight: 600,
-        color: "#334155",
-        display: "block",
-        marginBottom: 6,
-      }}
-    >
-      {children}
-    </label>
+    <div className="reportBox">
+      <label className="chk">
+        <input type="checkbox" checked={open} onChange={e=>setOpen(e.target.checked)} />
+        Indberet fejl i kampen
+      </label>
+      {open && (
+        <>
+          <textarea
+            placeholder="Skriv hvad der er forkert…"
+            value={txt}
+            onChange={e=>setTxt(e.target.value)}
+          />
+          <button className="btn danger" onClick={send}>
+            📩 Send besked
+          </button>
+        </>
+      )}
+    </div>
   );
-}
-function Select({
-  value,
-  onChange,
-  children,
-  placeholder,
-}: {
-  value?: string;
-  onChange: (v?: string) => void;
-  children: React.ReactNode;
-  placeholder?: string;
-}) {
-  return (
-    <select
-      value={value ?? ""}
-      onChange={(e) => onChange(e.target.value || undefined)}
-      style={{
-        width: "100%",
-        padding: "10px 12px",
-        borderRadius: 10,
-        border: "1px solid #E5E7EB",
-        background: "#fff",
-        fontSize: 14,
-      }}
-    >
-      <option value="">{placeholder ?? "Vælg spiller…"}</option>
-      {children}
-    </select>
-  );
-}
-function pill(active: boolean) {
-  return {
-    width: 38,
-    height: 38,
-    borderRadius: "999px",
-    border: active ? "2px solid #2563EB" : "1px solid #E5E7EB",
-    background: active ? "#2563EB" : "#fff",
-    color: active ? "#fff" : "#111827",
-    fontWeight: 600,
-    transition: "all .15s ease",
-  } as React.CSSProperties;
-}
-function btn(kind: "primary" | "secondary" | "danger" | "ghost") {
-  const base: React.CSSProperties = {
-    height: 44,
-    padding: "0 16px",
-    borderRadius: 12,
-    fontWeight: 700,
-    border: "1px solid transparent",
-  };
-  if (kind === "primary")
-    return { ...base, background: "#2563EB", color: "#fff", boxShadow: "0 8px 22px rgba(37,99,235,.25)" };
-  if (kind === "secondary")
-    return { ...base, background: "#F1F5FF", color: "#2563EB", border: "1px solid rgba(37,99,235,.25)" };
-  if (kind === "danger")
-    return { ...base, background: "#fff", color: "#EF4444", border: "1px solid #EF4444" };
-  return { ...base, background: "transparent", border: "1px solid #E5E7EB" };
 }
 
-/** Scorevælger 0–7 (runde knapper) */
-function ScorePicker({
-  value,
-  onChange,
-  ariaLabel,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-  ariaLabel: string;
-}) {
+// ====== Indtast resultater (kort “light” version – sætvis) ======
+type DraftSet = {
+  id: string;
+  when: string; // ISO
+  A1?: string; A2?: string;
+  B1?: string; B2?: string;
+  sA: number; sB: number;
+};
+
+function ScorePicker({ value, onChange }:{ value:number; onChange:(v:number)=>void }) {
+  const opts = [0,1,2,3,4,5,6,7];
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} aria-label={ariaLabel}>
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => (
-        <button key={n} type="button" onClick={() => onChange(n)} style={pill(n === value)}>
-          {n}
-        </button>
+    <div className="scorePicker">
+      {opts.map(n=>(
+        <button
+          key={n}
+          type="button"
+          className={`chip ${value===n?'active':''}`}
+          onClick={()=>onChange(n)}
+        >{n}</button>
       ))}
     </div>
   );
 }
 
-/** ========== Oversigt (kort i kort) ========== */
-function DayCard({ date, items }: { date: string; items: MatchRec[] }) {
-  return (
-    <div
-      style={{
-        border: "1px solid #E5E7EB",
-        borderRadius: 14,
-        background: "#fff",
-        padding: 14,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span>📅</span>
-        <div style={{ fontWeight: 700 }}>{date}</div>
-      </div>
-      <div style={{ display: "grid", gap: 10 }}>
-        {items.map((m) => {
-          const aWon = m.scoreA > m.scoreB;
-          const bWon = m.scoreB > m.scoreA;
-          const diff = Math.abs(m.scoreA - m.scoreB);
-          // lille visuel pointindikator (dummy)
-          const delta = Math.max(-20, Math.min(20, diff * 2));
-          const aDelta = aWon ? `+${delta}` : bWon ? `-${delta}` : "0";
-          const bDelta = bWon ? `+${delta}` : aWon ? `-${delta}` : "0";
+function EnterSets({
+  players,
+  onSaved
+}:{ players: Player[]; onSaved: ()=>void }) {
 
-          return (
-            <div
-              key={m.id}
-              style={{
-                border: "1px solid #F1F5F9",
-                borderRadius: 12,
-                padding: "10px 12px",
-                background: "#FAFAFA",
-              }}
-            >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  gap: 8,
-                  alignItems: "center",
-                }}
-              >
-                <div style={{ fontSize: 14, color: "#0F172A" }}>
-                  <span style={{ fontWeight: 700 }}>{m.aNames.join(" & ")}</span>{" "}
-                  <span style={{ color: "#64748B" }}>vs</span>{" "}
-                  <span style={{ fontWeight: 700 }}>{m.bNames.join(" & ")}</span>
-                  {m.court ? <span style={{ color: "#94A3B8" }}> — {m.court}</span> : null}
-                </div>
-                <div
-                  style={{
-                    fontWeight: 800,
-                    fontSize: 15,
-                    color: aWon ? "#16A34A" : bWon ? "#EF4444" : "#0F172A",
-                  }}
-                >
-                  {m.scoreA}–{m.scoreB}
-                </div>
-              </div>
+  const [drafts, setDrafts] = useState<DraftSet[]>([{
+    id: 's1', when: new Date().toISOString(), sA: 0, sB: 0
+  }]);
 
-              <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <Badge label={`A: ${aDelta}`} tone={aWon ? "green" : bWon ? "red" : "gray"} />
-                <Badge label={`B: ${bDelta}`} tone={bWon ? "green" : aWon ? "red" : "gray"} />
-                {m.isFriday && <Badge label="fredag" tone="blue" />}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-function Badge({ label, tone }: { label: string; tone: "green" | "red" | "blue" | "gray" }) {
-  const tones: Record<string, { bg: string; fg: string; bd: string }> = {
-    green: { bg: "rgba(16,185,129,.12)", fg: "#065F46", bd: "rgba(16,185,129,.35)" },
-    red: { bg: "rgba(239,68,68,.12)", fg: "#7F1D1D", bd: "rgba(239,68,68,.35)" },
-    blue: { bg: "rgba(37,99,235,.12)", fg: "#1E3A8A", bd: "rgba(37,99,235,.35)" },
-    gray: { bg: "rgba(148,163,184,.15)", fg: "#334155", bd: "rgba(148,163,184,.35)" },
-  };
-  const t = tones[tone];
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        padding: "4px 10px",
-        borderRadius: 999,
-        fontSize: 12,
-        fontWeight: 700,
-        background: t.bg,
-        color: t.fg,
-        border: `1px solid ${t.bd}`,
-      }}
-    >
-      {label}
-    </span>
-  );
-}
-
-/** ========== Hovedkomponent ========== */
-export default function Results() {
-  const players = useMemo<Player[]>(
-    () =>
-      load<Player[]>(LS_PLAYERS, [
-        // fallback demo spillere hvis LS er tomt
-        { id: "p1", name: "Emma Christensen", elo: 1520 },
-        { id: "p2", name: "Michael Sørensen", elo: 1480 },
-        { id: "p3", name: "Julie Rasmussen", elo: 1390 },
-        { id: "p4", name: "Lars Petersen", elo: 1500 },
-      ]),
-    []
-  );
-
-  const newSet = (): SetDraft => ({
-    id: crypto.randomUUID(),
-    whenISO: new Date().toISOString(),
-    a1: undefined,
-    a2: undefined,
-    b1: undefined,
-    b2: undefined,
-    scoreA: 0,
-    scoreB: 0,
-    court: "Bane 1",
-    isFriday: false,
-  });
-
-  const [sets, setSets] = useState<SetDraft[]>([newSet()]);
-  const [successMsg, setSuccessMsg] = useState<string>("");
-
-  const matches = useMemo<MatchRec[]>(
-    () => load<MatchRec[]>(LS_MATCHES, []),
-    []
-  );
-  const [_, forceRerender] = useState(0); // til at trigge visning efter gem
-
-  const playerOptions = players.map((p) => (
-    <option key={p.id} value={p.id}>
-      {p.name}
-    </option>
-  ));
-  const playerById = (id?: string) => players.find((p) => p.id === id)?.name || "";
-
-  function updateSet(id: string, patch: Partial<SetDraft>) {
-    setSets((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  }
   function addSet() {
-    setSets((prev) => [...prev, newSet()]);
+    setDrafts(d => [...d, { id: 's'+(d.length+1), when: d[0]?.when ?? new Date().toISOString(), sA:0, sB:0 }]);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   }
-  function removeSet(id: string) {
-    setSets((prev) => prev.filter((s) => s.id !== id));
+  function upd(id:string, patch: Partial<DraftSet>) {
+    setDrafts(d => d.map(x => x.id===id ? {...x, ...patch} : x));
   }
-  function validSet(s: SetDraft) {
-    return !!(s.a1 && s.a2 && s.b1 && s.b2);
-  }
+  function saveAll() {
+    // Mapper drafts -> MatchRec og gemmer i localStorage
+    const prev = load<MatchRec[]>(LS_MATCHES, []);
+    const now = new Date().toISOString();
 
-  function submitAll() {
-    if (sets.length === 0) return;
-    for (const s of sets) {
-      if (!validSet(s)) {
-        alert("Udfyld venligst alle spillere for hvert sæt.");
-        return;
-      }
-    }
-
-    const existing = load<MatchRec[]>(LS_MATCHES, []);
-    const now = Date.now();
-
-    const newRecs: MatchRec[] = sets.map((s, i) => ({
-      id: `${s.id}-${now}-${i}`,
-      when: s.whenISO,
-      aNames: [playerById(s.a1), playerById(s.a2)].filter(Boolean),
-      bNames: [playerById(s.b1), playerById(s.b2)].filter(Boolean),
-      scoreA: s.scoreA,
-      scoreB: s.scoreB,
-      court: s.court,
-      isFriday: s.isFriday,
+    const newMatches: MatchRec[] = drafts.map((s,i)=>({
+      id: `m_${Date.now()}_${i}`,
+      when: s.when,
+      aNames: [players.find(p=>p.id===s.A1)?.name ?? '—', players.find(p=>p.id===s.A2)?.name ?? '—'].filter(Boolean),
+      bNames: [players.find(p=>p.id===s.B1)?.name ?? '—', players.find(p=>p.id===s.B2)?.name ?? '—'].filter(Boolean),
+      scoreA: s.sA,
+      scoreB: s.sB,
+      points: [], // ELO-opdatering sker allerede andetsteds i din app – her lader vi feltet være
     }));
 
-    const next = [...newRecs, ...existing]; // nyeste først
+    const next = [...newMatches, ...prev].slice(0, 200);
     save(LS_MATCHES, next);
-
-    setSuccessMsg(
-      sets.length === 1
-        ? "Sættet er gemt. Du kan se det i oversigten herunder samt på Dashboard og Ranglisten."
-        : `${sets.length} sæt er gemt. Du kan se dem i oversigten herunder samt på Dashboard og Ranglisten.`
-    );
-
-    setSets([newSet()]);
-    // force visning til at opdatere (matches er memo-læst fra LS)
-    forceRerender((x) => x + 1);
-    setTimeout(() => setSuccessMsg(""), 4500);
+    alert('Resultater gemt. (Demo-lagring i browseren)');
+    setDrafts([{ id: 's1', when: now, sA:0, sB:0 }]);
+    onSaved();
   }
 
-  /** ---- grupper til oversigten ---- */
-  const allMatches = useMemo(() => load<MatchRec[]>(LS_MATCHES, []), [_, successMsg]);
-  const myName = useMemo(() => {
-    // bruger "me" hvis den findes, ellers første spiller
-    const me = players.find((p) => p.id === "me");
-    return me?.name || players[0]?.name || "";
-  }, [players]);
-
-  const groupsAll = useMemo(() => groupByDate(allMatches), [allMatches]);
-  const groupsMine = useMemo(
-    () =>
-      groupByDate(allMatches.filter((m) => m.aNames.includes(myName) || m.bNames.includes(myName))),
-    [allMatches, myName]
-  );
+  const opts = players.map(p=> <option key={p.id} value={p.id}>{p.name}</option> );
 
   return (
-    <div style={{ padding: 18, maxWidth: 980 }}>
-      <h1 style={{ margin: "10px 0 18px", fontSize: 24 }}>Indtast resultater</h1>
-
-      {/* Tidligere sæt i kladden (preview af alt undtagen sidste) */}
-      {sets.length > 1 && (
-        <SectionCard title="Tidligere sæt" icon={<span>🗂️</span>}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {sets.slice(0, -1).map((s, idx) => {
-              const aNames = [playerById(s.a1), playerById(s.a2)].filter(Boolean).join(" & ");
-              const bNames = [playerById(s.b1), playerById(s.b2)].filter(Boolean).join(" & ");
-              const label = aNames && bNames ? `${aNames} vs ${bNames} — ${s.scoreA}-${s.scoreB}` : "Udfyldt sæt";
-              const date = new Date(s.whenISO).toISOString().slice(0, 10);
-
-              return (
-                <div
-                  key={s.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr auto",
-                    alignItems: "center",
-                    gap: 10,
-                    border: "1px solid #E5E7EB",
-                    padding: 12,
-                    borderRadius: 12,
-                    background: "#FAFAFA",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600 }}>Sæt #{idx + 1} • {date}</div>
-                    <div style={{ color: "#374151" }}>{label}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeSet(s.id)}
-                    style={btn("danger")}
-                    aria-label={`Fjern sæt #${idx + 1}`}
-                  >
-                    Fjern
-                  </button>
-                </div>
-              );
-            })}
+    <div className="enterSets">
+      <h2>🔎 Indtast resultater</h2>
+      {drafts.map((s,idx)=>(
+        <div key={s.id} className="setCard">
+          <div className="setHdr">
+            <strong>Sæt #{idx+1}</strong>
+            <input
+              type="datetime-local"
+              value={toLocalInputValue(s.when)}
+              onChange={e=>upd(s.id, { when: fromLocalInputValue(e.target.value) })}
+            />
           </div>
-        </SectionCard>
-      )}
 
-      {/* Aktive sæt (sidste i listen) */}
-      {sets.map((s, i) => {
-        const isLast = i === sets.length - 1;
-        return (
-          <SectionCard key={s.id} title={`Sæt #${i + 1}`} icon={<span>🎾</span>}>
-            <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-              <input
-                type="datetime-local"
-                value={dateInputValueFromISO(s.whenISO)}
-                onChange={(e) => updateSet(s.id, { whenISO: isoFromDateInputValue(e.target.value) })}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: "1px solid #E5E7EB",
-                  background: "#fff",
-                  fontSize: 14,
-                }}
-                aria-label="Dato og tid for sættet"
-              />
-              <Select
-                value={s.court}
-                onChange={(v) => updateSet(s.id, { court: v })}
-                placeholder="Vælg bane…"
-              >
-                <option value="Bane 1">Bane 1</option>
-                <option value="Bane 2">Bane 2</option>
-                <option value="Bane 3">Bane 3</option>
-                <option value="Bane 4">Bane 4</option>
-              </Select>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
-                <input
-                  type="checkbox"
-                  checked={!!s.isFriday}
-                  onChange={(e) => updateSet(s.id, { isFriday: e.target.checked })}
-                />
-                Fredagskamp
-              </label>
+          <div className="teams">
+            <div className="team">
+              <div className="lbl">Hold A</div>
+              <select value={s.A1 ?? ''} onChange={e=>upd(s.id, {A1: e.target.value||undefined})}>
+                <option value="">Vælg spiller…</option>
+                {opts}
+              </select>
+              <select value={s.A2 ?? ''} onChange={e=>upd(s.id, {A2: e.target.value||undefined})}>
+                <option value="">Vælg spiller…</option>
+                {opts}
+              </select>
+              <ScorePicker value={s.sA} onChange={(v)=>upd(s.id, {sA:v})}/>
             </div>
 
-            {/* Hold A */}
-            <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
-              <FieldLabel>Hold A</FieldLabel>
-              <Select value={s.a1} onChange={(v) => updateSet(s.id, { a1: v })} placeholder="Spiller A1">
-                {playerOptions}
-              </Select>
-              <Select value={s.a2} onChange={(v) => updateSet(s.id, { a2: v })} placeholder="Spiller A2">
-                {playerOptions}
-              </Select>
-              <FieldLabel>Score A</FieldLabel>
-              <ScorePicker value={s.scoreA} onChange={(v) => updateSet(s.id, { scoreA: v })} ariaLabel="Score til Hold A"/>
+            <div className="team">
+              <div className="lbl">Hold B</div>
+              <select value={s.B1 ?? ''} onChange={e=>upd(s.id, {B1: e.target.value||undefined})}>
+                <option value="">Vælg spiller…</option>
+                {opts}
+              </select>
+              <select value={s.B2 ?? ''} onChange={e=>upd(s.id, {B2: e.target.value||undefined})}>
+                <option value="">Vælg spiller…</option>
+                {opts}
+              </select>
+              <ScorePicker value={s.sB} onChange={(v)=>upd(s.id, {sB:v})}/>
             </div>
-
-            {/* Hold B */}
-            <div style={{ display: "grid", gap: 12 }}>
-              <FieldLabel>Hold B</FieldLabel>
-              <Select value={s.b1} onChange={(v) => updateSet(s.id, { b1: v })} placeholder="Spiller B1">
-                {playerOptions}
-              </Select>
-              <Select value={s.b2} onChange={(v) => updateSet(s.id, { b2: v })} placeholder="Spiller B2">
-                {playerOptions}
-              </Select>
-              <FieldLabel>Score B</FieldLabel>
-              <ScorePicker value={s.scoreB} onChange={(v) => updateSet(s.id, { scoreB: v })} ariaLabel="Score til Hold B"/>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, marginTop: 14, justifyContent: "space-between", flexWrap: "wrap" }}>
-              <button type="button" onClick={addSet} style={btn("secondary")}>＋ Tilføj sæt</button>
-              {isLast && (
-                <button type="button" onClick={submitAll} style={btn("primary")}>
-                  Indsend resultater
-                </button>
-              )}
-            </div>
-          </SectionCard>
-        );
-      })}
-
-      {successMsg && (
-        <div
-          role="status"
-          style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            borderRadius: 12,
-            background: "#ECFDF5",
-            color: "#065F46",
-            border: "1px solid #A7F3D0",
-            fontWeight: 600,
-          }}
-        >
-          ✅ {successMsg}
+          </div>
         </div>
-      )}
+      ))}
 
-      {/* ------- Oversigter: Mine / Alle ------- */}
-      <div style={{ height: 14 }} />
+      <div className="setActions">
+        <button className="btn ghost" onClick={addSet}>➕ Tilføj sæt</button>
+        <button className="btn primary" onClick={saveAll}>Indsend resultater</button>
+      </div>
 
-      <SectionCard title="Mine resultater" icon={<span>👤</span>}>
-        {groupsMine.length === 0 ? (
-          <div style={{ padding: 10, background: "#F8FAFC", borderRadius: 10, border: "1px solid #E2E8F0", fontSize: 13 }}>
-            Ingen kampe endnu for din profil.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {groupsMine.map(([date, items]) => (
-              <DayCard key={date} date={date} items={items} />
-            ))}
-          </div>
-        )}
-      </SectionCard>
-
-      <div style={{ height: 10 }} />
-
-      <SectionCard title="Alle resultater" icon={<span>📋</span>}>
-        {groupsAll.length === 0 ? (
-          <div style={{ padding: 10, background: "#F8FAFC", borderRadius: 10, border: "1px solid #E2E8F0", fontSize: 13 }}>
-            Der er endnu ikke registreret kampe.
-          </div>
-        ) : (
-          <div style={{ display: "grid", gap: 10 }}>
-            {groupsAll.map(([date, items]) => (
-              <DayCard key={date} date={date} items={items} />
-            ))}
-          </div>
-        )}
-      </SectionCard>
+      <p className="tip">Tip: Tilføj flere sæt før du indsender – de samles under samme kamp-dag.</p>
     </div>
   );
 }
 
-/** --- Gruppering pr. dato (yyyy-mm-dd) --- */
-function groupByDate(ms: MatchRec[]): [string, MatchRec[]][] {
-  const m = new Map<string, MatchRec[]>();
-  for (const x of ms) {
-    const key = fmtDateKey(x.when);
-    if (!m.has(key)) m.set(key, []);
-    m.get(key)!.push(x);
+function toLocalInputValue(iso:string){
+  const d = new Date(iso);
+  const pad = (n:number)=> String(n).padStart(2,'0');
+  const Y=d.getFullYear(), M=pad(d.getMonth()+1), D=pad(d.getDate());
+  const h=pad(d.getHours()), m=pad(d.getMinutes());
+  return `${Y}-${M}-${D}T${h}:${m}`;
+}
+function fromLocalInputValue(v:string){
+  // v er "YYYY-MM-DDTHH:mm" i lokal tid
+  const d = new Date(v);
+  return d.toISOString();
+}
+
+// ====== Side-komponent ======
+export default function ResultsPage() {
+  const [players, setPlayers] = useState<Player[]>(() => load(LS_PLAYERS, [] as Player[]));
+  const [matches, setMatches] = useState<MatchRec[]>(() => load(LS_MATCHES, [] as MatchRec[]));
+
+  // Demo “current user”: vælg første spiller hvis der er nogen
+  const currentUser = players[0];
+
+  const myMatches = useMemo(()=>{
+    if (!currentUser) return [] as MatchRec[];
+    const name = currentUser.name;
+    return matches.filter(m =>
+      m.aNames.includes(name) || m.bNames.includes(name)
+    );
+  }, [matches, currentUser]);
+
+  function refresh() {
+    setMatches(load(LS_MATCHES, [] as MatchRec[]));
+    setPlayers(load(LS_PLAYERS, [] as Player[]));
   }
-  const out: [string, MatchRec[]][] = [...m.entries()];
-  out.sort((a, b) => (a[0] < b[0] ? 1 : -1)); // nyeste dato øverst
-  for (const [, arr] of out) arr.sort((a, b) => (a.when < b.when ? 1 : -1));
-  return out;
+
+  return (
+    <div className="resultsPage container">
+      {/* Indtast resultater */}
+      <EnterSets players={players} onSaved={refresh} />
+
+      {/* Mine resultater */}
+      <section className="panel">
+        <div className="panel__hdr">
+          <span className="ico">👤</span>
+          <h3>Mine resultater</h3>
+        </div>
+        {currentUser ? (
+          myMatches.length === 0 ? (
+            <div className="empty">Ingen kampe endnu for din profil.</div>
+          ) : (
+            <ResultCards players={players} matches={myMatches} currentUserName={currentUser.name}/>
+          )
+        ) : (
+          <div className="empty">Ingen aktiv spiller valgt.</div>
+        )}
+      </section>
+
+      {/* Alle resultater */}
+      <section className="panel">
+        <div className="panel__hdr">
+          <span className="ico">🗂</span>
+          <h3>Alle resultater</h3>
+        </div>
+        {matches.length === 0 ? (
+          <div className="empty">Der er endnu ikke registreret kampe.</div>
+        ) : (
+          <ResultCards players={players} matches={matches}/>
+        )}
+      </section>
+
+      {/* Page styles – lille “scoped” CSS så designet matcher appen */}
+      <style>{`
+        .resultsPage.container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+        .panel { background: #fff; border: 1px solid #e6e8eb; border-radius: 12px; padding: 16px; margin-top: 16px; }
+        .panel__hdr { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+        .panel__hdr h3 { margin:0; font-size: 18px; }
+        .ico { opacity:.9; margin-right:6px; }
+        .empty { padding:12px; color:#64748b; background:#f8fafc; border:1px dashed #e2e8f0; border-radius:10px; }
+
+        .enterSets { background:#fff; border:1px solid #e6e8eb; border-radius:12px; padding:16px; }
+        .enterSets h2 { margin:0 0 12px; font-size:20px; }
+        .setCard { border:1px solid #eef1f4; border-radius:12px; padding:12px; margin-top:12px; }
+        .setHdr { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+        .teams { display:grid; grid-template-columns: 1fr 1fr; gap:16px; }
+        .team .lbl { font-weight:600; margin-bottom:6px; }
+        .team select { width:100%; height:38px; border:1px solid #e5e7eb; border-radius:10px; padding:0 10px; background:#fff; }
+        .scorePicker { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+        .chip { min-width:38px; height:38px; border-radius:19px; border:1px solid #dbe1e6; background:#fff; }
+        .chip.active { background:#2563eb; color:#fff; border-color:#2563eb; }
+        .setActions { display:flex; gap:12px; margin-top:12px; }
+        .btn { height:40px; border-radius:10px; border:1px solid #dbe1e6; padding:0 14px; background:#fff; font-weight:600; }
+        .btn.ghost { background:#fff; }
+        .btn.primary { background:#2563eb; color:#fff; border-color:#2563eb; }
+        .btn.danger { background:#ef4444; color:#fff; border-color:#ef4444; }
+        .tip { color:#64748b; font-size:13px; margin-top:8px; }
+
+        .result-cards { display:grid; gap:14px; }
+        .res-card { border:1px solid #e9eef3; border-radius:12px; padding:12px; background:#fff; }
+        .res-card__hdr { display:flex; gap:16px; flex-wrap:wrap; }
+        .res-card__date { font-weight:700; }
+        .res-card__players { display:grid; gap:4px; }
+        .res-card__playerRow { display:flex; gap:8px; align-items:center; font-size:14px; }
+        .muted { color:#6b7280; margin-left:8px; }
+        .res-card__sets { margin-top:10px; border-top:1px dashed #e5e7eb; padding-top:10px; display:grid; gap:8px; }
+        .res-card__setRow .line { display:flex; justify-content:space-between; gap:8px; }
+        .res-card__setRow .teams { font-weight:500; }
+        .res-card__after { margin-top:10px; border-top:1px dashed #e5e7eb; padding-top:10px; display:grid; gap:6px; }
+        .afterRow { display:flex; align-items:center; gap:8px; }
+        .afterRow .delta { margin-left:auto; }
+        .afterRow .delta.pos { color:#16a34a; }
+        .afterRow .delta.neg { color:#dc2626; }
+
+        .reportBox { margin-top:10px; border-top:1px dashed #e5e7eb; padding-top:10px; display:grid; gap:8px; }
+        .reportBox .chk { display:flex; gap:8px; align-items:center; user-select:none; }
+        .reportBox textarea { min-height:72px; padding:10px; border-radius:10px; border:1px solid #e5e7eb; resize:vertical; }
+      `}</style>
+    </div>
+  );
 }
