@@ -1,84 +1,106 @@
 // src/pages/Admin.tsx
-import React, { useState } from "react";
+import React from "react";
 
-const LS_PLAYERS = "padel.players.v1";
-const LS_MATCHES = "padel.matches.v1";
+type Player = {
+  id: string;
+  name: string;
+  initials: string;
+  elo: number;
+};
 
-type Player = { id: string; name: string; elo: number };
-
-const demoPlayers: Player[] = [
-  { id: "p-emma", name: "Emma Christensen", elo: 1040 },
-  { id: "p-michael", name: "Michael Sørensen", elo: 1020 },
-  { id: "p-julie", name: "Julie Rasmussen", elo: 1005 },
-  { id: "p-lars", name: "Lars Petersen", elo: 1010 },
-  { id: "p-thomas", name: "Thomas Nielsen", elo: 990 },
-  { id: "p-anne", name: "Anne Møller", elo: 995 },
-  { id: "p-mette", name: "Mette Hansen", elo: 1000 },
-  { id: "p-alex", name: "Alex Hansen", elo: 980 },
-  { id: "p-sara", name: "Sara Nielsen", elo: 985 },
-  { id: "p-demo", name: "Demo Bruger", elo: 1000 },
-  { id: "p-anders", name: "Anders Beck Jensen", elo: 1015 },
-  { id: "p-bettina", name: "Bettina Linnemann", elo: 975 },
+const DEMO_PLAYERS: Player[] = [
+  { id: "p1", name: "Emma Christensen", initials: "EC", elo: 1020 },
+  { id: "p2", name: "Michael Sørensen", initials: "MS", elo: 1010 },
+  { id: "p3", name: "Julie Rasmussen", initials: "JR", elo: 1000 },
+  { id: "p4", name: "Lars Petersen", initials: "LP", elo: 995 },
+  { id: "p5", name: "Demo Bruger", initials: "DB", elo: 980 },
 ];
 
+function save<T>(key: string, value: T) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+function load<T>(key: string, fallback: T): T {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? (JSON.parse(v) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function Admin() {
-  const [msg, setMsg] = useState<string>("");
+  const [players, setPlayers] = React.useState<Player[]>(
+    load<Player[]>("players", [])
+  );
+  const [notice, setNotice] = React.useState<string>("");
 
-  const write = (k: string, v: unknown) =>
-    localStorage.setItem(k, JSON.stringify(v));
-
-  const seedPlayers = () => {
-    write(LS_PLAYERS, demoPlayers);
-    // behold kampe hvis du vil – eller nulstil:
-    if (!localStorage.getItem(LS_MATCHES)) write(LS_MATCHES, []);
-    setMsg("Demo-spillere oprettet. Genindlæs/åbn Resultater – nu kan du vælge spillere.");
+  const seedDemoPlayers = () => {
+    save("players", DEMO_PLAYERS);
+    // clear any demo matches/results to avoid confusion
+    localStorage.removeItem("matches");
+    localStorage.removeItem("sets");
+    setPlayers(DEMO_PLAYERS);
+    setNotice("Demo-spillere gendannet.");
   };
 
-  const wipeAll = () => {
-    localStorage.removeItem(LS_PLAYERS);
-    localStorage.removeItem(LS_MATCHES);
-    setMsg("Alle data er ryddet.");
+  const resetAll = () => {
+    localStorage.clear();
+    setPlayers([]);
+    setNotice("Al lokal data er nulstillet.");
   };
 
   return (
-    <div className="page">
-      <div className="card" style={{ padding: 16 }}>
-        <h2 style={{ margin: 0 }}>Admin</h2>
-        <p className="muted" style={{ marginTop: 6 }}>
-          Brug disse knapper hvis spillere mangler i select-felterne.
+    <div className="space-y-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="text-lg font-semibold">Admin</h2>
+        <p className="text-slate-600 mt-1">
+          Brug disse værktøjer til at nulstille data eller gendanne demo-spillere.
         </p>
 
-        <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
-          <button className="btn primary" onClick={seedPlayers}>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <button
+            onClick={seedDemoPlayers}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
             Gendan demo-spillere
           </button>
-          <button className="btn outline" onClick={wipeAll}>
-            Ryd alle data
+          <button
+            onClick={resetAll}
+            className="rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
+          >
+            Nulstil ALT (localStorage)
           </button>
         </div>
 
-        {msg && (
-          <div
-            style={{
-              marginTop: 12,
-              padding: "10px 12px",
-              borderRadius: 10,
-              background: "#f1f5ff",
-              color: "#1f2a56",
-              border: "1px solid #dfe6ff",
-            }}
-          >
-            {msg}
+        {notice && (
+          <div className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700">
+            {notice}
           </div>
         )}
+      </div>
 
-        <style>{`
-          .page .card { border:1px solid #e6e8ef; border-radius:14px; background:#fff; }
-          .btn { height:36px; border-radius:10px; padding:0 14px; border:1px solid transparent; cursor:pointer; }
-          .btn.primary { background:#2563eb; color:#fff; }
-          .btn.outline { background:#fff; border-color:#d9dbe6; color:#111827; }
-          .muted { color:#6b7280; }
-        `}</style>
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 className="font-medium mb-3">Aktuelle spillere</h3>
+        {players.length === 0 ? (
+          <p className="text-slate-500">Ingen spillere i systemet.</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+            {players.map((p) => (
+              <li
+                key={p.id}
+                className="rounded-lg border border-slate-200 p-3 flex items-center gap-3"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-semibold">
+                  {p.initials}
+                </span>
+                <div>
+                  <div className="font-medium">{p.name}</div>
+                  <div className="text-sm text-slate-500">ELO: {p.elo}</div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
