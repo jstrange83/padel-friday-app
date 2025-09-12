@@ -1,143 +1,243 @@
 // src/pages/Dashboard.tsx
-import React from "react";
-import {
-  formatDKK,
-  getMostActive,
-  getCurrentFridayStreaks,
-  getUnpaidFinesTotalDKK,
-  getUnpaidFinesCount,
-} from "../lib/selectors";
+import React, {useMemo} from "react";
 
-function Card(props: React.PropsWithChildren<{ title?: string; icon?: React.ReactNode; accent?: "blue"|"green"|"rose"|"slate" }>) {
-  const ring =
-    props.accent === "blue"  ? "rgba(37,99,235,.12)" :
-    props.accent === "green" ? "rgba(16,185,129,.12)" :
-    props.accent === "rose"  ? "rgba(244,63,94,.12)" :
-    "rgba(2,6,23,.08)";
-  const border =
-    props.accent === "blue"  ? "rgba(37,99,235,.30)" :
-    props.accent === "green" ? "rgba(16,185,129,.30)" :
-    props.accent === "rose"  ? "rgba(244,63,94,.30)" :
-    "rgba(2,6,23,.10)";
+/** Datatyper som vi allerede bruger andre steder */
+type MatchRec = {
+  id: string;
+  when: string;          // ISO string
+  aNames: string[];
+  bNames: string[];
+  scoreA: number;
+  scoreB: number;
+  points?: { id: string; name: string; value: number }[];
+};
 
-  return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 16,
-        border: `1px solid ${border}`,
-        boxShadow: `0 6px 22px ${ring}`,
-        padding: 16,
-      }}
-    >
-      {(props.title || props.icon) && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-          {props.icon}
-          <div style={{ fontWeight: 700 }}>{props.title}</div>
-        </div>
-      )}
-      {props.children}
-    </div>
-  );
+type Player = { id: string; name: string; elo: number };
+
+const LS_PLAYERS = "padel.players.v1";
+const LS_MATCHES = "padel.matches.v1";
+
+// Utils
+function load<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
 }
-
-function CircleStat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      <div
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: "999px",
-          background: "#2563EB",
-          color: "#fff",
-          fontWeight: 800,
-          display: "grid",
-          placeItems: "center",
-          boxShadow: "0 10px 25px rgba(37,99,235,.35)",
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: 14, color: "#0F172A" }}>{label}</div>
-    </div>
-  );
+function formatDateShort(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("da-DK", { year: "numeric", month: "2-digit", day: "2-digit" });
+  } catch {
+    return iso;
+  }
 }
 
 export default function Dashboard() {
-  const mostActive = getMostActive(3);
-  const streaks    = getCurrentFridayStreaks(3);
-  const unpaidDKK  = getUnpaidFinesTotalDKK();
-  const unpaidCnt  = getUnpaidFinesCount();
+  const players = load<Player[]>(LS_PLAYERS, []);
+  const matches = load<MatchRec[]>(LS_MATCHES, []);
+
+  // Aggreger data til kortene
+  const {
+    welcomeName,
+    totalGames,
+    totalWins,
+    winPct,
+    gamesThisMonth,
+    upcoming,
+    mostActiveTop3,
+    fridaysTop3,
+    playerOfMonth,
+  } = useMemo(() => {
+    const name = "Demo"; // (senere fra login/profil)
+    const total = matches.length;
+    const wins = matches.filter((m) => m.scoreA !== m.scoreB && m.scoreA > m.scoreB).length; // place­holder
+    const pct = total ? Math.round((wins / total) * 100) : 0;
+
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}`;
+    const inMonth = matches.filter((m) => (m.when || "").startsWith(ym)).length;
+
+    // Kommende kampe (vi bruger future dates, hvis du senere laver booking-kalender)
+    const up = matches
+      .filter((m) => new Date(m.when) > new Date())
+      .slice(0, 3);
+
+    // Mest aktive – tæl pr. spiller i hele datasættet
+    const counts = new Map<string, number>();
+    for (const m of matches) {
+      for (const n of [...m.aNames, ...m.bNames]) {
+        counts.set(n, (counts.get(n) || 0) + 1);
+      }
+    }
+    const mostActive = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, c]) => ({ name, c }));
+
+    // Fredags-streak (place­holder: sortér på hvem der har spillet flest kampe med weekday=5)
+    const fridayCounts = new Map<string, number>();
+    for (const m of matches) {
+      const d = new Date(m.when);
+      if (d.getDay() === 5) {
+        for (const n of [...m.aNames, ...m.bNames]) {
+          fridayCounts.set(n, (fridayCounts.get(n) || 0) + 1);
+        }
+      }
+    }
+    const fridaysTop = [...fridayCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, c]) => ({ name, c }));
+
+    // Månedens spiller – tag den med flest sejre i denne måned (simpel placeholder)
+    const winsByName = new Map<string, number>();
+    const monthMatches = matches.filter((m) => (m.when || "").startsWith(ym));
+    for (const m of monthMatches) {
+      const winnerNames = m.scoreA > m.scoreB ? m.aNames : m.bNames;
+      for (const n of winnerNames) winsByName.set(n, (winsByName.get(n) || 0) + 1);
+    }
+    const best = [...winsByName.entries()].sort((a, b) => b[1] - a[1])[0];
+    const playerOfMonth =
+      best ? { name: best[0], wins: best[1] } : { name: "Emma Christensen", wins: 2 }; // demo default
+
+    return {
+      welcomeName: name,
+      totalGames: total,
+      totalWins: wins,
+      winPct: pct,
+      gamesThisMonth: inMonth,
+      upcoming: up,
+      mostActiveTop3: mostActive,
+      fridaysTop3: fridaysTop,
+      playerOfMonth,
+    };
+  }, [players, matches]);
 
   return (
-    <div style={{ padding: 18, display: "grid", gap: 14 }}>
-      {/* Velkomst / besked */}
-      <Card title="Velkommen tilbage 👋" icon={<span>💬</span>} accent="slate">
-        <div style={{ fontSize: 14, color: "#334155" }}>
-          Klar til at spille? Husk at registrere dine sæt under <b>Resultater</b>.
+    <div className="page">
+      {/* Blå velkomst-card */}
+      <div className="card hero gradient">
+        <div className="hero-title">Velkommen tilbage, {welcomeName}! 👋</div>
+        <div className="hero-sub">
+          Du har spillet {totalGames} kampe og vundet {totalWins} af dem. Fortsæt den gode udvikling!
         </div>
-      </Card>
+      </div>
 
-      {/* Bøder øverst */}
-      <Card title="Bøder" icon={<span>💸</span>} accent="rose">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "grid", gap: 6 }}>
-            <div style={{ fontSize: 14, color: "#0F172A" }}>
-              Ubetalt: <b>{formatDKK(unpaidDKK)}</b> ({unpaidCnt} {unpaidCnt===1?"bøde":"bøder"})
-            </div>
-            <div style={{ fontSize: 12, color: "#64748B" }}>
-              Du kan se detaljer og indberette under <b>Bøder</b>.
+      {/* Øverste række: kommende kampe + månedens spiller */}
+      <div className="grid grid-2">
+        <div className="card">
+          <div className="card-title">
+            <span className="icon">📅</span> Kommende Kampe
+          </div>
+          {upcoming.length === 0 ? (
+            <div className="muted">Ingen planlagte kampe.</div>
+          ) : (
+            <ul className="list">
+              {upcoming.map((m) => (
+                <li key={m.id}>
+                  <div className="small muted">{formatDateShort(m.when)}</div>
+                  <div>
+                    {m.aNames.join(" & ")} <span className="muted">vs</span> {m.bNames.join(" & ")}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-title">
+            <span className="icon">⭐</span> Månedens spiller
+          </div>
+          <div className="row center">
+            <div className="avatar">{initials(playerOfMonth.name)}</div>
+            <div>
+              <div className="strong">{playerOfMonth.name}</div>
+              <div className="muted">{playerOfMonth.wins} sejre</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Midterste række: mest aktive + fredag-streak */}
+      <div className="grid grid-2">
+        <div className="card">
+          <div className="card-title">
+            <span className="icon">✅</span> Mest Aktive (Top 3)
+          </div>
+          {mostActiveTop3.length === 0 ? (
+            <div className="muted">Ingen data endnu.</div>
+          ) : (
+            <ol className="rank">
+              {mostActiveTop3.map((r, i) => (
+                <li key={r.name}>
+                  <span className="badge">{i + 1}</span>
+                  <span>{r.name}</span>
+                  <span className="muted">{r.c} kampe</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+
+        <div className="card">
+          <div className="card-title">
+            <span className="icon">☑️</span> Flest fredage i træk (Top 3)
+          </div>
+          {fridaysTop3.length === 0 ? (
+            <div className="muted">Ingen aktuelle streaks.</div>
+          ) : (
+            <ol className="rank">
+              {fridaysTop3.map((r, i) => (
+                <li key={r.name}>
+                  <span className="badge">{i + 1}</span>
+                  <span>{r.name}</span>
+                  <span className="muted">{r.c} fredage i træk</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
+      </div>
+
+      {/* Nederste række: vinderprocent + kampe spillet + bøder (med blå knap) */}
+      <div className="grid grid-3">
+        <div className="card kpi">
+          <div className="card-title">🏆 Vinderprocent</div>
+          <div className="kpi-value">{winPct}%</div>
+          <div className="muted">
+            {totalWins} sejre af {totalGames} kampe
+          </div>
+        </div>
+
+        <div className="card kpi">
+          <div className="card-title">🎯 Kampe spillet</div>
+          <div className="kpi-value">{totalGames}</div>
+          <div className="muted">+{gamesThisMonth} denne måned</div>
+        </div>
+
+        <div className="card">
+          <div className="card-title">🧾 Bøder</div>
+          <div className="muted">MobilePay-boks til indbetaling af bøder.</div>
           <a
+            className="btn primary"
             href="https://qr.mobilepay.dk/box/ad9ee90d-789f-42e9-aad8-b3b3e6ba7a5a/pay-in"
             target="_blank"
             rel="noreferrer"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 12,
-              background: "#16A34A",
-              border: "1px solid rgba(22,163,74,.45)",
-              color: "#fff",
-              fontWeight: 800,
-              textDecoration: "none",
-              boxShadow: "0 10px 25px rgba(22,163,74,.35)",
-            }}
           >
-            Betal via MobilePay
+            Betal med MobilePay
           </a>
-        </div>
-      </Card>
-
-      {/* 2-spaltet række: Mest aktive + Fredags-streaks */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
-          <Card title="Mest aktive (Top 3)" icon={<span>🏃‍♂️</span>} accent="blue">
-            {mostActive.length === 0 ? (
-              <div style={{ fontSize: 13, color: "#64748B" }}>Ingen data endnu.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {mostActive.map((r) => (
-                  <CircleStat key={r.name} label={r.name} value={r.count} />
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card title="Aktuel fredag-streak (Top 3)" icon={<span>📆</span>} accent="green">
-            {streaks.length === 0 ? (
-              <div style={{ fontSize: 13, color: "#64748B" }}>Ingen fredagsdata endnu.</div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {streaks.map((r) => (
-                  <CircleStat key={r.name} label={r.name} value={r.streak} />
-                ))}
-              </div>
-            )}
-          </Card>
         </div>
       </div>
     </div>
   );
+}
+
+// små UI helpers (genbruger eksisterende classes fra appens css)
+function initials(name: string) {
+  const parts = name.split(" ").filter(Boolean);
+  return ((parts[0]?.[0] || "") + (parts[parts.length - 1]?.[0] || "")).toUpperCase();
 }
