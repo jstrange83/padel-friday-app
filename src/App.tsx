@@ -1,73 +1,87 @@
 // src/App.tsx
-import React, { useState } from "react";
+import React from "react";
 import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
-import Admin from "./pages/Admin"; // <-- make sure this line exists
+import Admin from "./pages/Admin";
 
-// ...inside your component's render:
-{page === "Admin" && <Admin />}
+// Hvis du ikke har Dashboard/Results/Admin endnu, bør de filer eksistere.
+// "Ranglisten" og "Bøder" viser en simpel placeholder her i App.tsx.
 
+type PageKey = "Dashboard" | "Resultater" | "Ranglisten" | "Bøder" | "Admin";
 
+const NavItem: React.FC<{
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}> = ({ label, active, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`w-full rounded-lg px-4 py-2 text-left border ${
+      active
+        ? "border-slate-800 text-slate-900"
+        : "border-slate-200 text-slate-700 hover:bg-slate-50"
+    }`}
+  >
+    {label}
+  </button>
+);
 
-type Page = "Dashboard" | "Resultater" | "Ranglisten" | "Bøder" | "Admin";
+const Placeholder: React.FC<{ title: string }> = ({ title }) => (
+  <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <h2 className="text-xl font-semibold">{title}</h2>
+    <p className="text-slate-600 mt-2">Denne side er ikke implementeret endnu.</p>
+  </div>
+);
 
 export default function App() {
-  const [page, setPage] = useState<Page>(
-    () => (localStorage.getItem("padel.page") as Page) || "Dashboard"
-  );
-
-  function goto(p: Page) {
-    setPage(p);
-    try {
-      localStorage.setItem("padel.page", p);
-    } catch {}
-  }
+  const [current, setCurrent] = React.useState<PageKey>("Dashboard");
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-6">
         <div className="flex gap-6">
           {/* Sidebar */}
-          <aside className="w-56 shrink-0">
-            <div className="text-xl font-semibold mb-4">PadelApp</div>
-            <nav className="flex flex-col gap-2">
-              {(["Dashboard", "Resultater", "Ranglisten", "Bøder", "Admin"] as Page[]).map(
-                (p) => (
-                  <button
-                    key={p}
-                    onClick={() => goto(p)}
-                    className={`text-left rounded-xl px-3 py-2 border transition ${
-                      page === p
-                        ? "border-gray-900/20 bg-white shadow-sm"
-                        : "border-gray-200 bg-white hover:bg-gray-100"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-            </nav>
+          <aside className="w-[260px] shrink-0">
+            <div className="mb-4 text-xl font-semibold">PadelApp</div>
+            <div className="flex flex-col gap-3">
+              <NavItem
+                label="Dashboard"
+                active={current === "Dashboard"}
+                onClick={() => setCurrent("Dashboard")}
+              />
+              <NavItem
+                label="Resultater"
+                active={current === "Resultater"}
+                onClick={() => setCurrent("Resultater")}
+              />
+              <NavItem
+                label="Ranglisten"
+                active={current === "Ranglisten"}
+                onClick={() => setCurrent("Ranglisten")}
+              />
+              <NavItem
+                label="Bøder"
+                active={current === "Bøder"}
+                onClick={() => setCurrent("Bøder")}
+              />
+              <NavItem
+                label="Admin"
+                active={current === "Admin"}
+                onClick={() => setCurrent("Admin")}
+              />
+            </div>
           </aside>
 
           {/* Main content */}
           <main className="flex-1">
-            {page === "Dashboard" && <Dashboard />}
-            {page === "Resultater" && <Results />}
-            {page === "Ranglisten" && <Stub title="Ranglisten" />}
-            {page === "Bøder" && <Stub title="Bøder" />}
-            {page === "Admin" && <Stub title="Admin" />}
+            {current === "Dashboard" && <Dashboard />}
+            {current === "Resultater" && <Results />}
+            {current === "Ranglisten" && <Placeholder title="Ranglisten" />}
+            {current === "Bøder" && <Placeholder title="Bøder" />}
+            {current === "Admin" && <Admin />}
           </main>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Stub({ title }: { title: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-6">
-      <h2 className="text-xl font-semibold mb-2">{title}</h2>
-      <p className="text-gray-600">Denne side er ikke implementeret endnu.</p>
     </div>
   );
 }
