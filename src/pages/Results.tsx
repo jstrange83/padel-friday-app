@@ -1,31 +1,33 @@
+// src/pages/Results.tsx
 import React, { useMemo, useState } from "react";
 
-/**
- * LocalStorage keys (samme som vi har brugt i app'en)
- */
-const LS_PLAYERS = "padel.players.v1";
-const LS_MATCHES = "padel.matches.v1";
-
-/**
- * Typer (holdt lokalt her for at undgå at ændre andre filer)
- */
+/** ========== Types & LS helpers ========== */
 type Player = { id: string; name: string; elo: number };
+
+type SetDraft = {
+  id: string;
+  whenISO: string;   // ISO datetime for sættet
+  a1?: string;       // playerId
+  a2?: string;       // playerId
+  b1?: string;       // playerId
+  b2?: string;       // playerId
+  scoreA: number;    // 0..7
+  scoreB: number;    // 0..7
+};
 
 type MatchRec = {
   id: string;
-  when: string; // ISO datetime
-  court?: string;
-  isFriday?: boolean;
-  aNames: string[]; // [A1, A2]
-  bNames: string[]; // [B1, B2]
-  scoreA: number; // 0..7 (sæt)
-  scoreB: number; // 0..7 (sæt)
-  points?: { id?: string; name: string; value: number }[]; // ELO-delta pr. spiller
+  when: string;               // ISO datetime
+  aNames: string[];           // hold A navne
+  bNames: string[];           // hold B navne
+  scoreA: number;
+  scoreB: number;
+  points?: { id: string; name: string; value: number }[]; // (placeholder – kan udfyldes senere)
 };
 
-/**
- * Utils
- */
+const LS_PLAYERS = "padel.players.v1";
+const LS_MATCHES = "padel.matches.v1";
+
 function load<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
@@ -39,17 +41,76 @@ function save<T>(key: string, value: T) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {}
 }
-function fmtDate(d: string) {
-  // yyyy-mm-dd
-  return new Date(d).toISOString().slice(0, 10);
-}
-function classNames(...xs: Array<string | false | null | undefined>) {
-  return xs.filter(Boolean).join(" ");
+
+/** ========== Små UI helpers ========== */
+function SectionCard(props: React.PropsWithChildren<{ title?: string; icon?: React.ReactNode }>) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        borderRadius: 14,
+        boxShadow: "0 6px 20px rgba(15, 23, 42, 0.06)",
+        border: "1px solid rgba(2, 6, 23, 0.06)",
+        padding: 18,
+      }}
+    >
+      {props.title && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+          {props.icon}
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>{props.title}</h3>
+        </div>
+      )}
+      {props.children}
+    </div>
+  );
 }
 
-/**
- * Runde score-knapper
- */
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label
+      style={{
+        fontSize: 12,
+        fontWeight: 600,
+        color: "#334155",
+        display: "block",
+        marginBottom: 6,
+      }}
+    >
+      {children}
+    </label>
+  );
+}
+
+function Select({
+  value,
+  onChange,
+  children,
+  placeholder,
+}: {
+  value?: string;
+  onChange: (v?: string) => void;
+  children: React.ReactNode;
+  placeholder?: string;
+}) {
+  return (
+    <select
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value || undefined)}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: "1px solid #E5E7EB",
+        background: "#fff",
+        fontSize: 14,
+      }}
+    >
+      <option value="">{placeholder ?? "Vælg spiller…"}</option>
+      {children}
+    </select>
+  );
+}
+
 function ScorePicker({
   value,
   onChange,
@@ -57,480 +118,365 @@ function ScorePicker({
 }: {
   value: number;
   onChange: (v: number) => void;
-  ariaLabel?: string;
+  ariaLabel: string;
 }) {
-  const opts = [0, 1, 2, 3, 4, 5, 6, 7];
   return (
-    <div className="flex items-center gap-2">
-      {opts.map((v) => (
-        <button
-          type="button"
-          key={v}
-          aria-label={ariaLabel ? `${ariaLabel} ${v}` : undefined}
-          onClick={() => onChange(v)}
-          className={classNames(
-            "h-8 w-8 rounded-full border text-sm",
-            v === value
-              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-              : "bg-white hover:bg-gray-50 border-gray-300 text-gray-700"
-          )}
-        >
-          {v}
-        </button>
-      ))}
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }} aria-label={ariaLabel}>
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((n) => {
+        const active = n === value;
+        return (
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: "999px",
+              border: active ? "2px solid #2563EB" : "1px solid #E5E7EB",
+              background: active ? "#2563EB" : "#fff",
+              color: active ? "#fff" : "#111827",
+              fontWeight: 600,
+              boxShadow: active ? "0 6px 20px rgba(37,99,235,.25)" : "none",
+              transition: "all .15s ease",
+            }}
+            aria-pressed={active}
+          >
+            {n}
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-/**
- * Ét dato-kort med alle sæt den dag + ELO-ændringer
- */
-function DayCard({
-  date,
-  matches,
-}: {
-  date: string;
-  matches: MatchRec[];
-}) {
-  // Saml ELO-delta pr. spiller for dagen
-  const dayDeltas = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const m of matches) {
-      for (const p of m.points ?? []) {
-        const k = p.name;
-        map.set(k, (map.get(k) ?? 0) + p.value);
-      }
-    }
-    return [...map.entries()]
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
-  }, [matches]);
-
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-rose-600">📅</span>
-        <div className="text-lg font-semibold">{date}</div>
-      </div>
-
-      <div className="divide-y divide-gray-100">
-        {matches.map((m) => (
-          <div key={m.id} className="py-3">
-            <div className="text-[13.5px] text-gray-800">
-              <span className="font-medium">{m.aNames.join(" & ")}</span>{" "}
-              <span className="text-gray-400">vs.</span>{" "}
-              <span className="font-medium">{m.bNames.join(" & ")}</span>
-              {m.court ? (
-                <span className="text-gray-400"> — {m.court}</span>
-              ) : null}
-            </div>
-            <div className="mt-1 flex items-center justify-between">
-              <div className="text-base font-semibold">
-                {m.scoreA} - {m.scoreB}
-              </div>
-              {typeof m.isFriday === "boolean" && m.isFriday && (
-                <span className="text-[12px] text-green-600">fredagskamp</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {dayDeltas.length > 0 && (
-        <>
-          <div className="h-px bg-gray-100 my-3" />
-          <div className="grid sm:grid-cols-2 gap-2">
-            {dayDeltas.map((d) => (
-              <div
-                key={d.name}
-                className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2"
-              >
-                <div className="text-sm text-gray-700">{d.name}</div>
-                <div
-                  className={classNames(
-                    "text-sm font-semibold",
-                    d.value > 0
-                      ? "text-green-600"
-                      : d.value < 0
-                      ? "text-rose-600"
-                      : "text-gray-500"
-                  )}
-                >
-                  {d.value > 0
-                    ? `(+${Math.round(d.value)})`
-                    : `(${Math.round(d.value)})`}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Fejl-rapport (placeholder) */}
-      <div className="mt-3">
-        <label className="block text-[13px] text-gray-600 mb-1">
-          🚫 Indberet fejl i kampen:
-        </label>
-        <textarea
-          rows={2}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[13.5px] focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Skriv hvad der er forkert… (kommer i en senere version)"
-        />
-      </div>
-    </div>
-  );
+function dateInputValueFromISO(iso: string) {
+  // return yyyy-MM-ddThh:mm (input type="datetime-local")
+  const d = new Date(iso);
+  const pad = (x: number) => x.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }
 
-/**
- * Resultatsiden
- */
+function isoFromDateInputValue(v: string) {
+  // assume local time → to ISO with timezone offset applied
+  const d = new Date(v);
+  return d.toISOString();
+}
+
+/** ========== Hovedkomponent ========== */
 export default function Results() {
-  const players = load<Player[]>(LS_PLAYERS, [
-    { id: "p1", name: "Emma Christensen", elo: 1520 },
-    { id: "p2", name: "Michael Sørensen", elo: 1490 },
-    { id: "p3", name: "Julie Rasmussen", elo: 1460 },
-    { id: "p4", name: "Lars Petersen", elo: 1440 },
-    { id: "me", name: "Demo Bruger", elo: 1480 },
-  ]);
-  const [matches, setMatches] = useState<MatchRec[]>(
-    () => load<MatchRec[]>(LS_MATCHES, [])
+  const players = useMemo<Player[]>(
+    () =>
+      load<Player[]>(LS_PLAYERS, [
+        // fallback demo spillere hvis LS er tomt
+        { id: "p1", name: "Emma Christensen", elo: 1520 },
+        { id: "p2", name: "Michael Sørensen", elo: 1480 },
+        { id: "p3", name: "Julie Rasmussen", elo: 1390 },
+        { id: "p4", name: "Lars Petersen", elo: 1500 },
+      ]),
+    []
   );
 
-  // --------- Formular state ----------
-  const [a1, setA1] = useState(players[0]?.id ?? "");
-  const [a2, setA2] = useState(players[1]?.id ?? "");
-  const [b1, setB1] = useState(players[2]?.id ?? "");
-  const [b2, setB2] = useState(players[3]?.id ?? "");
-  const [when, setWhen] = useState(() =>
-    new Date().toISOString().slice(0, 16)
-  ); // input[type=datetime-local]
-  const [court, setCourt] = useState("Bane 1");
-  const [isFriday, setIsFriday] = useState(false);
+  const newSet = (): SetDraft => ({
+    id: crypto.randomUUID(),
+    whenISO: new Date().toISOString(),
+    a1: undefined,
+    a2: undefined,
+    b1: undefined,
+    b2: undefined,
+    scoreA: 0,
+    scoreB: 0,
+  });
 
-  // Flere sæt (mindst 1)
-  type SetRow = { id: string; scoreA: number; scoreB: number };
-  const [sets, setSets] = useState<SetRow[]>([
-    { id: "s_1", scoreA: 6, scoreB: 3 },
-  ]);
+  const [sets, setSets] = useState<SetDraft[]>([newSet()]);
+  const [successMsg, setSuccessMsg] = useState<string>("");
 
-  const [saved, setSaved] = useState<string | null>(null);
+  const playerOptions = players.map((p) => (
+    <option key={p.id} value={p.id}>
+      {p.name}
+    </option>
+  ));
 
-  function idToName(id: string) {
-    return players.find((p) => p.id === id)?.name ?? id;
+  function updateSet(id: string, patch: Partial<SetDraft>) {
+    setSets((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   }
 
   function addSet() {
-    const id = `s_${cryptoRandom()}`;
-    setSets((prev) => [...prev, { id, scoreA: 6, scoreB: 3 }]);
+    setSets((prev) => [...prev, newSet()]);
   }
+
   function removeSet(id: string) {
-    setSets((prev) => (prev.length <= 1 ? prev : prev.filter((s) => s.id !== id)));
-  }
-  function updateSet(id: string, field: "scoreA" | "scoreB", value: number) {
-    setSets((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, [field]: value } : s))
-    );
+    setSets((prev) => prev.filter((s) => s.id !== id));
   }
 
-  function onSave() {
-    const aNames = [idToName(a1), idToName(a2)];
-    const bNames = [idToName(b1), idToName(b2)];
+  function validSet(s: SetDraft) {
+    return !!(s.a1 && s.a2 && s.b1 && s.b2);
+  }
 
-    // Opret ét MatchRec per sæt (med lille tidsforskydning, så sortering er stabil)
-    const baseTime = new Date(when);
-    const newRecs: MatchRec[] = sets.map((s, idx) => {
-      const dt = new Date(baseTime.getTime() + idx * 60000); // +1 minut pr. sæt
-      const delta = Math.max(-20, Math.min(20, (s.scoreA - s.scoreB) * 2)); // visuel indikator
+  function submitAll() {
+    // Valider
+    if (sets.length === 0) return;
+    for (const s of sets) {
+      if (!validSet(s)) {
+        alert("Udfyld venligst alle spillere for hvert sæt.");
+        return;
+      }
+    }
+
+    const matches = load<MatchRec[]>(LS_MATCHES, []);
+    const now = Date.now();
+
+    const asMatchRecs: MatchRec[] = sets.map((s, i) => {
+      const aNames = [s.a1, s.a2]
+        .map((id) => players.find((p) => p.id === id)?.name || "")
+        .filter(Boolean);
+      const bNames = [s.b1, s.b2]
+        .map((id) => players.find((p) => p.id === id)?.name || "")
+        .filter(Boolean);
 
       return {
-        id: `m_${Date.now()}_${idx}`,
-        when: dt.toISOString(),
-        court,
-        isFriday,
+        id: `${s.id}-${now}-${i}`,
+        when: s.whenISO,
         aNames,
         bNames,
         scoreA: s.scoreA,
         scoreB: s.scoreB,
-        points: [
-          { name: aNames[0], value: delta / 2 },
-          { name: aNames[1], value: delta / 2 },
-          { name: bNames[0], value: -delta / 2 },
-          { name: bNames[1], value: -delta / 2 },
-        ],
       };
     });
 
-    const next = [...newRecs, ...matches].slice(0, 300);
-    setMatches(next);
+    const next = [...asMatchRecs, ...matches]; // nyeste først
     save(LS_MATCHES, next);
-    setSaved(
-      `${newRecs.length} sæt gemt ✅ — se dem på Dashboard og Ranglisten.`
+
+    setSuccessMsg(
+      sets.length === 1
+        ? "Sættet er gemt. Du kan se det på Dashboard og Ranglisten."
+        : `${sets.length} sæt er gemt. Du kan se dem på Dashboard og Ranglisten.`
     );
+
+    // Nulstil til én tom sektion igen
+    setSets([newSet()]);
+    // Auto-clear success efter lidt tid
+    setTimeout(() => setSuccessMsg(""), 4500);
   }
-
-  // --------- “Mine resultater” / “Alle resultater” ----------
-  const myName = useMemo(
-    () => players.find((p) => p.id === "me")?.name ?? "Demo Bruger",
-    [players]
-  );
-
-  const groupsAll = useMemo(() => groupByDate(matches), [matches]);
-  const groupsMine = useMemo(
-    () =>
-      groupByDate(
-        matches.filter(
-          (m) =>
-            m.aNames.includes(myName) ||
-            m.bNames.includes(myName)
-        )
-      ),
-    [matches, myName]
-  );
 
   return (
-    <div className="space-y-6">
-      {/* Formular-kort */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span>📝</span>
-          <div className="text-lg font-semibold">Indtast resultat</div>
-        </div>
+    <div style={{ padding: 18, maxWidth: 980 }}>
+      <h1 style={{ margin: "10px 0 18px", fontSize: 24 }}>Indtast resultater</h1>
 
-        {/* Hold A / Hold B */}
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm font-medium text-gray-700 mb-1">Hold A</div>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={a1}
-                onChange={(e) => setA1(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={a2}
-                onChange={(e) => setA2(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+      {/** Tidligere sæt i kladden (de sæt man er ved at indtaste) */}
+      {sets.length > 1 && (
+        <SectionCard title="Tidligere sæt" icon={<span>🗂️</span>}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {sets.slice(0, -1).map((s, idx) => {
+              const aNames = [s.a1, s.a2]
+                .map((id) => players.find((p) => p.id === id)?.name || "")
+                .filter(Boolean)
+                .join(" & ");
+              const bNames = [s.b1, s.b2]
+                .map((id) => players.find((p) => p.id === id)?.name || "")
+                .filter(Boolean)
+                .join(" & ");
+              const label =
+                aNames && bNames
+                  ? `${aNames} vs ${bNames} — ${s.scoreA}-${s.scoreB}`
+                  : "Udfyldt sæt";
+              const date = new Date(s.whenISO).toISOString().slice(0, 10);
 
-          <div>
-            <div className="text-sm font-medium text-gray-700 mb-1">Hold B</div>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={b1}
-                onChange={(e) => setB1(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={b2}
-                onChange={(e) => setB2(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-              >
-                {players.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Sæt-liste */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-gray-700">Sæt</div>
-            <button
-              type="button"
-              onClick={addSet}
-              className="rounded-lg border border-blue-600 text-blue-600 px-3 py-1 text-sm hover:bg-blue-50"
-            >
-              + Tilføj sæt
-            </button>
-          </div>
-
-          <div className="mt-2 space-y-2">
-            {sets.map((s, ix) => (
-              <div
-                key={s.id}
-                className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2"
-              >
-                <div className="text-[13px] text-gray-600">Sæt {ix + 1}</div>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-gray-600">A</span>
-                    <ScorePicker
-                      value={s.scoreA}
-                      onChange={(v) => updateSet(s.id, "scoreA", v)}
-                      ariaLabel={`Sæt ${ix + 1} score A`}
-                    />
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    alignItems: "center",
+                    gap: 10,
+                    border: "1px solid #E5E7EB",
+                    padding: 12,
+                    borderRadius: 12,
+                    background: "#FAFAFA",
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600 }}>Sæt #{idx + 1} • {date}</div>
+                    <div style={{ color: "#374151" }}>{label}</div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] text-gray-600">B</span>
-                    <ScorePicker
-                      value={s.scoreB}
-                      onChange={(v) => updateSet(s.id, "scoreB", v)}
-                      ariaLabel={`Sæt ${ix + 1} score B`}
-                    />
-                  </div>
-                  {sets.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSet(s.id)}
-                      className="ml-2 text-[13px] text-rose-600 hover:underline"
-                      title="Fjern sæt"
-                    >
-                      Fjern
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeSet(s.id)}
+                    style={{
+                      border: "1px solid #EF4444",
+                      color: "#EF4444",
+                      background: "#fff",
+                      padding: "8px 12px",
+                      borderRadius: 10,
+                      fontWeight: 600,
+                    }}
+                    aria-label={`Fjern sæt #${idx + 1}`}
+                  >
+                    Fjern
+                  </button>
                 </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      )}
+
+      {/** Aktive sæt (sidste i listen) */}
+      {sets.map((s, i) => {
+        const isLast = i === sets.length - 1;
+        return (
+          <SectionCard
+            key={s.id}
+            title={`Sæt #${i + 1}`}
+            icon={<span>🎾</span>}
+          >
+            <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+              <input
+                type="datetime-local"
+                value={dateInputValueFromISO(s.whenISO)}
+                onChange={(e) => updateSet(s.id, { whenISO: isoFromDateInputValue(e.target.value) })}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #E5E7EB",
+                  background: "#fff",
+                  fontSize: 14,
+                }}
+                aria-label="Dato og tid for sættet"
+              />
+            </div>
+
+            {/* Hold A */}
+            <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
+              <FieldLabel>Hold A</FieldLabel>
+              <div style={{ display: "grid", gap: 10 }}>
+                <FieldLabel>Spiller A1</FieldLabel>
+                <Select
+                  value={s.a1}
+                  onChange={(v) => updateSet(s.id, { a1: v })}
+                  placeholder="Vælg spiller…"
+                >
+                  {playerOptions}
+                </Select>
+
+                <FieldLabel>Spiller A2</FieldLabel>
+                <Select
+                  value={s.a2}
+                  onChange={(v) => updateSet(s.id, { a2: v })}
+                  placeholder="Vælg spiller…"
+                >
+                  {playerOptions}
+                </Select>
+
+                <FieldLabel>Score til Hold A</FieldLabel>
+                <ScorePicker
+                  value={s.scoreA}
+                  onChange={(v) => updateSet(s.id, { scoreA: v })}
+                  ariaLabel="Score til Hold A"
+                />
               </div>
-            ))}
-          </div>
+            </div>
 
-          <div className="mt-2 text-[12.5px] text-gray-500">
-            {sets.length} sæt klar til gem.
-          </div>
+            {/* Hold B */}
+            <div style={{ display: "grid", gap: 12 }}>
+              <FieldLabel>Hold B</FieldLabel>
+              <div style={{ display: "grid", gap: 10 }}>
+                <FieldLabel>Spiller B1</FieldLabel>
+                <Select
+                  value={s.b1}
+                  onChange={(v) => updateSet(s.id, { b1: v })}
+                  placeholder="Vælg spiller…"
+                >
+                  {playerOptions}
+                </Select>
+
+                <FieldLabel>Spiller B2</FieldLabel>
+                <Select
+                  value={s.b2}
+                  onChange={(v) => updateSet(s.id, { b2: v })}
+                  placeholder="Vælg spiller…"
+                >
+                  {playerOptions}
+                </Select>
+
+                <FieldLabel>Score til Hold B</FieldLabel>
+                <ScorePicker
+                  value={s.scoreB}
+                  onChange={(v) => updateSet(s.id, { scoreB: v })}
+                  ariaLabel="Score til Hold B"
+                />
+              </div>
+            </div>
+
+            {/* Knapper */}
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                marginTop: 14,
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={addSet}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  borderRadius: 12,
+                  border: "1px solid #EA580C",
+                  color: "#EA580C",
+                  background: "#fff",
+                  fontWeight: 700,
+                }}
+              >
+                <span>＋</span> Tilføj sæt
+              </button>
+
+              {isLast && (
+                <button
+                  type="button"
+                  onClick={submitAll}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: 12,
+                    border: "1px solid #2563EB",
+                    background: "#2563EB",
+                    color: "#fff",
+                    fontWeight: 700,
+                    boxShadow: "0 8px 22px rgba(37,99,235,.25)",
+                  }}
+                >
+                  Indsend resultater
+                </button>
+              )}
+            </div>
+          </SectionCard>
+        );
+      })}
+
+      {successMsg && (
+        <div
+          role="status"
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            borderRadius: 12,
+            background: "#ECFDF5",
+            color: "#065F46",
+            border: "1px solid #A7F3D0",
+            fontWeight: 600,
+          }}
+        >
+          ✅ {successMsg}
         </div>
-
-        {/* Tid, bane, fredag */}
-        <div className="mt-4 grid md:grid-cols-3 gap-2">
-          <div>
-            <div className="text-[13px] text-gray-600 mb-1">Hvornår</div>
-            <input
-              type="datetime-local"
-              value={when}
-              onChange={(e) => setWhen(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <div className="text-[13px] text-gray-600 mb-1">Bane</div>
-            <input
-              value={court}
-              onChange={(e) => setCourt(e.target.value)}
-              placeholder="Bane"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-gray-700 mt-6 md:mt-0">
-            <input
-              type="checkbox"
-              checked={isFriday}
-              onChange={(e) => setIsFriday(e.target.checked)}
-            />
-            Dette var en fredagskamp
-          </label>
-        </div>
-
-        {/* Gem */}
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <div
-            className={classNames(
-              "text-[13px]",
-              saved ? "text-blue-700" : "text-gray-400"
-            )}
-          >
-            {saved ?? "—"}
-          </div>
-          <button
-            onClick={onSave}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-          >
-            Gem resultat
-          </button>
-        </div>
-      </div>
-
-      {/* Mine resultater */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span>👤</span>
-          <div className="text-lg font-semibold">Mine resultater</div>
-        </div>
-
-        {groupsMine.length === 0 ? (
-          <div className="rounded-lg bg-gray-50 text-[13.5px] text-gray-600 px-3 py-2">
-            Ingen kampe endnu for din profil.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groupsMine.map(([date, ms]) => (
-              <DayCard key={date} date={date} matches={ms} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Alle resultater */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <span>📋</span>
-          <div className="text-lg font-semibold">Alle resultater</div>
-        </div>
-
-        {groupsAll.length === 0 ? (
-          <div className="rounded-lg bg-gray-50 text-[13.5px] text-gray-600 px-3 py-2">
-            Der er endnu ikke registreret kampe.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groupsAll.map(([date, ms]) => (
-              <DayCard key={date} date={date} matches={ms} />
-            ))}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
-}
-
-/**
- * Gruppeér kampe efter dato (yyyy-mm-dd), nyeste først.
- */
-function groupByDate(ms: MatchRec[]): [string, MatchRec[]][] {
-  const m = new Map<string, MatchRec[]>();
-  for (const x of ms) {
-    const key = fmtDate(x.when);
-    if (!m.has(key)) m.set(key, []);
-    m.get(key)!.push(x);
-  }
-  const out: [string, MatchRec[]][] = [...m.entries()];
-  out.sort((a, b) => (a[0] < b[0] ? 1 : -1)); // nyeste øverst
-  for (const [, arr] of out) {
-    arr.sort((a, b) => (a.when < b.when ? 1 : -1));
-  }
-  return out;
-}
-
-/** lille random helper, så SetRow-id'er er unikke */
-function cryptoRandom() {
-  try {
-    // @ts-ignore
-    const buf = new Uint32Array(1);
-    // @ts-ignore
-    (globalThis.crypto || ({} as any)).getRandomValues?.(buf);
-    return (buf[0] >>> 0).toString(36);
-  } catch {
-    return Math.random().toString(36).slice(2);
-  }
 }
