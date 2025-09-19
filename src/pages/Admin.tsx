@@ -1,106 +1,83 @@
 // src/pages/Admin.tsx
 import React from "react";
-
-type Player = {
-  id: string;
-  name: string;
-  initials: string;
-  elo: number;
-};
-
-const DEMO_PLAYERS: Player[] = [
-  { id: "p1", name: "Emma Christensen", initials: "EC", elo: 1020 },
-  { id: "p2", name: "Michael Sørensen", initials: "MS", elo: 1010 },
-  { id: "p3", name: "Julie Rasmussen", initials: "JR", elo: 1000 },
-  { id: "p4", name: "Lars Petersen", initials: "LP", elo: 995 },
-  { id: "p5", name: "Demo Bruger", initials: "DB", elo: 980 },
-];
-
-function save<T>(key: string, value: T) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-function load<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+import { getPlayers, upsertPlayer, removePlayer, Player } from "../lib/playerStore";
 
 export default function Admin() {
-  const [players, setPlayers] = React.useState<Player[]>(
-    load<Player[]>("players", [])
-  );
-  const [notice, setNotice] = React.useState<string>("");
+  const [players, setPlayers] = React.useState<Player[]>([]);
+  const [name, setName] = React.useState("");
+  const [elo, setElo] = React.useState(1000);
 
-  const seedDemoPlayers = () => {
-    save("players", DEMO_PLAYERS);
-    // clear any demo matches/results to avoid confusion
-    localStorage.removeItem("matches");
-    localStorage.removeItem("sets");
-    setPlayers(DEMO_PLAYERS);
-    setNotice("Demo-spillere gendannet.");
+  const reload = () => setPlayers(getPlayers());
+  React.useEffect(() => { reload(); }, []);
+
+  const add = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    upsertPlayer({ name: trimmed, elo });
+    setName("");
+    setElo(1000);
+    reload();
   };
 
-  const resetAll = () => {
-    localStorage.clear();
-    setPlayers([]);
-    setNotice("Al lokal data er nulstillet.");
+  const del = (id: string) => {
+    if (!confirm("Slet spiller?")) return;
+    removePlayer(id);
+    reload();
   };
 
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold">Admin</h2>
-        <p className="text-slate-600 mt-1">
-          Brug disse værktøjer til at nulstille data eller gendanne demo-spillere.
-        </p>
+        <h2 className="text-lg font-semibold mb-3">Admin</h2>
+        <p className="text-slate-600 mb-4">Tilføj eller slet spillere. Disse gemmes i browserens localStorage og bruges af alle sider.</p>
 
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[260px]">
+            <label className="block text-sm text-slate-600 mb-1">Navn</label>
+            <input
+              className="w-full rounded-lg border border-slate-300 px-3 py-2"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Spillers navn"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-slate-600 mb-1">Start ELO</label>
+            <input
+              type="number"
+              className="w-[140px] rounded-lg border border-slate-300 px-3 py-2"
+              value={elo}
+              onChange={(e) => setElo(Number(e.target.value))}
+            />
+          </div>
           <button
-            onClick={seedDemoPlayers}
             className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            onClick={add}
           >
-            Gendan demo-spillere
-          </button>
-          <button
-            onClick={resetAll}
-            className="rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
-          >
-            Nulstil ALT (localStorage)
+            Tilføj spiller
           </button>
         </div>
-
-        {notice && (
-          <div className="mt-4 rounded-md bg-emerald-50 px-3 py-2 text-emerald-700">
-            {notice}
-          </div>
-        )}
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 className="font-medium mb-3">Aktuelle spillere</h3>
-        {players.length === 0 ? (
-          <p className="text-slate-500">Ingen spillere i systemet.</p>
-        ) : (
-          <ul className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-            {players.map((p) => (
-              <li
-                key={p.id}
-                className="rounded-lg border border-slate-200 p-3 flex items-center gap-3"
+        <h3 className="font-semibold mb-3">Spillere ({players.length})</h3>
+        <ul className="divide-y divide-slate-200">
+          {players.map(p => (
+            <li key={p.id} className="flex items-center justify-between py-3">
+              <div>
+                <div className="font-medium">{p.name}</div>
+                <div className="text-sm text-slate-600">ELO: {p.elo}</div>
+              </div>
+              <button
+                className="rounded-lg border border-red-300 px-3 py-1 text-red-600 hover:bg-red-50"
+                onClick={() => del(p.id)}
               >
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-700 font-semibold">
-                  {p.initials}
-                </span>
-                <div>
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-sm text-slate-500">ELO: {p.elo}</div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+                Slet
+              </button>
+            </li>
+          ))}
+          {players.length === 0 && <li className="py-2 text-slate-600">Ingen spillere endnu.</li>}
+        </ul>
       </div>
     </div>
   );
