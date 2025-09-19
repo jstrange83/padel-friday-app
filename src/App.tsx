@@ -3,9 +3,7 @@ import React from "react";
 import Dashboard from "./pages/Dashboard";
 import Results from "./pages/Results";
 import Admin from "./pages/Admin";
-
-// Hvis du ikke har Dashboard/Results/Admin endnu, bør de filer eksistere.
-// "Ranglisten" og "Bøder" viser en simpel placeholder her i App.tsx.
+import { ensureSeedPlayers } from "./lib/playerStore";
 
 type PageKey = "Dashboard" | "Resultater" | "Ranglisten" | "Bøder" | "Admin";
 
@@ -36,6 +34,11 @@ const Placeholder: React.FC<{ title: string }> = ({ title }) => (
 export default function App() {
   const [current, setCurrent] = React.useState<PageKey>("Dashboard");
 
+  React.useEffect(() => {
+    // seed demo-spillere kun hvis der ikke findes nogen
+    ensureSeedPlayers();
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-7xl px-4 py-6">
@@ -44,41 +47,21 @@ export default function App() {
           <aside className="w-[260px] shrink-0">
             <div className="mb-4 text-xl font-semibold">PadelApp</div>
             <div className="flex flex-col gap-3">
-              <NavItem
-                label="Dashboard"
-                active={current === "Dashboard"}
-                onClick={() => setCurrent("Dashboard")}
-              />
-              <NavItem
-                label="Resultater"
-                active={current === "Resultater"}
-                onClick={() => setCurrent("Resultater")}
-              />
-              <NavItem
-                label="Ranglisten"
-                active={current === "Ranglisten"}
-                onClick={() => setCurrent("Ranglisten")}
-              />
-              <NavItem
-                label="Bøder"
-                active={current === "Bøder"}
-                onClick={() => setCurrent("Bøder")}
-              />
-              <NavItem
-                label="Admin"
-                active={current === "Admin"}
-                onClick={() => setCurrent("Admin")}
-              />
+              <NavItem label="Dashboard"  active={current === "Dashboard"}  onClick={() => setCurrent("Dashboard")} />
+              <NavItem label="Resultater" active={current === "Resultater"} onClick={() => setCurrent("Resultater")} />
+              <NavItem label="Ranglisten" active={current === "Ranglisten"} onClick={() => setCurrent("Ranglisten")} />
+              <NavItem label="Bøder"      active={current === "Bøder"}      onClick={() => setCurrent("Bøder")} />
+              <NavItem label="Admin"      active={current === "Admin"}      onClick={() => setCurrent("Admin")} />
             </div>
           </aside>
 
-          {/* Main content */}
+          {/* Main */}
           <main className="flex-1">
-            {current === "Dashboard" && <Dashboard />}
+            {current === "Dashboard"  && <Dashboard />}
             {current === "Resultater" && <Results />}
             {current === "Ranglisten" && <Placeholder title="Ranglisten" />}
-            {current === "Bøder" && <Placeholder title="Bøder" />}
-            {current === "Admin" && <Admin />}
+            {current === "Bøder"      && <Placeholder title="Bøder" />}
+            {current === "Admin"      && <Admin />}
           </main>
         </div>
       </div>
