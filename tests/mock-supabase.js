@@ -187,7 +187,7 @@ const RPC = {
     const ev = db.padel_events.find((e) => e.id === m.event_id);
     if (ev.status === 'planlagt') Object.assign(ev, { status: 'igang', current_round: Math.max(ev.current_round, m.round_no) });
     else if (ev.status === 'igang' && ev.format !== 'rotation') ev.current_round = Math.max(ev.current_round, m.round_no);
-    if (superuser()) { revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet', changed: false, prev_score_a: null, prev_score_b: null }); return applyElo(m); }
+    if (superuser() || m.status === 'planlagt') { if (!superuser() && !teamOf(m)) throw new Error('Du spiller ikke i denne kamp'); revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet', changed: false, prev_score_a: null, prev_score_b: null }); return applyElo(m); }
     const t = teamOf(m); if (!t) throw new Error('Du spiller ikke i denne kamp');
     if (m.status === 'planlagt') return Object.assign(m, { score_a: p_a, score_b: p_b, status: 'indtastet', reported_team: t, reported_by: uid(), changed: false });
     if (m.score_a === p_a && m.score_b === p_b) return;

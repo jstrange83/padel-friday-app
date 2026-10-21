@@ -94,7 +94,7 @@ export const FAQ = [
   {
     cat: 'Resultater',
     q: 'Hvordan indtaster jeg et resultat?',
-    a: `<p>Tryk <b>Indtast resultat</b> på kampkortet. Én spiller fra kampen indtaster, og så skal en fra <b>modstanderholdet</b> trykke <b>Godkend</b>. Først når resultatet er godkendt, tæller det.</p>`,
+    a: `<p>Tryk <b>Indtast resultat</b> på kampkortet. Alle fire spillere i kampen kan indtaste, og resultatet tæller med det samme. Skal det rettes bagefter, skal rettelsen godkendes af en fra <b>modstanderholdet</b>.</p>`,
   },
   {
     cat: 'Resultater',
@@ -106,8 +106,7 @@ export const FAQ = [
   {
     cat: 'Resultater',
     q: 'Hvad hvis resultatet er forkert?',
-    a: `<p>Er det ikke godkendt endnu, kan modstanderne trykke <b>Afvis</b>, så skal det indtastes igen.</p>
-<p>Er det allerede godkendt, kan en spiller fra kampen trykke <b>Ret</b>. Ændringen skal så godkendes af en fra <b>modstanderholdet</b> (din makker kan ikke). Indtil da tæller kampen ikke, og afviser de ændringen, gælder det gamle resultat igen.</p>
+    a: `<p>Alle fire spillere i kampen kan trykke <b>Ret</b>. Ændringen skal så godkendes af en fra <b>modstanderholdet</b> (din makker kan ikke). Indtil da tæller kampen ikke, og afviser de ændringen, gælder det gamle resultat igen.</p>
 <p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {

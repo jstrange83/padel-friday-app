@@ -312,7 +312,7 @@ function matchCard(c, m) {
       : '<span class="badge wait">Afventer godkendelse</span>';
     if (canOk) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">${m.changed ? 'Godkend ændring' : 'Godkend'}</button>`;
     if (opp || run) actions += `<button class="btn sm" data-act="reject" data-id="${m.id}" data-changed="${m.changed && m.prev_score_a != null ? 1 : ''}">${m.changed ? 'Afvis ændring' : 'Afvis'}</button>`;
-    if (myTeam === m.reported_team || run) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>${mic}`;
+    if (myTeam || run) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>${mic}`;
   } else {
     const d = delta[m.id + m.a_left];
     if (d !== undefined) status = `<span class="badge">Point ${sign(d)} / ${sign(-d)}</span>`;
@@ -647,8 +647,7 @@ function bind(c) {
     try {
       const old = matches.find((x) => x.id === f.dataset.id);
       await q(sb.rpc('padel_report_result', { p_match: f.dataset.id, p_a: a, p_b: bb }));
-      toast(run ? 'Resultatet er gemt' : old.status === 'planlagt' || old.reported_by === me
-        ? 'Gemt. Modstanderne skal godkende' : 'Ændringen er sendt. En fra modstanderholdet skal godkende');
+      toast(run || old.status === 'planlagt' ? 'Resultatet er gemt' : 'Rettelsen er sendt. En fra modstanderholdet skal godkende');
       await reload();
     } catch { busy(btn, false); }
   }));

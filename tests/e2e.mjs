@@ -179,6 +179,17 @@ try {
   await wait(500);
   await openAll();
   ok((await page.locator(`#m-${cm.id} .score`).innerText()).replace(/\s/g, '') === '6–0' && (await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'admin retter direkte');
+  // Nulstil kampen; en spiller taster et nyt resultat, som tæller med det samme
+  await page.locator(`#m-${cm.id} [data-act=reset]`).click();
+  await wait(500);
+  await loginAs(cm.b);
+  await page.locator(`#m-${cm.id} [data-act=enter]`).first().click();
+  await cf.locator('input[name=a]').fill('2'); await cf.locator('input[name=b]').fill('6');
+  await cf.locator('button').click();
+  await wait(500);
+  await openAll();
+  ok((await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'spillerens første resultat tæller uden godkendelse');
+  await loginAs('jimmy@test');
   await page.locator('#finish').first().click();
   await wait(400);
   ok((await text()).includes('afsluttet'), 'dagen afsluttet');
