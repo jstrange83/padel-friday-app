@@ -1,0 +1,712 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { generateRound } from './pairing.js';
+
+const sb = createClient('https://mxdgspfhakomblprhvto.supabase.co', 'sb_publishable_0ZKQoqCX5a6okJl_Lh0Leg_URrexVdI', {
+  auth: { persistSession: true, storageKey: 'fredagspadel-auth' },
+});
+
+const S = { session: null, me: null, profiles: {}, centers: [], courts: [], filter: 'alle', recovery: false };
+let pollTimer = null, tickTimer = null;
+
+const app = document.getElementById('app');
+const navEl = document.getElementById('nav');
+const SIDE = { venstre: 'Venstre', hojre: 'Højre', begge: 'Begge sider' };
+const SIDE_SHORT = { venstre: 'V', hojre: 'H', begge: 'V/H' };
+const GENDER = { mand: 'Mand', kvinde: 'Kvinde' };
+const FORMAT = { rotation: 'Rotation på tid', klassisk: 'Klassisk' };
+const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nameOf = (id) => S.profiles[id]?.name || 'Ukendt';
+const first = (id) => nameOf(id).split(' ')[0];
+const fmtDate = (d, opts = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) =>
+  new Intl.DateTimeFormat('da-DK', { ...opts, timeZone: 'Europe/Copenhagen' }).format(new Date(d));
+const courtById = (id) => S.courts.find((c) => c.id === id);
+const centerById = (id) => S.centers.find((c) => c.id === id);
+
+function toast(msg, bad = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (bad ? ' bad' : '');
+  clearTimeout(t._h);
+  t._h = setTimeout(() => (t.className = ''), 3200);
+}
+function niceError(e) {
+  const m = e?.message || String(e);
+  if (/Invalid login credentials/i.test(m)) return 'Forkert e-mail eller adgangskode';
+  if (/Email not confirmed/i.test(m)) return 'Bekræft din e-mail først (tjek din indbakke)';
+  if (/already registered/i.test(m)) return 'E-mailen er allerede oprettet. Log ind i stedet';
+  if (/Password should be/i.test(m)) return 'Adgangskoden skal være mindst 6 tegn';
+  if (/violates foreign key/i.test(m)) return 'Kan ikke slettes, fordi den er brugt i kampe';
+  if (/row-level security/i.test(m)) return 'Det har du ikke adgang til';
+  return m;
+}
+async function q(p) {
+  const { data, error } = await p;
+  if (error) { toast(niceError(error), true); throw error; }
+  return data;
+}
+function busy(btn, on) {
+  if (!btn) return;
+  btn.disabled = on;
+  if (on) { btn._t = btn.textContent; btn.textContent = '…'; } else if (btn._t) btn.textContent = btn._t;
+}
+
+// ---------- Opstart og navigation ----------
+sb.auth.onAuthStateChange((ev, session) => {
+  S.session = session;
+  if (ev === 'PASSWORD_RECOVERY') S.recovery = true;
+  if (['INITIAL_SESSION', 'SIGNED_IN', 'SIGNED_OUT', 'PASSWORD_RECOVERY'].includes(ev)) setTimeout(boot, 0);
+});
+window.addEventListener('hashchange', () => { if (S.me) route(); });
+
+let booting = false;
+async function boot() {
+  if (booting) return;
+  booting = true;
+  try {
+    stopTimers();
+    if (S.recovery && S.session) return renderNewPassword();
+    if (!S.session) { navEl.innerHTML = ''; return renderAuth(); }
+    await loadBase();
+    if (!S.me) { navEl.innerHTML = ''; return renderProfileForm(true); }
+    renderNav();
+    await route();
+  } finally { booting = false; }
+}
+
+async function loadBase() {
+  const [profiles, centers, courts] = await Promise.all([
+    q(sb.from('padel_profiles').select('*')),
+    q(sb.from('padel_centers').select('*').order('name')),
+    q(sb.from('padel_courts').select('*').order('sort')),
+  ]);
+  S.profiles = Object.fromEntries(profiles.map((p) => [p.id, p]));
+  S.centers = centers;
+  S.courts = courts;
+  S.me = S.profiles[S.session.user.id] || null;
+}
+
+function renderNav() {
+  const items = [['#/rangliste', '🏆', 'Rangliste'], ['#/fredage', '🎾', 'Fredage'], ['#/profil', '👤', 'Profil']];
+  if (S.me.is_admin) items.push(['#/admin', '⚙️', 'Admin']);
+  const cur = location.hash || '#/fredage';
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${cur.startsWith(h) || (h === '#/fredage' && cur.startsWith('#/fredag')) ? 'on' : ''}"><span>${i}</span>${t}</a>`).join('');
+}
+
+function stopTimers() {
+  clearInterval(pollTimer); clearInterval(tickTimer);
+  pollTimer = tickTimer = null;
+}
+
+async function route() {
+  stopTimers();
+  const h = location.hash || '#/fredage';
+  renderNav();
+  window.scrollTo(0, 0);
+  const [, page, id] = h.split('/');
+  try {
+    if (page === 'rangliste') return await viewRanking();
+    if (page === 'fredag' && id) return await viewEvent(id);
+    if (page === 'ny-fredag') return viewNewEvent();
+    if (page === 'profil') return renderProfileForm(false);
+    if (page === 'spiller' && id) return await viewPlayer(id);
+    if (page === 'admin' && S.me.is_admin) return await viewAdmin();
+    return await viewEvents();
+  } catch (e) { console.error(e); }
+}
+
+// ---------- Login ----------
+function renderAuth(mode = 'login') {
+  const signup = mode === 'signup';
+  app.innerHTML = `
+  <div class="auth">
+    <div class="logo">🎾</div>
+    <h1>Fredagspadel</h1>
+    <p class="muted">Rangliste, hold og resultater til fredagspadel.</p>
+    <form class="card" id="authForm">
+      <label>E-mail<input type="email" name="email" required autocomplete="email"></label>
+      <label>Adgangskode<input type="password" name="password" required minlength="6" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
+      <button class="btn primary" type="submit">${signup ? 'Opret konto' : 'Log ind'}</button>
+      ${signup ? '' : '<button class="link" type="button" id="forgot">Glemt adgangskode?</button>'}
+    </form>
+    <p class="center">${signup ? 'Har du allerede en konto?' : 'Ny spiller?'}
+      <button class="link" id="switch">${signup ? 'Log ind' : 'Opret konto'}</button></p>
+  </div>`;
+  document.getElementById('switch').onclick = () => renderAuth(signup ? 'login' : 'signup');
+  const f = document.getElementById('authForm');
+  document.getElementById('forgot')?.addEventListener('click', async () => {
+    const email = f.email.value.trim();
+    if (!email) return toast('Skriv din e-mail først', true);
+    await q(sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin }));
+    toast('Vi har sendt en mail med et link til ny adgangskode');
+  });
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button[type=submit]');
+    busy(btn, true);
+    try {
+      const creds = { email: f.email.value.trim(), password: f.password.value };
+      if (signup) {
+        const data = await q(sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin } }));
+        if (!data.session) {
+          app.innerHTML = `<div class="auth"><div class="logo">📬</div><h1>Tjek din mail</h1>
+          <p class="muted">Vi har sendt et link til ${esc(creds.email)}. Klik på det for at bekræfte din konto, og log så ind her.</p>
+          <button class="btn" onclick="location.reload()">Til login</button></div>`;
+        }
+      } else {
+        await q(sb.auth.signInWithPassword(creds));
+      }
+    } catch {} finally { busy(btn, false); }
+  };
+}
+
+function renderNewPassword() {
+  app.innerHTML = `<div class="auth"><h1>Ny adgangskode</h1>
+    <form class="card" id="pw"><label>Ny adgangskode<input type="password" name="pw" minlength="6" required autocomplete="new-password"></label>
+    <button class="btn primary">Gem</button></form></div>`;
+  document.getElementById('pw').onsubmit = async (e) => {
+    e.preventDefault();
+    await q(sb.auth.updateUser({ password: e.target.pw.value }));
+    S.recovery = false;
+    toast('Adgangskoden er ændret');
+    boot();
+  };
+}
+
+// ---------- Profil ----------
+function radios(name, opts, val) {
+  return `<div class="seg">${Object.entries(opts).map(([k, v]) =>
+    `<label><input type="radio" name="${name}" value="${k}" ${k === val ? 'checked' : ''} required><span>${v}</span></label>`).join('')}</div>`;
+}
+
+function renderProfileForm(isNew) {
+  const p = S.me || { name: '', gender: '', side: 'begge' };
+  app.innerHTML = `
+  <div class="page">
+    <h1>${isNew ? 'Velkommen 👋' : 'Din profil'}</h1>
+    ${isNew ? '<p class="muted">Fortæl lidt om dig selv, så appen kan sætte gode hold.</p>' : ''}
+    <form class="card" id="pf">
+      <label>Navn<input name="name" value="${esc(p.name)}" required maxlength="60" autocomplete="name"></label>
+      <div class="lbl">Køn</div>${radios('gender', GENDER, p.gender)}
+      <div class="lbl">Foretrukken side</div>${radios('side', SIDE, p.side)}
+      <button class="btn primary">${isNew ? 'Kom i gang' : 'Gem'}</button>
+    </form>
+    ${isNew ? '' : `
+      <a class="btn" href="#/spiller/${S.me.id}">Se min statistik</a>
+      <div class="card tip"><b>Tip:</b> Åbn appen i Safari eller Chrome og vælg "Føj til hjemmeskærm", så ligger den som en app på telefonen.</div>
+      <button class="btn ghost" id="logout">Log ud</button>`}
+  </div>`;
+  document.getElementById('pf').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, btn = f.querySelector('button');
+    busy(btn, true);
+    try {
+      await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+      toast('Profilen er gemt');
+      if (isNew) { location.hash = '#/fredage'; return boot(); }
+      await loadBase();
+    } catch {} finally { busy(btn, false); }
+  };
+  document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+}
+
+// ---------- Rangliste ----------
+async function viewRanking() {
+  const changes = await q(sb.from('padel_elo_changes').select('player_id,delta,created_at').eq('active', true).order('created_at', { ascending: false }));
+  const stats = {};
+  for (const c of changes) {
+    const s = (stats[c.player_id] ||= { n: 0, form: [] });
+    s.n++;
+    if (s.form.length < 5) s.form.push(c.delta);
+  }
+  let list = Object.values(S.profiles);
+  if (S.filter === 'mand') list = list.filter((p) => p.gender === 'mand');
+  if (S.filter === 'kvinde') list = list.filter((p) => p.gender === 'kvinde');
+  list.sort((a, b) => b.elo - a.elo || a.name.localeCompare(b.name));
+  const active = list.filter((p) => stats[p.id]?.n);
+  const fresh = list.filter((p) => !stats[p.id]?.n);
+  const row = (p, i) => {
+    const s = stats[p.id] || { n: 0, form: [] };
+    const medal = ['🥇', '🥈', '🥉'][i] || `<span class="rk">${i + 1}</span>`;
+    const form = s.form.map((d) => `<i class="${d > 0 ? 'up' : d < 0 ? 'dn' : 'eq'}"></i>`).join('');
+    return `<a class="row ${p.id === S.me.id ? 'me' : ''}" href="#/spiller/${p.id}">
+      <div class="pos">${medal}</div>
+      <div class="grow"><b>${esc(p.name)}</b><small>${s.n} kampe ${form ? `<span class="form">${form}</span>` : ''}</small></div>
+      <div class="elo">${p.elo}</div></a>`;
+  };
+  app.innerHTML = `
+  <div class="page">
+    <h1>Rangliste</h1>
+    <div class="chips">${[['alle', 'Alle'], ['mand', 'Mænd'], ['kvinde', 'Kvinder']].map(([k, v]) =>
+      `<button class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${v}</button>`).join('')}</div>
+    <div class="list">${active.map(row).join('') || '<p class="muted pad">Ingen kampe spillet endnu.</p>'}</div>
+    ${fresh.length ? `<h3>Ikke spillet endnu</h3><div class="list">${fresh.map((p) =>
+      `<a class="row" href="#/spiller/${p.id}"><div class="grow"><b>${esc(p.name)}</b></div><div class="elo muted">${p.elo}</div></a>`).join('')}</div>` : ''}
+    <p class="muted small">Alle starter på 1000 Elo. Slår man et stærkere hold, giver det flere point.</p>
+  </div>`;
+  app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
+}
+
+// ---------- Spillerstatistik ----------
+async function viewPlayer(id) {
+  const p = S.profiles[id];
+  if (!p) { app.innerHTML = '<div class="page"><p>Spilleren findes ikke.</p></div>'; return; }
+  const ms = await q(sb.from('padel_matches').select('*, padel_events(starts_at,format)')
+    .or(`a_left.eq.${id},a_right.eq.${id},b_left.eq.${id},b_right.eq.${id}`).eq('status', 'bekraeftet').order('created_at', { ascending: false }));
+  const ch = await q(sb.from('padel_elo_changes').select('match_id,delta').eq('player_id', id).eq('active', true));
+  const delta = Object.fromEntries(ch.map((c) => [c.match_id, c.delta]));
+  let w = 0, d = 0, l = 0, gf = 0, ga = 0;
+  const partners = {};
+  const rows = ms.map((m) => {
+    const onA = [m.a_left, m.a_right].includes(id);
+    const mine = onA ? m.score_a : m.score_b, theirs = onA ? m.score_b : m.score_a;
+    const mate = onA ? (m.a_left === id ? m.a_right : m.a_left) : (m.b_left === id ? m.b_right : m.b_left);
+    const opps = onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right];
+    partners[mate] = (partners[mate] || 0) + 1;
+    if (mine > theirs) w++; else if (mine < theirs) l++; else d++;
+    gf += mine; ga += theirs;
+    const dl = delta[m.id] ?? 0;
+    return `<div class="row"><div class="grow"><b>${mine}–${theirs}</b> med ${esc(first(mate))} mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}
+      <small>${m.padel_events ? fmtDate(m.padel_events.starts_at, { day: 'numeric', month: 'short' }) : ''}</small></div>
+      <div class="delta ${dl > 0 ? 'up' : dl < 0 ? 'dn' : ''}">${dl > 0 ? '+' : ''}${dl}</div></div>`;
+  });
+  const topMate = Object.entries(partners).sort((a, b) => b[1] - a[1])[0];
+  app.innerHTML = `
+  <div class="page">
+    <button class="back" onclick="history.back()">‹ Tilbage</button>
+    <h1>${esc(p.name)}</h1>
+    <p class="muted">${GENDER[p.gender]} · ${SIDE[p.side]}${p.is_admin ? ' · Admin' : ''}</p>
+    <div class="stats">
+      <div><b>${p.elo}</b><span>Elo</span></div>
+      <div><b>${ms.length}</b><span>Kampe</span></div>
+      <div><b>${w}/${d}/${l}</b><span>V/U/T</span></div>
+      <div><b>${gf - ga > 0 ? '+' : ''}${gf - ga}</b><span>Score</span></div>
+    </div>
+    ${topMate ? `<div class="card">🤝 Oftest makker: <b>${esc(nameOf(topMate[0]))}</b> (${topMate[1]} kampe)</div>` : ''}
+    <h3>Seneste kampe</h3>
+    <div class="list">${rows.slice(0, 15).join('') || '<p class="muted pad">Ingen kampe endnu.</p>'}</div>
+  </div>`;
+}
+
+// ---------- Fredage ----------
+async function viewEvents() {
+  const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id)').order('starts_at', { ascending: false }).limit(60));
+  const now = Date.now() - 6 * 3600e3;
+  const upcoming = evs.filter((e) => e.status !== 'afsluttet' && new Date(e.starts_at).getTime() >= now).reverse();
+  const running = evs.filter((e) => e.status === 'igang' && !upcoming.includes(e));
+  const past = evs.filter((e) => !upcoming.includes(e) && !running.includes(e));
+  const card = (e) => {
+    const n = e.padel_signups.length;
+    const mine = e.padel_signups.some((s) => s.player_id === S.me.id);
+    return `<a class="ev" href="#/fredag/${e.id}">
+      <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
+      <div class="grow"><b>${esc(e.title || 'Fredagspadel')}</b>
+        <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>
+        <small>${n} tilmeldt${mine ? ' · <span class="ok">Du er med</span>' : ''}</small></div>
+      ${e.status === 'igang' ? '<span class="badge live">I gang</span>' : ''}</a>`;
+  };
+  app.innerHTML = `
+  <div class="page">
+    <div class="head"><h1>Fredage</h1>${S.me.is_admin ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
+    ${[...running, ...upcoming].map(card).join('') || '<p class="muted pad">Ingen kommende fredage endnu.</p>'}
+    ${past.length ? `<h3>Tidligere</h3>${past.map(card).join('')}` : ''}
+  </div>`;
+}
+
+function nextFriday() {
+  const d = new Date();
+  d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
+  d.setHours(19, 0, 0, 0);
+  const pad = (x) => String(x).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T19:00`;
+}
+
+function viewNewEvent() {
+  if (!S.me.is_admin) return (location.hash = '#/fredage');
+  const c0 = S.centers[0]?.id;
+  app.innerHTML = `
+  <div class="page">
+    <button class="back" onclick="history.back()">‹ Tilbage</button>
+    <h1>Ny fredag</h1>
+    <form class="card" id="nf">
+      <label>Center<select name="center">${S.centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+      <div class="lbl">Baner</div><div id="courts" class="checks"></div>
+      <label>Dato og tid<input type="datetime-local" name="when" value="${nextFriday()}" required></label>
+      <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60"></label>
+      <div class="lbl">Format</div>${radios('format', FORMAT, 'rotation')}
+      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"></label>
+      <div class="lbl">Hold</div>${radios('mode', MODE, 'aaben')}
+      <button class="btn primary">Opret fredag</button>
+    </form>
+  </div>`;
+  const f = document.getElementById('nf');
+  const drawCourts = () => {
+    document.getElementById('courts').innerHTML = S.courts.filter((c) => c.center_id === f.center.value)
+      .map((c) => `<label><input type="checkbox" name="court" value="${c.id}" checked><span>${esc(c.name)}</span></label>`).join('');
+  };
+  f.center.value = c0; drawCourts();
+  f.center.onchange = drawCourts;
+  const fmt = () => (document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none');
+  f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt));
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const courts = [...f.querySelectorAll('[name=court]:checked')].map((x) => x.value);
+    if (!courts.length) return toast('Vælg mindst én bane', true);
+    const btn = f.querySelector('button.primary');
+    busy(btn, true);
+    try {
+      const ev = await q(sb.from('padel_events').insert({
+        center_id: f.center.value, starts_at: new Date(f.when.value).toISOString(), title: f.title.value.trim() || null,
+        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, court_ids: courts, created_by: S.me.id,
+      }).select().single());
+      location.hash = '#/fredag/' + ev.id;
+    } catch {} finally { busy(btn, false); }
+  };
+}
+
+// ---------- En fredag ----------
+async function loadEvent(id) {
+  const [ev, signups, matches] = await Promise.all([
+    q(sb.from('padel_events').select('*').eq('id', id).single()),
+    q(sb.from('padel_signups').select('*').eq('event_id', id).order('created_at')),
+    q(sb.from('padel_matches').select('*').eq('event_id', id).order('round_no', { ascending: false }).order('created_at')),
+  ]);
+  const ids = matches.map((m) => m.id);
+  const changes = ids.length ? await q(sb.from('padel_elo_changes').select('*').in('match_id', ids).eq('active', true)) : [];
+  return { ev, signups, matches, changes };
+}
+
+async function viewEvent(id) {
+  const data = await loadEvent(id);
+  renderEvent(data);
+  pollTimer = setInterval(async () => {
+    const a = document.activeElement;
+    if (a && app.contains(a) && ['INPUT', 'SELECT'].includes(a.tagName)) return;
+    if (document.hidden) return;
+    try { await loadBase(); renderEvent(await loadEvent(id)); } catch {}
+  }, 15000);
+}
+
+function teamHtml(l, r, me) {
+  const n = (pid, s) => `<span class="${pid === me ? 'meName' : ''}">${esc(nameOf(pid))}<em>${s}</em></span>`;
+  return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
+}
+
+function renderEvent({ ev, signups, matches, changes }) {
+  const me = S.me.id, admin = S.me.is_admin;
+  const signed = signups.map((s) => s.player_id);
+  const iAmIn = signed.includes(me);
+  const rounds = {};
+  for (const m of matches) (rounds[m.round_no] ||= []).push(m);
+  const cur = rounds[ev.current_round] || [];
+  const curAllPlanned = cur.length && cur.every((m) => m.status === 'planlagt');
+  const delta = {};
+  for (const c of changes) delta[c.match_id + c.player_id] = c.delta;
+  const center = centerById(ev.center_id);
+  const courts = ev.court_ids.map(courtById).filter(Boolean).sort((a, b) => a.sort - b.sort);
+  const isRot = ev.format === 'rotation';
+  const unit = isRot ? 'partier' : 'sæt';
+
+  const canGender = ev.team_mode === 'aaben' || ev.team_mode === 'mix' || (ev.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
+
+  const matchCard = (m) => {
+    const onA = [m.a_left, m.a_right].includes(me), onB = [m.b_left, m.b_right].includes(me);
+    const mine = onA || onB;
+    const myTeam = onA ? 'a' : onB ? 'b' : null;
+    const court = courtById(m.court_id)?.name || '';
+    let status = '', actions = '';
+    if (m.status === 'planlagt') {
+      if (mine || admin) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`;
+    } else if (m.status === 'indtastet') {
+      status = `<span class="badge wait">Afventer godkendelse</span>`;
+      const opponent = myTeam && myTeam !== m.reported_team;
+      if (opponent || admin) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">Godkend</button><button class="btn sm" data-act="reject" data-id="${m.id}">Afvis</button>`;
+      if (myTeam === m.reported_team) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>`;
+    } else {
+      const d = delta[m.id + m.a_left];
+      if (d !== undefined) status = `<span class="badge">Elo ${d > 0 ? '+' : ''}${d} / ${-d > 0 ? '+' : ''}${-d}</span>`;
+      if (admin) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button><button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
+    }
+    const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
+    return `<div class="match ${mine ? 'mine' : ''}" id="m-${m.id}">
+      <div class="mhead"><b>${esc(court)}</b>${status}</div>
+      <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
+      ${actions ? `<div class="mact">${actions}</div>` : ''}
+      <form class="enter" hidden data-id="${m.id}">
+        <input type="number" name="a" min="0" max="99" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score hold 1">
+        <span>–</span>
+        <input type="number" name="b" min="0" max="99" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
+        <button class="btn sm primary">Gem</button>
+        <small class="muted">Antal ${unit}</small>
+      </form>
+    </div>`;
+  };
+
+  // Hvem sidder over i den aktuelle runde
+  const playingNow = new Set(cur.flatMap((m) => [m.a_left, m.a_right, m.b_left, m.b_right]));
+  const sittingNow = cur.length ? signed.filter((p) => !playingNow.has(p)) : [];
+
+  // Dagens stilling
+  const table = {};
+  for (const m of matches.filter((x) => x.status === 'bekraeftet')) {
+    for (const [pl, f, a] of [[m.a_left, m.score_a, m.score_b], [m.a_right, m.score_a, m.score_b], [m.b_left, m.score_b, m.score_a], [m.b_right, m.score_b, m.score_a]]) {
+      const t = (table[pl] ||= { n: 0, w: 0, f: 0, a: 0, elo: 0 });
+      t.n++; t.f += f; t.a += a; if (f > a) t.w++;
+      t.elo += delta[m.id + pl] || 0;
+    }
+  }
+  const standings = Object.entries(table).sort((x, y) => (isRot ? y[1].f - x[1].f || (y[1].f - y[1].a) - (x[1].f - x[1].a) : y[1].w - x[1].w || (y[1].f - y[1].a) - (x[1].f - x[1].a)));
+
+  const roundNos = Object.keys(rounds).map(Number).sort((a, b) => b - a);
+  const timer = isRot && ev.status === 'igang' && ev.round_started_at
+    ? `<div class="timer card"><small>Runde ${ev.current_round}</small><div id="clock">--:--</div><small id="clockSub">tilbage</small></div>` : '';
+
+  app.innerHTML = `
+  <div class="page">
+    <button class="back" onclick="location.hash='#/fredage'">‹ Fredage</button>
+    <h1>${esc(ev.title || 'Fredagspadel')}</h1>
+    <p class="muted cap">${fmtDate(ev.starts_at)} · ${esc(center?.name || '')}</p>
+    <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
+      <span class="chip">${courts.length} baner</span>${ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : ''}</div>
+
+    ${timer}
+
+    ${admin && ev.status !== 'afsluttet' ? `<div class="card adminbar">
+      <button class="btn primary" id="nextRound">${ev.current_round ? `Start runde ${ev.current_round + 1}` : 'Start første runde'}</button>
+      ${curAllPlanned ? `<button class="btn" id="redoRound">Lav runde ${ev.current_round} om</button>` : ''}
+      ${ev.status === 'igang' ? '<button class="btn ghost" id="finish">Afslut dagen</button>' : ''}
+      ${!matches.length ? '<button class="btn ghost danger" id="delEvent">Slet fredag</button>' : ''}
+    </div>` : ''}
+    ${admin && ev.status === 'afsluttet' ? '<button class="btn ghost" id="reopen">Genåbn dagen</button>' : ''}
+
+    ${sittingNow.length ? `<div class="card sit">☕ Pause i runde ${ev.current_round}: <b>${sittingNow.map((p) => esc(first(p))).join(', ')}</b></div>` : ''}
+
+    ${roundNos.map((r) => `<h3>Runde ${r}</h3>${rounds[r].map(matchCard).join('')}`).join('')}
+
+    ${standings.length ? `<h3>Dagens stilling</h3><div class="list table">
+      <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot ? 'Partier' : 'Sejre'}</div><div>Elo</div></div>
+      ${standings.map(([pid, t], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i === 0 ? '👑' : i + 1}</div>
+        <div class="grow">${esc(nameOf(pid))}</div><div>${t.n}</div><div>${isRot ? `${t.f}–${t.a}` : t.w}</div>
+        <div class="delta ${t.elo > 0 ? 'up' : t.elo < 0 ? 'dn' : ''}">${t.elo > 0 ? '+' : ''}${t.elo}</div></div>`).join('')}
+    </div>` : ''}
+
+    <h3>Tilmeldte (${signed.length})</h3>
+    ${ev.status === 'planlagt' ? (iAmIn
+      ? '<button class="btn" id="signoff">Afmeld mig</button>'
+      : canGender ? '<button class="btn primary" id="signon">Tilmeld mig</button>' : `<p class="muted">Denne dag er kun for ${MODE[ev.team_mode].toLowerCase()}.</p>`) : ''}
+    <div class="people">${signed.map((pid) => {
+      const p = S.profiles[pid] || {};
+      return `<div class="person"><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
+      ${admin ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld">×</button>` : ''}</div>`;
+    }).join('') || '<p class="muted">Ingen endnu.</p>'}</div>
+    ${admin ? `<div class="addp"><select id="addPlayer"><option value="">Tilmeld en spiller…</option>${Object.values(S.profiles)
+      .filter((p) => !signed.includes(p.id)).sort((a, b) => a.name.localeCompare(b.name))
+      .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>` : ''}
+  </div>`;
+
+  const reload = async () => { await loadBase(); renderEvent(await loadEvent(ev.id)); };
+
+  // Timer
+  if (timer) {
+    const end = new Date(ev.round_started_at).getTime() + ev.round_minutes * 60e3;
+    const flag = `beeped-${ev.id}-${ev.current_round}`;
+    const tick = () => {
+      const left = Math.round((end - Date.now()) / 1000);
+      const el = document.getElementById('clock');
+      if (!el) return;
+      const a = Math.abs(left);
+      el.textContent = `${left < 0 ? '+' : ''}${Math.floor(a / 60)}:${String(a % 60).padStart(2, '0')}`;
+      el.parentElement.classList.toggle('over', left <= 0);
+      document.getElementById('clockSub').textContent = left <= 0 ? 'Tiden er gået – skift makker!' : 'tilbage';
+      let beeped = false;
+      try { beeped = !!sessionStorage.getItem(flag); } catch {}
+      if (left <= 0 && left > -60 && !beeped) {
+        try { sessionStorage.setItem(flag, '1'); } catch {}
+        beep();
+      }
+    };
+    tick();
+    clearInterval(tickTimer);
+    tickTimer = setInterval(tick, 1000);
+  }
+
+  // Tilmelding
+  document.getElementById('signon')?.addEventListener('click', async (e) => {
+    busy(e.target, true);
+    try { await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: me })); await reload(); } catch { busy(e.target, false); }
+  });
+  document.getElementById('signoff')?.addEventListener('click', async (e) => {
+    busy(e.target, true);
+    try { await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', me)); await reload(); } catch { busy(e.target, false); }
+  });
+  app.querySelectorAll('[data-unsign]').forEach((b) => (b.onclick = async () => {
+    if (!confirm(`Afmeld ${nameOf(b.dataset.unsign)}?`)) return;
+    await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', b.dataset.unsign));
+    await reload();
+  }));
+  document.getElementById('addPlayer')?.addEventListener('change', async (e) => {
+    if (!e.target.value) return;
+    await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: e.target.value }));
+    await reload();
+  });
+
+  // Runder
+  const makeRound = async (roundNo, btn) => {
+    busy(btn, true);
+    try {
+      const players = signed.map((pid) => S.profiles[pid]).filter(Boolean);
+      const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
+        .order('created_at', { ascending: false }).limit(800));
+      const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo });
+      if (res.error) { toast(res.error, true); return; }
+      await q(sb.from('padel_matches').insert(res.matches.map((m) => ({ ...m, event_id: ev.id, round_no: roundNo }))));
+      await q(sb.from('padel_events').update({ current_round: roundNo, round_started_at: new Date().toISOString(), status: 'igang' }).eq('id', ev.id));
+      await reload();
+    } catch (e) { console.error(e); } finally { busy(btn, false); }
+  };
+  document.getElementById('nextRound')?.addEventListener('click', async (e) => {
+    const open = cur.filter((m) => m.status !== 'bekraeftet').length;
+    if (open && !confirm(`${open} kamp(e) i runde ${ev.current_round} mangler godkendt resultat. Start næste runde alligevel?`)) return;
+    if (signed.length < 4) return toast('Der skal være mindst 4 tilmeldte', true);
+    makeRound(ev.current_round + 1, e.target);
+  });
+  document.getElementById('redoRound')?.addEventListener('click', async (e) => {
+    if (!confirm(`Lav runde ${ev.current_round} om med nye hold?`)) return;
+    busy(e.target, true);
+    try {
+      await q(sb.from('padel_matches').delete().eq('event_id', ev.id).eq('round_no', ev.current_round).eq('status', 'planlagt'));
+      await makeRound(ev.current_round, e.target);
+    } catch { busy(e.target, false); }
+  });
+  document.getElementById('finish')?.addEventListener('click', async () => {
+    if (!confirm('Afslut dagen? Tilmelding og nye runder lukkes.')) return;
+    await q(sb.from('padel_events').update({ status: 'afsluttet', round_started_at: null }).eq('id', ev.id));
+    await reload();
+  });
+  document.getElementById('reopen')?.addEventListener('click', async () => {
+    await q(sb.from('padel_events').update({ status: matches.length ? 'igang' : 'planlagt' }).eq('id', ev.id));
+    await reload();
+  });
+  document.getElementById('delEvent')?.addEventListener('click', async () => {
+    if (!confirm('Slet denne fredag?')) return;
+    await q(sb.from('padel_events').delete().eq('id', ev.id));
+    location.hash = '#/fredage';
+  });
+
+  // Resultater
+  app.querySelectorAll('[data-act]').forEach((b) => (b.onclick = async () => {
+    const id = b.dataset.id, act = b.dataset.act;
+    if (act === 'enter') {
+      const f = app.querySelector(`form.enter[data-id="${id}"]`);
+      f.hidden = !f.hidden;
+      if (!f.hidden) f.a.focus();
+      return;
+    }
+    busy(b, true);
+    try {
+      if (act === 'confirm') await q(sb.rpc('padel_confirm_result', { p_match: id }));
+      if (act === 'reject') { if (!confirm('Afvis resultatet? Det skal så indtastes igen.')) return busy(b, false); await q(sb.rpc('padel_reject_result', { p_match: id })); }
+      if (act === 'reset') { if (!confirm('Nulstil kampen? Elo rulles tilbage.')) return busy(b, false); await q(sb.rpc('padel_admin_reset_match', { p_match: id })); }
+      await reload();
+    } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('form.enter').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button');
+    busy(btn, true);
+    try {
+      await q(sb.rpc('padel_report_result', { p_match: f.dataset.id, p_a: +f.a.value, p_b: +f.b.value }));
+      toast(admin ? 'Resultatet er gemt' : 'Gemt. Modstanderne skal godkende');
+      await reload();
+    } catch { busy(btn, false); }
+  }));
+}
+
+function beep() {
+  try { navigator.vibrate?.([400, 200, 400, 200, 400]); } catch {}
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.5, 1].forEach((t) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.4, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.4);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.4);
+    });
+  } catch {}
+}
+
+// ---------- Admin ----------
+async function viewAdmin() {
+  const players = Object.values(S.profiles).sort((a, b) => a.name.localeCompare(b.name));
+  app.innerHTML = `
+  <div class="page">
+    <h1>Admin</h1>
+    <h3>Spillere (${players.length})</h3>
+    <div class="list">${players.map((p) => `
+      <div class="row wrap" id="p-${p.id}">
+        <div class="grow"><b>${esc(p.name)}</b>${p.is_admin ? ' <span class="badge">Admin</span>' : ''}
+          <small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${p.elo} Elo</small></div>
+        <button class="btn sm" data-edit="${p.id}">Ret</button>
+        ${p.id !== S.me.id ? `<button class="btn sm" data-admin="${p.id}" data-val="${!p.is_admin}">${p.is_admin ? 'Fjern admin' : 'Gør til admin'}</button>` : ''}
+      </div>`).join('')}</div>
+
+    <h3>Centre og baner</h3>
+    ${S.centers.map((c) => `<div class="card">
+      <div class="head"><b>${esc(c.name)}</b><button class="btn sm" data-rencenter="${c.id}">Omdøb</button></div>
+      ${S.courts.filter((x) => x.center_id === c.id).map((x) => `<div class="row">
+        <div class="grow">${esc(x.name)}</div>
+        <button class="btn sm" data-rencourt="${x.id}">Omdøb</button>
+        <button class="btn sm ghost" data-delcourt="${x.id}">Slet</button></div>`).join('')}
+      <button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button>
+    </div>`).join('')}
+    <button class="btn" id="addCenter">+ Nyt center</button>
+  </div>`;
+
+  const refresh = async () => { await loadBase(); viewAdmin(); };
+  app.querySelectorAll('[data-admin]').forEach((b) => (b.onclick = async () => {
+    const val = b.dataset.val === 'true';
+    if (!confirm(`${val ? 'Gør' : 'Fjern'} ${nameOf(b.dataset.admin)} ${val ? 'til admin' : 'som admin'}?`)) return;
+    await q(sb.rpc('padel_set_admin', { p_user: b.dataset.admin, p_admin: val }));
+    refresh();
+  }));
+  app.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => {
+    const p = S.profiles[b.dataset.edit];
+    const row = document.getElementById('p-' + p.id);
+    row.innerHTML = `<form class="grow editp"><input name="name" value="${esc(p.name)}" required>
+      ${radios('gender', GENDER, p.gender)}${radios('side', SIDE, p.side)}
+      <div class="mact"><button class="btn sm primary">Gem</button><button type="button" class="btn sm" id="cancel">Annuller</button></div></form>`;
+    row.querySelector('#cancel').onclick = viewAdmin;
+    row.querySelector('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      await q(sb.rpc('padel_admin_update_player', { p_user: p.id, p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+      refresh();
+    };
+  }));
+  app.querySelectorAll('[data-rencenter]').forEach((b) => (b.onclick = async () => {
+    const c = centerById(b.dataset.rencenter), n = prompt('Nyt navn', c.name);
+    if (n?.trim()) { await q(sb.from('padel_centers').update({ name: n.trim() }).eq('id', c.id)); refresh(); }
+  }));
+  app.querySelectorAll('[data-rencourt]').forEach((b) => (b.onclick = async () => {
+    const c = courtById(b.dataset.rencourt), n = prompt('Nyt navn', c.name);
+    if (n?.trim()) { await q(sb.from('padel_courts').update({ name: n.trim() }).eq('id', c.id)); refresh(); }
+  }));
+  app.querySelectorAll('[data-delcourt]').forEach((b) => (b.onclick = async () => {
+    const c = courtById(b.dataset.delcourt);
+    if (!confirm(`Slet ${c.name}?`)) return;
+    try { await q(sb.from('padel_courts').delete().eq('id', c.id)); refresh(); } catch {}
+  }));
+  app.querySelectorAll('[data-addcourt]').forEach((b) => (b.onclick = async () => {
+    const n = prompt('Navn på banen');
+    if (!n?.trim()) return;
+    const sort = Math.max(0, ...S.courts.filter((x) => x.center_id === b.dataset.addcourt).map((x) => x.sort)) + 1;
+    await q(sb.from('padel_courts').insert({ center_id: b.dataset.addcourt, name: n.trim(), sort }));
+    refresh();
+  }));
+  document.getElementById('addCenter').onclick = async () => {
+    const n = prompt('Navn på centret');
+    if (n?.trim()) { await q(sb.from('padel_centers').insert({ name: n.trim() })); refresh(); }
+  };
+}
