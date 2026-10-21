@@ -119,6 +119,26 @@ try {
   ok((await text()).includes('1 kampe') || (await text()).includes('kampe'), 'ranglisten viser kampe');
   await shot('rangliste');
 
+  // Telefonnummer: påmindelse, ugyldigt nummer afvises, gyldigt gemmes og vises for admin
+  await page.click('#nav a:has-text("Spilledage")');
+  await wait(300);
+  ok(await page.locator('.phonetip').count() === 1, 'påmindelse om telefonnummer');
+  await page.click('.phonetip');
+  await page.waitForSelector('#pf');
+  await page.fill('#pf input[name=phone]', '1234');
+  await page.click('#pf button.primary');
+  await wait(300);
+  ok((await page.locator('#toast').innerText()).includes('Ugyldigt telefonnummer'), 'ugyldigt nummer afvist');
+  await page.fill('#pf input[name=phone]', '12 34 56 78');
+  await page.click('#pf button.primary');
+  await wait(400);
+  await page.click('#nav a:has-text("Admin")');
+  await page.locator('.prow summary').first().click();
+  ok((await page.locator('.prow[open] .contact').innerText()).includes('12 34 56 78'), 'nummer vises for admin med ring/SMS');
+  await page.click('#nav a:has-text("Spilledage")');
+  await wait(300);
+  ok(await page.locator('.phonetip').count() === 0, 'påmindelse væk efter gemt nummer');
+
   // FAQ-søgning
   await page.goto('http://localhost:8765/#/faq');
   await page.fill('#faqSearch', 'røre nettet');
@@ -184,6 +204,22 @@ try {
   await shot('admin-baner');
   await page.click('[data-tab="spillere"]');
   await shot('admin-spillere');
+  // Alle spillere: tilføj Test Carsten til Lørdagspadel og gør ham til superbruger der
+  await page.click('[data-allp]');
+  await page.fill('#playerSearch', 'carsten');
+  await page.locator('.prow:visible summary').first().click();
+  await page.locator('.prow[open] [data-gadd]').filter({ hasText: 'Lørdagspadel' }).click();
+  await wait(400);
+  const sel = page.locator('.prow[open] .mrow:has-text("Lørdagspadel") select');
+  ok(await sel.count() === 1, 'Alle spillere: Carsten tilføjet til Lørdagspadel');
+  await sel.selectOption('superbruger');
+  await wait(400);
+  ok((await page.locator('.prow[open] summary').innerText()).includes('Lørdagspadel (Superbruger)'), 'Alle spillere: rolle skiftet');
+  await shot('alle-spillere');
+  await page.locator('.prow[open] .mrow:has-text("Lørdagspadel") [data-gremove]').click();
+  await wait(400);
+  ok(!(await page.locator('.prow[open] summary').innerText()).includes('Lørdagspadel'), 'Alle spillere: fjernet igen');
+  await page.locator('[data-pgroup]', { hasText: 'Lørdagspadel' }).click();
   const lordag = await page.evaluate(() => localStorage.getItem('fp-group'));
 
   // Log ind som Brian: ser kun Lørdagspadel, kan kun vælge Helsinge

@@ -1,13 +1,13 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
   sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
-  esc, nameOf, courtById, centerById, toast, q, busy, radios, share,
+  esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin)
-  const tabs = [isAdmin() && S.groupId ? ['spillere', '👥 Spillere'] : null, isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null].filter(Boolean);
+  const tabs = [(isAdmin() && S.groupId) || isSuper() ? ['spillere', '👥 Spillere'] : null, isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null].filter(Boolean);
   if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
   const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab }[S.adminTab];
   app.innerHTML = `
@@ -18,23 +18,62 @@ export async function viewAdmin() {
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); viewAdmin(); }));
+  app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
+  app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });
   bind();
 }
 
 // ---------- Spillere i den valgte gruppe ----------
+// Gruppeknapper, og for superadmin også "Alle spillere"
+function playersBar() {
+  if (!isSuper()) return groupBar(viewAdmin);
+  return `<div class="chips groups">${S.groups.map((x) => `<button class="chip ${!S.adminAll && x.id === S.groupId ? 'on' : ''}" data-pgroup="${x.id}">${esc(x.name)}</button>`).join('')}
+    <button class="chip ${S.adminAll ? 'on' : ''}" data-allp>🌍 Alle spillere</button></div>`;
+}
+
+// Superadmin: alle spillere på tværs af grupper, med deres grupper og roller
+function allPlayers() {
+  const all = Object.values(S.profiles).sort((a, b) => a.name.localeCompare(b.name));
+  const gname = (g) => S.groups.find((x) => x.id === g)?.name || 'Gruppe';
+  return `
+    ${playersBar()}
+    <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
+    <div class="list compact">${all.map((p) => {
+      const ms = S.members.filter((m) => m.player_id === p.id && m.status !== 'fjernet');
+      const summary = ms.length ? ms.map((m) => `${esc(gname(m.group_id))}${m.status === 'afventer' ? ' (venter)' : m.role !== 'bruger' ? ` (${ROLE[m.role]})` : ''}`).join(' · ') : 'Ingen gruppe';
+      const notIn = S.groups.filter((g) => !ms.some((m) => m.group_id === g.id && m.status === 'aktiv'));
+      return `<details class="prow" data-name="${esc(p.name.toLowerCase())}">
+        <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}<small>${summary}</small></span><span class="muted">›</span></summary>
+        <div class="ppanel" id="p-${p.id}">
+          <div class="mact contact">${phoneLinks(p.id)}</div>
+          ${ms.filter((m) => m.status === 'aktiv').map((m) => `<div class="mrow"><span class="grow">${esc(gname(m.group_id))}</span>
+            <select class="rolesel sm" data-grole="${p.id}|${m.group_id}" aria-label="Rolle i ${esc(gname(m.group_id))}">${Object.entries(ROLE).map(([k, v]) =>
+              `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+            <button class="icon sm" data-gremove="${p.id}|${m.group_id}" aria-label="Fjern fra ${esc(gname(m.group_id))}">✕</button></div>`).join('')}
+          ${notIn.length ? `<div class="mact">${notIn.map((g) => `<button class="btn sm" data-gadd="${p.id}|${g.id}">+ ${esc(g.name)}</button>`).join('')}</div>` : ''}
+          <div class="mact">
+            <button class="btn sm" data-edit="${p.id}">✏️ Ret</button>
+            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
+          </div>
+        </div>
+      </details>`;
+    }).join('')}</div>`;
+}
+
 function playersTab() {
+  if (isSuper() && (S.adminAll || !S.groupId)) return allPlayers();
   const gm = S.members.filter((m) => m.group_id === S.groupId);
   const pending = gm.filter((m) => m.status === 'afventer' && S.profiles[m.player_id]);
   const players = gm.filter((m) => m.status === 'aktiv' && S.profiles[m.player_id]).map((m) => S.profiles[m.player_id]).sort((a, b) => a.name.localeCompare(b.name));
   const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${ROLE[r]}</span>` : ''; };
   return `
-    ${groupBar(viewAdmin)}
+    ${playersBar()}
     <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       <button class="btn sm primary" id="invite">📤 Inviter</button></div>
 
     ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
-      return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}</small></span>
+      return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}${phoneOf(p.id) ? ` · ${fmtPhone(phoneOf(p.id))}` : ''}</small></span>
         <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
     }).join('')}</div>` : ''}
 
@@ -43,6 +82,7 @@ function playersTab() {
       <details class="prow" data-name="${esc(p.name.toLowerCase())}">
         <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}<small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
+          <div class="mact contact">${phoneLinks(p.id)}</div>
           <label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(ROLE).map(([k, v]) =>
             `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <div class="mact">
@@ -114,6 +154,13 @@ function courtsTab() {
 function bind() {
   const g = S.groupId;
   const refresh = async () => { await hooks.loadBase(); viewAdmin(); };
+  const refreshOpen = async (pid) => {
+    const term = document.getElementById('playerSearch')?.value || '';
+    await refresh();
+    const ps = document.getElementById('playerSearch');
+    if (ps && term) { ps.value = term; ps.oninput(); }
+    document.getElementById('p-' + pid)?.closest('details')?.setAttribute('open', '');
+  };
   const on = (sel, fn) => app.querySelectorAll(sel).forEach((el) => (el.onclick = () => fn(el)));
   const setMember = (p, role, status) => q(sb.rpc('padel_set_member', { g, p, p_role: role, p_status: status }));
 
@@ -146,10 +193,29 @@ function bind() {
 
   on('[data-viewas]', (b) => startViewAs(b.dataset.viewas));
 
+  // Alle spillere: rolle, fjern og tilføj pr. gruppe
+  const pg = (el, key) => el.dataset[key].split('|');
+  app.querySelectorAll('[data-grole]').forEach((sel) => (sel.onchange = async () => {
+    const [p, gid] = pg(sel, 'grole');
+    try { await q(sb.rpc('padel_set_member', { g: gid, p, p_role: sel.value, p_status: 'aktiv' })); toast(`${nameOf(p)} er nu ${ROLE[sel.value].toLowerCase()}`); refreshOpen(p); } catch {}
+  }));
+  on('[data-gremove]', async (b) => {
+    const [p, gid] = pg(b, 'gremove');
+    const gname = S.groups.find((x) => x.id === gid)?.name;
+    if (!confirm(`Fjern ${nameOf(p)} fra ${gname}?`)) return;
+    try { await q(sb.rpc('padel_set_member', { g: gid, p, p_role: member(p, gid)?.role || 'bruger', p_status: 'fjernet' })); toast(`Fjernet fra ${gname}`); refreshOpen(p); } catch {}
+  });
+  on('[data-gadd]', async (b) => {
+    const [p, gid] = pg(b, 'gadd');
+    busy(b, true);
+    try { await q(sb.rpc('padel_set_member', { g: gid, p, p_role: 'bruger', p_status: 'aktiv' })); toast(`${nameOf(p)} er tilføjet`); refreshOpen(p); } catch { busy(b, false); }
+  });
+
   on('[data-edit]', (b) => {
     const p = S.profiles[b.dataset.edit];
     const panel = document.getElementById('p-' + p.id);
     panel.innerHTML = `<form class="editp"><input name="name" value="${esc(p.name)}" required>
+      <input name="phone" type="tel" inputmode="tel" placeholder="Telefonnummer" value="${esc(fmtPhone(phoneOf(p.id)))}">
       ${radios('gender', GENDER, p.gender)}${radios('side', SIDE, p.side)}
       <div class="mact"><button class="btn sm primary">Gem</button><button type="button" class="btn sm" data-cancel>Annuller</button></div></form>`;
     panel.querySelector('[data-cancel]').onclick = viewAdmin;
@@ -157,6 +223,7 @@ function bind() {
       e.preventDefault();
       const f = e.target;
       await q(sb.rpc('padel_admin_update_player', { p_user: p.id, p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+      if (f.phone.value.trim() && f.phone.value.trim() !== fmtPhone(phoneOf(p.id))) await q(sb.rpc('padel_admin_set_phone', { p_user: p.id, p_phone: f.phone.value }));
       refresh();
     };
   });

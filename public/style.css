@@ -263,3 +263,7 @@ details.centerbox .mact { margin-top: 12px; }
 .mrow:last-child { border-bottom: 0; }
 .rolesel.sm { width: auto; padding: 6px 8px; font-size: 14px; }
 .hitrow { flex-wrap: wrap; }
+.contact { align-items: center; margin: 2px 0 10px; }
+.phone { font-weight: 600; margin-right: 4px; }
+.phonetip { display: block; font-size: 15px; }
+.editp input[name=phone] { margin-bottom: 8px; }

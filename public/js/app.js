@@ -10,7 +10,7 @@ import { viewFaq } from './views/faq.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 
 async function loadBase() {
-  const [profiles, centers, courts, groups, groupCenters, members, settings] = await Promise.all([
+  const [profiles, centers, courts, groups, groupCenters, members, settings, contacts] = await Promise.all([
     q(sb.from('padel_profiles').select('*')),
     q(sb.from('padel_centers').select('*').order('name')),
     q(sb.from('padel_courts').select('*').order('sort')),
@@ -18,7 +18,9 @@ async function loadBase() {
     q(sb.from('padel_group_centers').select('*')),
     q(sb.from('padel_group_members').select('*')),
     q(sb.from('padel_settings').select('*')),
+    q(sb.from('padel_contacts').select('player_id,phone')),
   ]);
+  S.contacts = Object.fromEntries(contacts.map((c) => [c.player_id, c.phone]));
   Object.assign(S, { centers, courts, groups, groupCenters, members, settings: settings[0] || {} });
   S.profiles = Object.fromEntries(profiles.map((p) => [p.id, p]));
   S.realMe = S.profiles[S.session.user.id] || null;

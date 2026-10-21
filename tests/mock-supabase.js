@@ -20,7 +20,7 @@ function seed() {
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
-    padel_settings: [{ id: 1, global_ranking_public: false }] };
+    padel_settings: [{ id: 1, global_ranking_public: false }], padel_contacts: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -133,7 +133,20 @@ function revertElo(id) {
 const M = (id) => db.padel_matches.find((m) => m.id === id);
 const teamOf = (m) => ([m.a_left, m.a_right].includes(uid()) ? 'a' : [m.b_left, m.b_right].includes(uid()) ? 'b' : null);
 
+const cleanPhone = (x) => {
+  x = String(x || '').replace(/[\s\-().]/g, '');
+  if (/^\+?45\d{8}$/.test(x)) return '+45' + x.slice(-8);
+  if (/^\d{8}$/.test(x)) return '+45' + x;
+  if (/^\+\d{8,15}$/.test(x)) return x;
+  throw new Error('Ugyldigt telefonnummer');
+};
+const setPhone = (pid, ph) => {
+  const c = db.padel_contacts.find((x) => x.player_id === pid);
+  if (c) c.phone = cleanPhone(ph); else db.padel_contacts.push({ player_id: pid, phone: cleanPhone(ph) });
+};
 const RPC = {
+  padel_set_phone: ({ p_phone }) => setPhone(uid(), p_phone),
+  padel_admin_set_phone: ({ p_user, p_phone }) => setPhone(p_user, p_phone),
   padel_group_name: ({ g }) => db.padel_groups.find((x) => x.id === g)?.name,
   padel_request_join: ({ g }) => {
     const m = GM(g, uid());

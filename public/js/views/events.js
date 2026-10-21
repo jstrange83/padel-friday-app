@@ -1,5 +1,5 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
 
 export async function viewEvents() {
@@ -31,6 +31,7 @@ export async function viewEvents() {
   <div class="page">
     <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
     ${groupBar(viewEvents)}
+    ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer på din profil, så admin kan få fat i dig. ›</a>' : ''}
     ${coming.map(card).join('') || (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}

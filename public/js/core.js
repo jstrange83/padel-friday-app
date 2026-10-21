@@ -8,7 +8,7 @@ export const sb = createClient('https://mxdgspfhakomblprhvto.supabase.co', 'sb_p
 // S.me er den man ser appen som (kan være en anden spiller i "se som"), S.realMe er den der er logget ind.
 export const S = {
   session: null, me: null, realMe: null, viewAs: null, profiles: {}, centers: [], courts: [], filter: 'alle', recovery: false,
-  groups: [], groupCenters: [], members: [], settings: {}, groupId: null,
+  groups: [], groupCenters: [], members: [], settings: {}, groupId: null, contacts: {},
 };
 export const app = document.getElementById('app');
 export const navEl = document.getElementById('nav');
@@ -121,3 +121,11 @@ export function groupBar(onChange) {
   setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); onChange(); })), 0);
   return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}</button>`).join('')}</div>`;
 }
+
+// Telefonnummer (kun synligt for spilleren selv, gruppens admins/superbrugere og superadmin)
+export const phoneOf = (pid) => S.contacts[pid] || '';
+export const fmtPhone = (ph) => (ph.startsWith('+45') && ph.length === 11 ? ph.slice(3).replace(/(\d{2})(?=\d)/g, '$1 ').trim() : ph);
+export const phoneLinks = (pid) => {
+  const ph = phoneOf(pid);
+  return ph ? `<span class="phone">📱 ${fmtPhone(ph)}</span><a class="btn sm" href="tel:${ph}">📞 Ring</a><a class="btn sm" href="sms:${ph}">💬 SMS</a>` : '<span class="muted small">Intet telefonnummer</span>';
+};

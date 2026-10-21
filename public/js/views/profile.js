@@ -1,5 +1,5 @@
 // Egen profil (og velkomst første gang).
-import { sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, esc, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
 
 export function renderProfile(isNew) {
   const p = S.me || { name: '', gender: '', side: 'begge' };
@@ -10,6 +10,8 @@ export function renderProfile(isNew) {
       : `<p class="muted">${isSuper() ? 'Superadmin' : ''}</p>`}
     <form class="card" id="pf">
       <label>Navn<input name="name" value="${esc(p.name)}" required maxlength="60" autocomplete="name"></label>
+      <label>Telefonnummer<input name="phone" type="tel" inputmode="tel" value="${esc(p.id ? fmtPhone(phoneOf(p.id)) : '')}" required autocomplete="tel" placeholder="12 34 56 78">
+        <small class="muted">Kun admins i dine grupper kan se det.</small></label>
       <div class="lbl">Køn</div>${radios('gender', GENDER, p.gender)}
       <div class="lbl">Foretrukken side</div>${radios('side', SIDE, p.side)}
       <button class="btn primary">${isNew ? 'Kom i gang' : 'Gem'}</button>
@@ -30,6 +32,7 @@ export function renderProfile(isNew) {
     busy(btn, true);
     try {
       await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+      await q(sb.rpc('padel_set_phone', { p_phone: f.phone.value }));
       toast('Profilen er gemt');
       if (isNew) { if (!location.hash.startsWith('#/fredag/')) location.hash = '#/fredage'; return hooks.boot(); }
       await hooks.loadBase();
