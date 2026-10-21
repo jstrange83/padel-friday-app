@@ -362,6 +362,12 @@ async function viewEvents() {
   })));
 }
 
+// Samme ugedag og klokkeslæt i flere uger i træk (lokal tid, så sommer/vintertid passer)
+function weekDates(value, n) {
+  if (!value) return [];
+  return Array.from({ length: n }, (_, i) => { const d = new Date(value); d.setDate(d.getDate() + 7 * i); return d; });
+}
+
 function nextFriday() {
   const d = new Date();
   d.setDate(d.getDate() + ((5 - d.getDay() + 7) % 7 || 7));
@@ -380,7 +386,9 @@ function viewNewEvent() {
     <form class="card" id="nf">
       <label>Center<select name="center">${S.centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
       <div class="lbl">Baner</div><div id="courts" class="checks"></div>
-      <label>Dato og tid<input type="datetime-local" name="when" value="${nextFriday()}" required></label>
+      <label>Dato og tid (første fredag)<input type="datetime-local" name="when" value="${nextFriday()}" required></label>
+      <label>Antal fredage<select name="count">${[1, 2, 3, 4, 6, 8].map((v) => `<option value="${v}" ${v === 4 ? 'selected' : ''}>${v === 1 ? 'Kun denne' : `${v} uger i træk`}</option>`).join('')}</select>
+        <small class="muted" id="countHint"></small></label>
       <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60"></label>
       <div class="lbl">Format</div>${radios('format', FORMAT, 'rotation')}
       <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((v) =>
@@ -389,7 +397,7 @@ function viewNewEvent() {
         <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
       <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, 'aaben')}
-      <button class="btn primary">Opret fredag</button>
+      <button class="btn primary" id="createBtn">Opret fredage</button>
     </form>
   </div>`;
   const f = document.getElementById('nf');
@@ -409,6 +417,12 @@ function viewNewEvent() {
     document.getElementById('ptsWrap').style.display = f.format.value === 'americano' ? '' : 'none';
   };
   f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt));
+  const countHint = () => {
+    const ds = weekDates(f.when.value, +f.count.value);
+    document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
+    document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} fredage` : 'Opret fredag';
+  };
+  f.count.onchange = countHint; f.when.onchange = countHint; countHint();
   f.onsubmit = async (e) => {
     e.preventDefault();
     const courts = [...f.querySelectorAll('[name=court]:checked')].map((x) => x.value);
@@ -416,12 +430,14 @@ function viewNewEvent() {
     const btn = f.querySelector('button.primary');
     busy(btn, true);
     try {
-      const ev = await q(sb.from('padel_events').insert({
-        center_id: f.center.value, starts_at: new Date(f.when.value).toISOString(), title: f.title.value.trim() || null,
+      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({
+        center_id: f.center.value, starts_at: d.toISOString(), title: f.title.value.trim() || null,
         format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, points_per_match: f.format.value === 'americano' ? +f.points.value : null,
         ranked: f.format.value !== 'americano', duration_minutes: +f.duration.value || 120, court_ids: courts, created_by: S.me.id,
-      }).select().single());
-      location.hash = '#/fredag/' + ev.id;
+      }));
+      const evs = await q(sb.from('padel_events').insert(rows).select());
+      toast(evs.length === 1 ? 'Fredagen er oprettet' : `${evs.length} fredage er oprettet`);
+      location.hash = evs.length === 1 ? '#/fredag/' + evs[0].id : '#/fredage';
     } catch {} finally { busy(btn, false); }
   };
 }
