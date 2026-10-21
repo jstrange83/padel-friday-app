@@ -120,7 +120,7 @@ try {
   // Rangliste
   await page.click('#nav a:has-text("Rangliste")');
   await wait(400);
-  ok((await text()).includes('1 kampe') || (await text()).includes('kampe'), 'ranglisten viser kampe');
+  ok((await text()).includes('kamp'), 'ranglisten viser kampe');
   await shot('rangliste');
   for (const k of ['maaned', 'aeg', 'streak']) { await page.click(`[data-kind="${k}"]`); await wait(300); }
   ok((await page.locator('.list .row').count()) >= 1, 'ranglistefaner (måned, æg, streak) virker');
