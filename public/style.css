@@ -153,3 +153,8 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .rolesel { width: auto; margin: 0; padding: 8px 10px; font-size: 14px; }
 .badge.role-admin { background: rgba(212, 245, 60, .15); color: var(--accent); }
 .badge.role-superbruger { background: rgba(96, 165, 250, .15); color: #93c5fd; }
+.lineup { font-size: 15px; }
+.lineup.ok { border-left: 4px solid var(--up); }
+.person small { color: var(--muted); font-size: 11px; min-width: 14px; }
+.person.wait { opacity: .75; border: 1px dashed var(--line); background: transparent; }
+.person.meP { outline: 1px solid var(--accent); }

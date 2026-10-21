@@ -312,7 +312,7 @@ async function viewPlayer(id) {
 
 // ---------- Fredage ----------
 async function viewEvents() {
-  const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id)').order('starts_at', { ascending: false }).limit(60));
+  const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id, created_at)').order('starts_at', { ascending: false }).limit(60));
   const now = Date.now() - 6 * 3600e3;
   const upcoming = evs.filter((e) => e.status !== 'afsluttet' && new Date(e.starts_at).getTime() >= now).reverse();
   const running = evs.filter((e) => e.status === 'igang' && !upcoming.includes(e));
@@ -324,7 +324,7 @@ async function viewEvents() {
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
       <div class="grow"><b>${esc(e.title || 'Fredagspadel')}</b>
         <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>
-        <small>${n} tilmeldt${mine ? ' · <span class="ok">Du er med</span>' : ''}</small></div>
+        <small>${n} tilmeldt · ${(() => { const L = lineup(e.padel_signups.map((x) => x.player_id), e.court_ids.length); return L.courts ? `${L.courts} ${L.courts === 1 ? 'bane' : 'baner'} klar${L.waiting.length ? `, ${L.waiting.length} venter` : ''}` : `mangler ${4 - n}`; })()}${mine ? ' · <span class="ok">Du er med</span>' : ''}</small></div>
       ${e.status === 'igang' ? '<span class="badge live">I gang</span>' : ''}</a>`;
   };
   app.innerHTML = `
@@ -559,6 +559,13 @@ function renderEvent({ ev, signups, matches, changes }) {
   }
   const standings = Object.entries(table).sort((x, y) => (isShare ? y[1].f - x[1].f || (y[1].f - y[1].a) - (x[1].f - x[1].a) : y[1].w - x[1].w || (y[1].f - y[1].a) - (x[1].f - x[1].a)));
 
+  const L = lineup(signed, courts.length);
+  const myWait = L.courts ? L.waiting.indexOf(me) : -1;
+  const person = (ids, label, offset = 0) => ids.length ? `<div class="people">${ids.map((pid, i) => {
+    const p = S.profiles[pid] || {};
+    return `<div class="person ${label === 'Venter' ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
+      ${admin ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld">×</button>` : ''}</div>`;
+  }).join('')}</div>` : '';
   const roundNos = Object.keys(rounds).map(Number).sort((a, b) => b - a);
   const timer = isRot && ev.status === 'igang' && ev.round_started_at
     ? `<div class="timer card"><small>Runde ${ev.current_round} af ${totalRounds}</small><div id="clock">--:--</div><small id="clockSub">tilbage</small></div>` : '';
@@ -601,14 +608,13 @@ function renderEvent({ ev, signups, matches, changes }) {
          ${isAdmin && confirmedCount ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>` : ''}
 
     <h3>Tilmeldte (${signed.length})</h3>
+    <div class="card lineup ${L.courts ? 'ok' : ''}">🎾 ${lineupText(L, courts.length)}${myWait >= 0 ? `<br><b>Du er nr. ${myWait + 1} på ventelisten.</b>` : ''}</div>
     ${ev.status === 'planlagt' ? (iAmIn
       ? '<button class="btn" id="signoff">Afmeld mig</button>'
-      : canGender ? '<button class="btn primary" id="signon">Tilmeld mig</button>' : `<p class="muted">Denne dag er kun for ${MODE[ev.team_mode].toLowerCase()}.</p>`) : ''}
-    <div class="people">${signed.map((pid) => {
-      const p = S.profiles[pid] || {};
-      return `<div class="person"><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
-      ${admin ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld">×</button>` : ''}</div>`;
-    }).join('') || '<p class="muted">Ingen endnu.</p>'}</div>
+      : canGender ? `<button class="btn primary" id="signon">${L.full ? 'Skriv mig på ventelisten' : 'Tilmeld mig'}</button>` : `<p class="muted">Denne dag er kun for ${MODE[ev.team_mode].toLowerCase()}.</p>`) : ''}
+    ${person(L.courts ? L.playing : signed, 'Spiller')}
+    ${L.courts && L.waiting.length ? `<h3>Venteliste (${L.waiting.length})</h3>${person(L.waiting, 'Venter', L.playing.length)}` : ''}
+    ${!signed.length ? '<p class="muted">Ingen endnu.</p>' : ''}
     ${admin ? `<div class="addp"><select id="addPlayer"><option value="">Tilmeld en spiller…</option>${Object.values(S.profiles)
       .filter((p) => !signed.includes(p.id)).sort((a, b) => a.name.localeCompare(b.name))
       .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>` : ''}
@@ -664,7 +670,7 @@ function renderEvent({ ev, signups, matches, changes }) {
   const makeRound = async (roundNo, btn) => {
     busy(btn, true);
     try {
-      const players = signed.map((pid) => S.profiles[pid]).filter(Boolean);
+      const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean);
       const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
         .order('created_at', { ascending: false }).limit(800));
       const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo });
@@ -677,7 +683,8 @@ function renderEvent({ ev, signups, matches, changes }) {
   document.getElementById('nextRound')?.addEventListener('click', async (e) => {
     const open = cur.filter((m) => m.status !== 'bekraeftet').length;
     if (open && !confirm(`${open} kamp(e) i runde ${ev.current_round} mangler godkendt resultat. Start næste runde alligevel?`)) return;
-    if (signed.length < 4) return toast('Der skal være mindst 4 tilmeldte', true);
+    if (!L.courts) return toast('Der skal være mindst 4 tilmeldte', true);
+    if (L.waiting.length && !confirm(`${L.waiting.length} står på venteliste og kommer ikke med i runden. Fortsæt?`)) return;
     makeRound(ev.current_round + 1, e.target);
   });
   document.getElementById('redoRound')?.addEventListener('click', async (e) => {
@@ -808,6 +815,21 @@ function renderEvent({ ev, signups, matches, changes }) {
       await reload();
     } catch { busy(btn, false); }
   }));
+}
+
+// ---------- Baner og venteliste ----------
+// Først til mølle: hver gang 4 er tilmeldt, er en bane klar. Resten står på venteliste,
+// indtil der er 4 igen, eller alle baner er fyldt.
+function lineup(ids, nCourts) {
+  const courts = Math.min(nCourts, Math.floor(ids.length / 4));
+  const playing = ids.slice(0, courts * 4), waiting = ids.slice(courts * 4);
+  return { courts, playing, waiting, full: courts >= nCourts };
+}
+function lineupText(L, nCourts) {
+  if (!L.courts) return `Mangler ${4 - L.waiting.length} spiller${4 - L.waiting.length === 1 ? '' : 'e'} til første bane`;
+  let t = `${L.courts} ${L.courts === 1 ? 'bane' : 'baner'} klar`;
+  if (L.waiting.length) t += L.full ? ` · alle ${nCourts} baner er fyldt, ${L.waiting.length} på venteliste` : ` · ${L.waiting.length} på venteliste, mangler ${4 - L.waiting.length} til næste bane`;
+  return t;
 }
 
 // ---------- Sig resultatet ----------

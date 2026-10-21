@@ -102,7 +102,13 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvordan tilmelder jeg mig en fredag?',
-    a: `<p>Gå til <b>Fredage</b>, åbn dagen og tryk <b>Tilmeld mig</b>. Du kan afmelde dig igen, indtil dagen er gået i gang. Derefter skal en admin gøre det.</p>`,
+    a: `<p>Alle fredage er åbne for tilmelding. Gå til <b>Fredage</b>, åbn dagen og tryk <b>Tilmeld mig</b>. Du kan afmelde dig igen, indtil dagen er gået i gang. Derefter skal en admin gøre det.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Hvorfor står jeg på venteliste?',
+    a: `<p>Der spilles 4 på hver bane, og det er først til mølle. Hver gang der er 4 tilmeldte, er en bane klar. Er I fx 6, er 4 klar til bane 1, og 2 står på venteliste, indtil der kommer 2 mere.</p>
+<p>Er alle dagens baner fyldt, kommer resten også på venteliste. Melder nogen fra, rykker ventelisten automatisk op. Du kan se dit nummer på ventelisten på fredagen.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
