@@ -93,7 +93,14 @@ async function loadBase() {
   S.profiles = Object.fromEntries(profiles.map((p) => [p.id, p]));
   S.centers = centers;
   S.courts = courts;
-  S.me = S.profiles[S.session.user.id] || null;
+  S.realMe = S.profiles[S.session.user.id] || null;
+  // "Se som": en admin kan se appen som en anden spiller (kun visning)
+  let viewAs = null;
+  try { viewAs = sessionStorage.getItem('fp-viewas'); } catch {}
+  if (viewAs && (!S.realMe?.is_admin || !S.profiles[viewAs])) { viewAs = null; try { sessionStorage.removeItem('fp-viewas'); } catch {} }
+  S.viewAs = viewAs;
+  S.me = viewAs ? S.profiles[viewAs] : S.realMe;
+  renderViewAsBar();
 }
 
 function renderNav() {
@@ -298,6 +305,7 @@ async function viewPlayer(id) {
   <div class="page">
     <button class="back" onclick="history.back()">‹ Tilbage</button>
     <h1>${esc(p.name)}</h1>
+    ${S.realMe?.is_admin && !S.viewAs && p.id !== S.realMe.id ? `<button class="btn sm" id="viewAsBtn">👁 Se appen som ${esc(first(p.id))}</button>` : ''}
     <p class="muted">${GENDER[p.gender]} · ${SIDE[p.side]}${roleOf(p) !== 'bruger' ? ` · ${ROLE[roleOf(p)]}` : ''}</p>
     <div class="stats">
       <div><b>${p.elo}</b><span>Point</span></div>
@@ -1054,6 +1062,7 @@ async function viewAdmin() {
         <div class="grow"><b>${esc(p.name)}</b>${roleOf(p) !== 'bruger' ? ` <span class="badge role-${roleOf(p)}">${ROLE[roleOf(p)]}</span>` : ''}
           <small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${p.elo} point</small></div>
         <button class="btn sm" data-edit="${p.id}">Ret</button>
+        ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
         <select class="rolesel" data-role="${p.id}" aria-label="Rolle for ${esc(p.name)}">${Object.entries(ROLE).map(([k, v]) =>
           `<option value="${k}" ${roleOf(p) === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
       </div>`).join('')}</div>
@@ -1082,6 +1091,7 @@ async function viewAdmin() {
     if (self && role !== 'admin') { await loadBase(); location.hash = '#/profil'; return boot(); }
     refresh();
   }));
+  app.querySelectorAll('[data-viewas]').forEach((b) => (b.onclick = () => startViewAs(b.dataset.viewas)));
   app.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => {
     const p = S.profiles[b.dataset.edit];
     const row = document.getElementById('p-' + p.id);
@@ -1144,3 +1154,41 @@ function viewFaq() {
   draw();
   document.getElementById('faqSearch').oninput = (e) => draw(e.target.value);
 }
+
+// ---------- Se som (admin) ----------
+function startViewAs(id) {
+  try { sessionStorage.setItem('fp-viewas', id); } catch {}
+  toast(`Du ser nu appen som ${nameOf(id)}`);
+  location.hash = '#/fredage';
+  boot();
+}
+function stopViewAs() {
+  try { sessionStorage.removeItem('fp-viewas'); } catch {}
+  location.hash = '#/admin';
+  boot();
+}
+function renderViewAsBar() {
+  let bar = document.getElementById('viewAsBar');
+  if (!S.viewAs) { bar?.remove(); document.body.classList.remove('viewing'); return; }
+  if (!bar) { bar = document.createElement('div'); bar.id = 'viewAsBar'; document.body.prepend(bar); }
+  bar.innerHTML = `<span>👁 Du ser appen som <b>${esc(nameOf(S.viewAs))}</b> · kun visning</span><button id="stopViewAs">Tilbage til mig</button>`;
+  document.body.classList.add('viewing');
+  bar.querySelector('#stopViewAs').onclick = stopViewAs;
+}
+// I "se som" må man kigge og åbne ting, men ikke ændre noget i spillerens navn
+const VIEW_SAFE = '.back, .chip, summary, [data-act="enter"], [data-act="teams"], [data-act="voice"], [data-cancel], #cancel, #shareEvent, #viewAsBtn';
+const blockMsg = () => toast('Kun visning. Tryk "Tilbage til mig" for at ændre noget.', true);
+app.addEventListener('click', (e) => {
+  if (e.target.closest('#viewAsBtn')) { const id = location.hash.split('/')[2]; if (id) startViewAs(id); return; }
+  if (!S.viewAs) return;
+  const btn = e.target.closest('button');
+  if (btn && !btn.matches(VIEW_SAFE) && !btn.closest(VIEW_SAFE)) { e.preventDefault(); e.stopImmediatePropagation(); blockMsg(); }
+}, true);
+app.addEventListener('submit', (e) => {
+  if (!S.viewAs) return;
+  e.preventDefault(); e.stopImmediatePropagation(); blockMsg();
+}, true);
+app.addEventListener('change', (e) => {
+  if (!S.viewAs || !e.target.matches('#addPlayer, .rolesel')) return;
+  e.stopImmediatePropagation(); e.target.value = ''; blockMsg();
+}, true);
