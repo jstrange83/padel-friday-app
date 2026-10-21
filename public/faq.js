@@ -107,7 +107,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvordan inviterer jeg en ven?',
-    a: `<p>Åbn en fredag og tryk <b>Del fredagen</b>. Din ven får et link, opretter en profil og lander direkte på den fredag, så de kan tilmelde sig.</p>`,
+    a: `<p>Det er kun en admin, der kan invitere nye spillere. Spørg en admin, så sender de et link, hvor din ven kan oprette en profil og tilmelde sig.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
