@@ -167,3 +167,9 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .logrow:last-child { border-bottom: 0; }
 .logrow small { font-size: 12px; white-space: nowrap; }
 .mact.top { margin: 4px 0 8px; }
+.rhead { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 26px 0 8px; }
+.rhead h3 { margin: 0; }
+.rtime { text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
+.sitline { font-size: 14px; color: var(--muted); margin: -2px 0 6px; }
+.sitline b { color: var(--text); font-weight: 600; }
+.warnbox { border-left: 4px solid var(--warn); font-size: 15px; }

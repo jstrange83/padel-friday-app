@@ -410,7 +410,7 @@ async function viewEventForm(ev) {
         `<option value="${n}" ${n === v.duration_minutes ? 'selected' : ''}>${n % 60 ? `${Math.floor(n / 60)}½ time` : `${n / 60} ${n === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
       <label id="ptsWrap">Point pr. kamp<select name="points">${[16, 21, 24, 32].map((n) => `<option value="${n}" ${n === (v.points_per_match || 24) ? 'selected' : ''}>${n} point</option>`).join('')}</select>
         <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
-      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="${v.round_minutes}" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
+      <label id="minWrap"><span id="minLabel">Minutter pr. runde</span><input type="number" name="minutes" value="${v.round_minutes}" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, v.team_mode)}
       <button class="btn primary" id="createBtn">${ev ? 'Gem ændringer' : 'Opret fredage'}</button>
     </form>
@@ -427,11 +427,14 @@ async function viewEventForm(ev) {
     document.getElementById('roundsHint').textContent = n ? `Giver ${n} runder` : '';
   };
   f.duration.onchange = hint; f.minutes.oninput = hint; hint();
-  const fmt = () => {
-    document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none';
-    document.getElementById('ptsWrap').style.display = f.format.value === 'americano' ? '' : 'none';
+  const ROUND_MIN = { rotation: 30, saet: 20, americano: 20, klassisk: 40 };
+  const fmt = (changed) => {
+    const fm = f.format.value;
+    document.getElementById('minLabel').textContent = fm === 'rotation' ? 'Minutter pr. runde' : 'Ca. minutter pr. runde (bruges til dagsplanen)';
+    document.getElementById('ptsWrap').style.display = fm === 'americano' ? '' : 'none';
+    if (changed) { f.minutes.value = ROUND_MIN[fm]; hint(); }
   };
-  f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt)); fmt();
+  f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = () => fmt(true))); fmt(false);
   if (!ev) {
     const countHint = () => {
       const ds = weekDates(f.when.value, +f.count.value);
@@ -534,8 +537,9 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
   const center = centerById(ev.center_id);
   const courts = ev.court_ids.map(courtById).filter(Boolean).sort((a, b) => a.sort - b.sort);
   const isRot = ev.format === 'rotation';
-  const totalRounds = isRot ? Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes)) : null;
-  const lastDone = isRot && ev.current_round >= totalRounds;
+  const totalRounds = Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes));
+  const lastDone = ev.current_round >= totalRounds;
+  const roundStart = (r) => new Date(new Date(ev.starts_at).getTime() + (r - 1) * ev.round_minutes * 60e3);
   const endsAt = new Date(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3);
   const hm = (d) => fmtDate(d, { hour: '2-digit', minute: '2-digit' });
   const isAm = ev.format === 'americano';
@@ -551,7 +555,10 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
     const myTeam = onA ? 'a' : onB ? 'b' : null;
     const court = courtById(m.court_id)?.name || '';
     let status = '', actions = '';
-    if (m.status === 'planlagt') {
+    const future = m.round_no > ev.current_round;
+    if (m.status === 'planlagt' && future) {
+      if (admin) actions = `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
+    } else if (m.status === 'planlagt') {
       if (mine || admin) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : ''}`;
       if (admin) actions += `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
     } else if (m.status === 'indtastet') {
@@ -637,7 +644,19 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
     return `<div class="person ${label === 'Venter' ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
       ${admin ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld">×</button>` : ''}</div>`;
   }).join('')}</div>` : '';
-  const roundNos = Object.keys(rounds).map(Number).sort((a, b) => b - a);
+  const roundNos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
+  const futureRounds = roundNos.filter((r) => r > ev.current_round);
+  const futureAllPlanned = futureRounds.every((r) => rounds[r].every((m) => m.status === 'planlagt'));
+  const nextPlanned = !!rounds[ev.current_round + 1];
+  const planPlayers = new Set(futureRounds.flatMap((r) => [...inRound(r)]));
+  const planOutdated = futureRounds.length && ev.status !== 'afsluttet' &&
+    (L.playing.some((p) => !planPlayers.has(p)) || [...planPlayers].some((p) => !L.playing.includes(p)));
+  const roundHead = (r) => {
+    const tag = r === ev.current_round && ev.status === 'igang' ? '<span class="badge live">I gang</span>' : r > ev.current_round ? '<span class="badge">Planlagt</span>' : '';
+    const sit = L.playing.filter((p) => !inRound(r).has(p));
+    return `<div class="rhead"><h3>Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} <span class="rtime">ca. ${hm(roundStart(r))}</span></h3>${tag}</div>
+      ${sit.length ? `<div class="sitline">☕ Pause: ${sit.map((p) => `<b class="${p === me ? 'meName' : ''}">${esc(first(p))}</b>`).join(', ')}</div>` : ''}`;
+  };
   const timer = isRot && ev.status === 'igang' && ev.round_started_at
     ? `<div class="timer card"><small>Runde ${ev.current_round} af ${totalRounds}</small><div id="clock">--:--</div><small id="clockSub">tilbage</small></div>` : '';
 
@@ -654,17 +673,19 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
 
     ${admin && ev.status !== 'afsluttet' ? `<div class="card adminbar">
       ${lastDone && ev.status === 'igang' ? '<button class="btn primary" id="finish">Afslut dagen</button>' : ''}
-      <button class="btn ${lastDone ? '' : 'primary'}" id="nextRound">${!ev.current_round ? 'Start første runde'
-        : lastDone ? 'Spil en ekstra runde' : `Start runde ${ev.current_round + 1}${isRot ? ` af ${totalRounds}` : ''}`}</button>
-      ${curAllPlanned ? `<button class="btn" id="redoRound">Lav runde ${ev.current_round} om</button>` : ''}
+      ${!futureRounds.length && !lastDone ? `<button class="btn ${ev.current_round ? '' : 'primary'}" id="makePlan">📋 Lav dagsplan (${totalRounds - ev.current_round} runder)</button>` : ''}
+      <button class="btn ${lastDone || (!futureRounds.length && !ev.current_round) ? '' : 'primary'}" id="nextRound">${!ev.current_round ? 'Start første runde'
+        : lastDone && !nextPlanned ? 'Spil en ekstra runde' : `Start runde ${ev.current_round + 1}${ev.current_round + 1 <= totalRounds ? ` af ${totalRounds}` : ''}`}</button>
+      ${futureRounds.length && futureAllPlanned ? '<button class="btn" id="redoPlan">🔄 Lav dagsplanen om</button>' : ''}
+      ${curAllPlanned && ev.status === 'igang' ? `<button class="btn" id="redoRound">Lav runde ${ev.current_round} om</button>` : ''}
       ${ev.status === 'igang' && !lastDone ? '<button class="btn ghost" id="finish">Afslut dagen</button>' : ''}
       ${isAdmin && !matches.length ? '<button class="btn ghost danger" id="delEvent">Slet fredag</button>' : ''}
     </div>` : ''}
     ${admin && ev.status === 'afsluttet' ? '<button class="btn ghost" id="reopen">Genåbn dagen</button>' : ''}
 
-    ${sittingNow.length ? `<div class="card sit">☕ Pause i runde ${ev.current_round}: <b>${sittingNow.map((p) => esc(first(p))).join(', ')}</b></div>` : ''}
+    ${planOutdated && admin ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>Lav dagsplanen om</b> for at få de nye spillere med.</div>' : ''}
 
-    ${roundNos.map((r) => `<h3>Runde ${r}</h3>${rounds[r].map(matchCard).join('')}`).join('')}
+    ${roundNos.map((r) => `${roundHead(r)}${rounds[r].map(matchCard).join('')}`).join('')}
 
     ${standings.length ? `<h3>Dagens stilling</h3><div class="list table">
       <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot || isSet ? 'Partier' : isAm ? 'Score' : 'Sejre'}</div><div>Point</div></div>
@@ -744,15 +765,30 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
   });
 
   // Runder
+  // Lav hold til en eller flere runder. Hver ny runde tager højde for de runder, der lige er lavet.
+  const buildRounds = async (from, to) => {
+    const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean);
+    const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
+      .order('created_at', { ascending: false }).limit(800));
+    const rows = [];
+    for (let r = from; r <= to; r++) {
+      const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo: r });
+      if (res.error) { toast(res.error, true); return false; }
+      const ms = res.matches.map((m) => ({ ...m, event_id: ev.id, round_no: r }));
+      rows.push(...ms);
+      history.unshift(...ms);
+    }
+    await q(sb.from('padel_matches').insert(rows));
+    return true;
+  };
+  const checkLineup = () => {
+    if (!L.courts) { toast('Der skal være mindst 4 tilmeldte', true); return false; }
+    return !L.waiting.length || confirm(`${L.waiting.length} står på venteliste og kommer ikke med. Fortsæt?`);
+  };
   const makeRound = async (roundNo, btn) => {
     busy(btn, true);
     try {
-      const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean);
-      const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
-        .order('created_at', { ascending: false }).limit(800));
-      const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo });
-      if (res.error) { toast(res.error, true); return; }
-      await q(sb.from('padel_matches').insert(res.matches.map((m) => ({ ...m, event_id: ev.id, round_no: roundNo }))));
+      if (!rounds[roundNo] || roundNo === ev.current_round) { if (!(await buildRounds(roundNo, roundNo))) return; }
       await q(sb.rpc('padel_start_round', { p_event: ev.id, p_round: roundNo }));
       await reload();
     } catch (e) { console.error(e); } finally { busy(btn, false); }
@@ -760,9 +796,25 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
   document.getElementById('nextRound')?.addEventListener('click', async (e) => {
     const open = cur.filter((m) => m.status !== 'bekraeftet').length;
     if (open && !confirm(`${open} kamp(e) i runde ${ev.current_round} mangler godkendt resultat. Start næste runde alligevel?`)) return;
-    if (!L.courts) return toast('Der skal være mindst 4 tilmeldte', true);
-    if (L.waiting.length && !confirm(`${L.waiting.length} står på venteliste og kommer ikke med i runden. Fortsæt?`)) return;
+    if (!nextPlanned && !checkLineup()) return;
     makeRound(ev.current_round + 1, e.target);
+  });
+  document.getElementById('makePlan')?.addEventListener('click', async (e) => {
+    if (!checkLineup()) return;
+    busy(e.target, true);
+    try {
+      if (await buildRounds(ev.current_round + 1, totalRounds)) { toast('Dagsplanen er lavet'); await reload(); }
+    } catch (err) { console.error(err); } finally { busy(e.target, false); }
+  });
+  document.getElementById('redoPlan')?.addEventListener('click', async (e) => {
+    if (!confirm('Lav alle kommende runder om med de nuværende tilmeldte?')) return;
+    if (!checkLineup()) return;
+    busy(e.target, true);
+    try {
+      await q(sb.from('padel_matches').delete().eq('event_id', ev.id).gt('round_no', ev.current_round).eq('status', 'planlagt'));
+      const to = Math.max(totalRounds, ...futureRounds);
+      if (await buildRounds(ev.current_round + 1, to)) { toast('Dagsplanen er lavet om'); await reload(); }
+    } catch (err) { console.error(err); } finally { busy(e.target, false); }
   });
   document.getElementById('redoRound')?.addEventListener('click', async (e) => {
     if (!confirm(`Lav runde ${ev.current_round} om med nye hold?`)) return;

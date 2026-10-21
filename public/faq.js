@@ -79,6 +79,13 @@ export const FAQ = [
   },
   {
     cat: 'Hold og runder',
+    q: 'Hvad er dagsplanen?',
+    a: `<p>Når spillerne er tilmeldt, kan admin eller en superbruger trykke <b>Lav dagsplan</b>. Så lægger appen alle dagens runder ud på forhånd med hold, baner, pauser og cirka‑tider.</p>
+<p>Et sæt tager ca. 20 minutter, så 2 timer giver 6 runder. En 30‑minutters rotation giver 4. Du kan altså se hele aftenen, inden I går på banen.</p>
+<p>Melder nogen til eller fra, kan dagsplanen laves om, og runder der allerede er spillet, bliver ikke rørt.</p>`,
+  },
+  {
+    cat: 'Hold og runder',
     q: 'Hvorfor holder jeg pause?',
     a: `<p>Er der flere tilmeldte, end der er plads til på banerne, må nogle sidde over. Appen fordeler pauserne, så det går på skift, og den der har holdt flest pauser, spiller først.</p>`,
   },
