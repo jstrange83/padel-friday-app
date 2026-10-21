@@ -308,3 +308,17 @@ details.centerbox .mact { margin-top: 12px; }
 .editbox[open] > summary { margin-bottom: 4px; }
 .editbox #pf { background: none; padding: 0; margin: 0; }
 .row.logout { width: 100%; background: none; border: 0; color: var(--dn); font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+
+/* Statistikside */
+.stats.two { grid-template-columns: 1fr 1fr; }
+.stats.two span { font-size: 12px; }
+.trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; text-align: center; }
+.trio small { display: block; color: var(--muted); font-size: 12px; }
+.trio b { font-size: 20px; }
+.pgraph { width: 100%; height: 130px; margin-top: 8px; }
+.pgraph polyline { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.pgraph line { stroke: var(--line); vector-effect: non-scaling-stroke; }
+.pgraph text { fill: var(--muted); font-size: 10px; }
+.tabbar.inner { margin: 0 0 6px; background: var(--bg); }
+.stats-page .card > b { display: block; }
+.stats-page .lbl { margin: 10px 0 6px; }
