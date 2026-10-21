@@ -14,7 +14,7 @@ const navEl = document.getElementById('nav');
 const SIDE = { venstre: 'Venstre', hojre: 'Højre', begge: 'Begge sider' };
 const SIDE_SHORT = { venstre: 'V', hojre: 'H', begge: 'V/H' };
 const GENDER = { mand: 'Mand', kvinde: 'Kvinde' };
-const FORMAT = { rotation: 'Rotation på tid', americano: 'Americano', klassisk: 'Klassisk' };
+const FORMAT = { rotation: 'Rotation på tid', saet: 'Ét sæt pr. runde', americano: 'Americano', klassisk: 'Klassisk' };
 const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -465,8 +465,9 @@ function renderEvent({ ev, signups, matches, changes }) {
   const endsAt = new Date(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3);
   const hm = (d) => fmtDate(d, { hour: '2-digit', minute: '2-digit' });
   const isAm = ev.format === 'americano';
-  const isShare = isRot || isAm;
-  const unit = isRot ? 'partier' : isAm ? 'point' : 'sæt';
+  const isSet = ev.format === 'saet';
+  const isShare = isRot || isAm || isSet;
+  const unit = isRot || isSet ? 'partier' : isAm ? 'point' : 'sæt';
 
   const canGender = ev.team_mode === 'aaben' || ev.team_mode === 'mix' || (ev.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
 
@@ -499,7 +500,7 @@ function renderEvent({ ev, signups, matches, changes }) {
         <span>–</span>
         <input type="number" name="b" min="0" max="99" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
         <button class="btn sm primary">Gem</button>
-        <small class="muted">${isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : `Antal ${unit}`}</small>
+        <small class="muted">${isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6' : `Antal ${unit}`}</small>
       </form>
       ${admin && m.status === 'planlagt' ? teamForm(m) : ''}
     </div>`;
@@ -585,7 +586,7 @@ function renderEvent({ ev, signups, matches, changes }) {
     ${roundNos.map((r) => `<h3>Runde ${r}</h3>${rounds[r].map(matchCard).join('')}`).join('')}
 
     ${standings.length ? `<h3>Dagens stilling</h3><div class="list table">
-      <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot ? 'Partier' : isAm ? 'Score' : 'Sejre'}</div><div>Point</div></div>
+      <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot || isSet ? 'Partier' : isAm ? 'Score' : 'Sejre'}</div><div>Point</div></div>
       ${standings.map(([pid, t], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i === 0 ? '👑' : i + 1}</div>
         <div class="grow">${esc(nameOf(pid))}</div><div>${t.n}</div><div>${isShare ? `${t.f}–${t.a}` : t.w}</div>
         <div class="delta ${t.elo > 0 ? 'up' : t.elo < 0 ? 'dn' : ''}">${unranked ? '≈' : ''}${t.elo > 0 ? '+' : ''}${t.elo}</div></div>`).join('')}

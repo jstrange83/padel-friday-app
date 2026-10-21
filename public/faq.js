@@ -12,12 +12,13 @@ export const FAQ = [
     cat: 'Point og rangliste',
     q: 'Hvorfor fik jeg kun få point, selvom vi vandt?',
     a: `<p>Det sker, når I var favoritter på forhånd. Hvis jeres hold samlet havde flere point end modstanderne, forventede systemet allerede, at I ville vinde, og så giver sejren ikke så meget.</p>
-<p>I 30‑minutters kampe og Americano tæller det også, <b>hvor meget</b> I vandt med. Vinder I kun 8‑7 over et svagere hold, kan I faktisk miste et par point, fordi I klarede jer dårligere end forventet.</p>`,
+<p>I 30‑minutters kampe, ét sæt pr. runde og Americano tæller det også, <b>hvor meget</b> I vandt med. Vinder I kun 8‑7 over et svagere hold, kan I faktisk miste et par point, fordi I klarede jer dårligere end forventet.</p>`,
   },
   {
     cat: 'Point og rangliste',
     q: 'Hvordan tæller resultatet i de forskellige formater?',
     a: `<ul><li><b>Rotation (30 min):</b> andelen af vundne partier tæller. 9‑3 tæller som 75 %, 8‑8 er uafgjort.</li>
+<li><b>Ét sæt pr. runde:</b> andelen af partier i sættet tæller. 6‑4 tæller som 60 %, 6‑0 som 100 %.</li>
 <li><b>Americano:</b> andelen af point tæller på samme måde, fx 16‑8 = 67 %.</li>
 <li><b>Klassisk:</b> kun sejr, uafgjort eller nederlag tæller, ikke hvor mange sæt.</li></ul>`,
   },
@@ -32,6 +33,13 @@ export const FAQ = [
     a: `<p>I spiller i <b>30 minutter</b>, og når tiden er gået, stopper kampen, uanset stillingen. Resultatet kan derfor sagtens blive 9‑3 eller 8‑8.</p>
 <p>Efter hver runde får alle en <b>ny makker</b> og nye modstandere. En fredag på 2 timer giver 4 runder.</p>
 <p>Appen viser en nedtælling og siger til med lyd og vibration, når tiden er gået. Tæl antal vundne partier (games) og indtast dem.</p>`,
+  },
+  {
+    cat: 'Formater',
+    q: 'Hvad er "Ét sæt pr. runde"?',
+    a: `<p>I spiller <b>ét sæt</b> (først til 6 partier, 7‑6 ved tiebreak), og når sættet er færdigt, skifter alle makker og modstandere.</p>
+<p>Indtast antal partier hvert hold vandt i sættet, fx 6‑4. Jo større sejren er, jo flere point giver den på ranglisten.</p>
+<p>Der er ingen nedtælling. Admin starter næste runde, når alle sæt er færdige.</p>`,
   },
   {
     cat: 'Formater',
