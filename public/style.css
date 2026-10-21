@@ -3,6 +3,7 @@
   --text: #eef4fa; --muted: #8ea6bd; --accent: #d4f53c; --accent-ink: #0c1b2a;
   --up: #4ade80; --dn: #f87171; --warn: #fbbf24; --r: 14px;
 }
+[hidden] { display: none !important; }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
@@ -177,3 +178,40 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   background: var(--warn); color: #1a1300; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; font-size: 14px; }
 #viewAsBar button { background: #1a1300; color: #fff; border: 0; border-radius: 8px; padding: 7px 10px; font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
 body.viewing .page { padding-top: 14px; }
+
+/* ---------- Oprydning ---------- */
+.head .back { padding: 0; }
+.tools { display: flex; gap: 6px; }
+.icon { background: var(--card); border: 1px solid var(--line); border-radius: 10px; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; cursor: pointer; color: var(--text); }
+.mine-card { border-left: 4px solid var(--accent); }
+.mine-card.wait { border-left-color: var(--warn); }
+.mine-card.now { background: var(--card2); }
+.mine-card p { margin: 2px 0 10px; font-size: 16px; }
+.mine-card p:last-child { margin-bottom: 0; }
+.mine-card small { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+.mine-card .btn { width: auto; margin: 0 8px 0 0; }
+.mine-card .btn.primary:only-of-type, .mine-card #signon { width: 100%; }
+.mine-card .delta { margin-left: 6px; }
+.runbar { display: flex; flex-direction: column; gap: 10px; }
+.runbar .btn.primary { margin: 0; }
+.runbar .mact { margin: 0; }
+details.rounds, details.past { margin: 18px 0 6px; }
+details.rounds > summary, details.past > summary { cursor: pointer; font-weight: 700; color: var(--muted); font-size: 14px; text-transform: uppercase; letter-spacing: .8px; padding: 8px 0; list-style: none; }
+details.rounds > summary::-webkit-details-marker, details.past > summary::-webkit-details-marker { display: none; }
+details.rounds > summary::after, details.past > summary::after { content: ' ▾'; }
+details.rounds[open] > summary::after, details.past[open] > summary::after { content: ' ▴'; }
+details.rounds .rhead:first-of-type { margin-top: 6px; }
+.addp { margin-top: 12px; }
+.links { margin: 14px 0; }
+.links .row { font-weight: 600; }
+.tipline { margin: 10px 4px 4px; }
+#playerSearch { margin: 0 0 10px; }
+.prow { border-bottom: 1px solid var(--line); }
+.prow:last-child { border-bottom: 0; }
+.prow > summary { display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.prow > summary::-webkit-details-marker { display: none; }
+.prow > summary small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.prow[open] > summary { background: var(--card2); }
+.ppanel { padding: 4px 14px 14px; background: var(--card2); }
+.ppanel label { margin: 6px 0 10px; }
+.fresh { margin-top: 14px; }

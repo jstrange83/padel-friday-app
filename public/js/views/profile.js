@@ -1,0 +1,38 @@
+// Egen profil (og velkomst første gang).
+import { sb, S, app, hooks, GENDER, SIDE, ROLE, roleOf, esc, toast, q, busy, radios } from '../core.js';
+
+export function renderProfile(isNew) {
+  const p = S.me || { name: '', gender: '', side: 'begge' };
+  app.innerHTML = `
+  <div class="page">
+    <h1>${isNew ? 'Velkommen 👋' : 'Din profil'}</h1>
+    ${isNew ? '<p class="muted">Fortæl lidt om dig selv, så appen kan sætte gode hold.</p>'
+      : `<p class="muted">${p.elo} point${roleOf(p) !== 'bruger' ? ` · ${ROLE[roleOf(p)]}` : ''}</p>`}
+    <form class="card" id="pf">
+      <label>Navn<input name="name" value="${esc(p.name)}" required maxlength="60" autocomplete="name"></label>
+      <div class="lbl">Køn</div>${radios('gender', GENDER, p.gender)}
+      <div class="lbl">Foretrukken side</div>${radios('side', SIDE, p.side)}
+      <button class="btn primary">${isNew ? 'Kom i gang' : 'Gem'}</button>
+    </form>
+    ${isNew ? '' : `
+      <div class="list links">
+        <a class="row" href="#/spiller/${p.id}"><span class="grow">📊 Min statistik</span><span class="muted">›</span></a>
+        <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
+      </div>
+      <p class="muted small tipline">Tip: Vælg "Føj til hjemmeskærm" i Safari eller Chrome, så ligger appen på telefonen.</p>
+      <button class="btn ghost" id="logout">Log ud</button>`}
+  </div>`;
+
+  document.getElementById('pf').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target, btn = f.querySelector('button');
+    busy(btn, true);
+    try {
+      await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+      toast('Profilen er gemt');
+      if (isNew) { if (!location.hash.startsWith('#/fredag/')) location.hash = '#/fredage'; return hooks.boot(); }
+      await hooks.loadBase();
+    } catch {} finally { busy(btn, false); }
+  };
+  document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+}
