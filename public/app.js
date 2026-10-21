@@ -67,9 +67,15 @@ async function boot() {
   try {
     stopTimers();
     if (S.recovery && S.session) return renderNewPassword();
-    if (!S.session) { navEl.innerHTML = ''; return renderAuth(); }
+    // Husk et delt fredagslink, så man lander der efter login/oprettelse
+    if (location.hash.startsWith('#/fredag/')) { try { localStorage.setItem('fp-next', location.hash); } catch {} }
+    if (!S.session) { navEl.innerHTML = ''; return renderAuth(location.hash === '#/velkommen' ? 'signup' : 'login'); }
     await loadBase();
     if (!S.me) { navEl.innerHTML = ''; return renderProfileForm(true); }
+    let next = null;
+    try { next = localStorage.getItem('fp-next'); localStorage.removeItem('fp-next'); } catch {}
+    if (next && next !== location.hash) { location.hash = next; }
+    else if (location.hash === '#/velkommen') { location.hash = '#/fredage'; }
     renderNav();
     await route();
   } finally { booting = false; }
@@ -94,9 +100,17 @@ function renderNav() {
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${cur.startsWith(h) || (h === '#/fredage' && cur.startsWith('#/fredag')) ? 'on' : ''}"><span>${i}</span>${t}</a>`).join('');
 }
 
+let channel = null;
 function stopTimers() {
   clearInterval(pollTimer); clearInterval(tickTimer);
   pollTimer = tickTimer = null;
+  if (channel) { sb.removeChannel(channel); channel = null; }
+}
+
+async function share(url, text) {
+  if (navigator.share) { try { await navigator.share({ title: 'Fredagspadel', text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(url); toast('Linket er kopieret'); }
+  catch { prompt('Kopiér linket', url); }
 }
 
 async function route() {
@@ -123,7 +137,9 @@ function renderAuth(mode = 'login') {
   <div class="auth">
     <div class="logo">🎾</div>
     <h1>Fredagspadel</h1>
-    <p class="muted">Rangliste, hold og resultater til fredagspadel.</p>
+    <p class="muted">${signup && location.hash === '#/velkommen'
+      ? 'Du er inviteret med til fredagspadel! Opret en konto, så kan du tilmelde dig og komme på ranglisten.'
+      : 'Rangliste, hold og resultater til fredagspadel.'}</p>
     <form class="card" id="authForm">
       <label>E-mail<input type="email" name="email" required autocomplete="email"></label>
       <label>Adgangskode<input type="password" name="password" required minlength="6" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>
@@ -204,7 +220,7 @@ function renderProfileForm(isNew) {
     try {
       await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
       toast('Profilen er gemt');
-      if (isNew) { location.hash = '#/fredage'; return boot(); }
+      if (isNew) { if (!location.hash.startsWith('#/fredag/')) location.hash = '#/fredage'; return boot(); }
       await loadBase();
     } catch {} finally { busy(btn, false); }
   };
@@ -380,12 +396,34 @@ async function loadEvent(id) {
 async function viewEvent(id) {
   const data = await loadEvent(id);
   renderEvent(data);
-  pollTimer = setInterval(async () => {
+
+  // Live opdatering: genindlæs når kampe, tilmeldinger eller dagen ændres.
+  // Er man i gang med at skrive et resultat eller rette hold, venter vi til man er færdig.
+  let timer = null, pending = false;
+  const busyTyping = () => {
     const a = document.activeElement;
-    if (a && app.contains(a) && ['INPUT', 'SELECT'].includes(a.tagName)) return;
-    if (document.hidden) return;
-    try { await loadBase(); renderEvent(await loadEvent(id)); } catch {}
-  }, 15000);
+    return (a && app.contains(a) && ['INPUT', 'SELECT'].includes(a.tagName)) || !!app.querySelector('form.enter:not([hidden]), form.editteams:not([hidden])');
+  };
+  const refresh = () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      if (!location.hash.startsWith('#/fredag/' + id)) return;
+      if (busyTyping()) { pending = true; return; }
+      pending = false;
+      try { await loadBase(); renderEvent(await loadEvent(id)); } catch {}
+    }, 400);
+  };
+  app.onfocusout = () => { if (pending) setTimeout(refresh, 300); };
+  channel = sb.channel('fredag-' + id)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'padel_matches', filter: `event_id=eq.${id}` }, refresh)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'padel_matches' }, refresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'padel_signups', filter: `event_id=eq.${id}` }, refresh)
+    .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'padel_signups' }, refresh)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'padel_events', filter: `id=eq.${id}` }, refresh)
+    .subscribe();
+  // Sikkerhedsnet hvis live-forbindelsen falder ud (fx når telefonen har været låst)
+  pollTimer = setInterval(() => { if (!document.hidden) refresh(); }, 60000);
+  document.onvisibilitychange = () => { if (!document.hidden && location.hash.startsWith('#/fredag/' + id)) refresh(); };
 }
 
 function teamHtml(l, r, me) {
@@ -418,6 +456,7 @@ function renderEvent({ ev, signups, matches, changes }) {
     let status = '', actions = '';
     if (m.status === 'planlagt') {
       if (mine || admin) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`;
+      if (admin) actions += `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
     } else if (m.status === 'indtastet') {
       status = `<span class="badge wait">Afventer godkendelse</span>`;
       const opponent = myTeam && myTeam !== m.reported_team;
@@ -440,7 +479,27 @@ function renderEvent({ ev, signups, matches, changes }) {
         <button class="btn sm primary">Gem</button>
         <small class="muted">Antal ${unit}</small>
       </form>
+      ${admin && m.status === 'planlagt' ? teamForm(m) : ''}
     </div>`;
+  };
+
+  // Admin: ret hold. Spillere der vælges fra en anden kamp i runden bytter automatisk plads.
+  const inRound = (r) => new Set((rounds[r] || []).flatMap((x) => [x.a_left, x.a_right, x.b_left, x.b_right]));
+  const teamForm = (m) => {
+    const used = inRound(m.round_no);
+    const pool = [...new Set([...signed, m.a_left, m.a_right, m.b_left, m.b_right])]
+      .sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+    const sel = (name, label, val) => `<label>${label}<select name="${name}">${pool.map((p) =>
+      `<option value="${p}" ${p === val ? 'selected' : ''}>${esc(nameOf(p))}${used.has(p) ? '' : ' (pause)'}</option>`).join('')}</select></label>`;
+    return `<form class="editteams" hidden data-id="${m.id}">
+      <div class="tgrid">
+        ${sel('al', 'Hold 1 venstre', m.a_left)}${sel('ar', 'Hold 1 højre', m.a_right)}
+        ${sel('bl', 'Hold 2 venstre', m.b_left)}${sel('br', 'Hold 2 højre', m.b_right)}
+      </div>
+      <label>Bane<select name="court">${courts.map((c) => `<option value="${c.id}" ${c.id === m.court_id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
+      <div class="mact"><button class="btn sm primary">Gem hold</button><button type="button" class="btn sm" data-cancel>Annuller</button></div>
+      <small class="muted">Vælger du en spiller fra en anden kamp, bytter de plads. Vælger du en bane der er i brug, bytter kampene bane.</small>
+    </form>`;
   };
 
   // Hvem sidder over i den aktuelle runde
@@ -469,6 +528,7 @@ function renderEvent({ ev, signups, matches, changes }) {
     <p class="muted cap">${fmtDate(ev.starts_at)} · ${esc(center?.name || '')}</p>
     <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
       <span class="chip">${courts.length} baner</span>${ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : ''}</div>
+    ${ev.status !== 'afsluttet' ? '<button class="btn sm" id="shareEvent">📤 Del fredagen</button>' : ''}
 
     ${timer}
 
@@ -597,6 +657,11 @@ function renderEvent({ ev, signups, matches, changes }) {
   // Resultater
   app.querySelectorAll('[data-act]').forEach((b) => (b.onclick = async () => {
     const id = b.dataset.id, act = b.dataset.act;
+    if (act === 'teams') {
+      const f = app.querySelector(`form.editteams[data-id="${id}"]`);
+      f.hidden = !f.hidden;
+      return;
+    }
     if (act === 'enter') {
       const f = app.querySelector(`form.enter[data-id="${id}"]`);
       f.hidden = !f.hidden;
@@ -611,6 +676,58 @@ function renderEvent({ ev, signups, matches, changes }) {
       await reload();
     } catch { busy(b, false); }
   }));
+  app.querySelectorAll('form.editteams').forEach((f) => {
+    f.querySelector('[data-cancel]').onclick = () => { f.hidden = true; reload(); };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const m = matches.find((x) => x.id === f.dataset.id);
+      const nv = [f.al.value, f.ar.value, f.bl.value, f.br.value];
+      if (new Set(nv).size < 4) return toast('En spiller kan kun stå ét sted i kampen', true);
+      const roundMs = rounds[m.round_no];
+      const state = Object.fromEntries(roundMs.map((x) => [x.id, { p: [x.a_left, x.a_right, x.b_left, x.b_right], court: x.court_id, status: x.status }]));
+      const old = state[m.id].p.slice();
+      const leavers = old.filter((p) => !nv.includes(p));
+      const joiners = nv.filter((p) => !old.includes(p));
+      state[m.id].p = nv;
+      // Spillere hentet fra en anden kamp bytter plads med dem der forlader denne kamp
+      for (const j of joiners) {
+        for (const [mid, s] of Object.entries(state)) {
+          if (mid === m.id) continue;
+          const k = s.p.indexOf(j);
+          if (k < 0) continue;
+          if (s.status !== 'planlagt') return toast(`${nameOf(j)} spiller i en kamp der allerede har resultat`, true);
+          s.p[k] = leavers.shift();
+        }
+      }
+      // Bane: er den i brug af en anden kamp i runden, bytter de
+      const newCourt = f.court.value;
+      if (newCourt !== m.court_id) {
+        for (const [mid, s] of Object.entries(state)) {
+          if (mid !== m.id && s.court === newCourt) {
+            if (s.status !== 'planlagt') return toast('Banen bruges af en kamp der allerede har resultat', true);
+            s.court = m.court_id;
+          }
+        }
+        state[m.id].court = newCourt;
+      }
+      const btn = f.querySelector('button.primary');
+      busy(btn, true);
+      try {
+        for (const x of roundMs) {
+          const s = state[x.id];
+          const changed = s.court !== x.court_id || s.p.join() !== [x.a_left, x.a_right, x.b_left, x.b_right].join();
+          if (changed) await q(sb.rpc('padel_admin_set_teams', { p_match: x.id, p_al: s.p[0], p_ar: s.p[1], p_bl: s.p[2], p_br: s.p[3], p_court: s.court }));
+        }
+        toast('Holdene er rettet');
+        f.hidden = true;
+        await reload();
+      } catch { busy(btn, false); }
+    };
+  });
+
+  document.getElementById('shareEvent')?.addEventListener('click', () =>
+    share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || 'Fredagspadel'} ${fmtDate(ev.starts_at)} i ${center?.name || ''}. Tilmeld dig her:`));
+
   app.querySelectorAll('form.enter').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button');
@@ -643,6 +760,12 @@ async function viewAdmin() {
   app.innerHTML = `
   <div class="page">
     <h1>Admin</h1>
+    <div class="card">
+      <b>Inviter spillere</b>
+      <p class="muted small">Send linket i jeres gruppechat. Det åbner direkte på "Opret konto".</p>
+      <div class="invite">${esc(location.origin)}/#/velkommen</div>
+      <button class="btn primary" id="invite">📤 Del invitationslink</button>
+    </div>
     <h3>Spillere (${players.length})</h3>
     <div class="list">${players.map((p) => `
       <div class="row wrap" id="p-${p.id}">
@@ -665,6 +788,8 @@ async function viewAdmin() {
   </div>`;
 
   const refresh = async () => { await loadBase(); viewAdmin(); };
+  document.getElementById('invite').onclick = () =>
+    share(`${location.origin}/#/velkommen`, 'Kom med til fredagspadel! Opret en profil her, så kan du tilmelde dig og komme på ranglisten:');
   app.querySelectorAll('[data-admin]').forEach((b) => (b.onclick = async () => {
     const val = b.dataset.val === 'true';
     if (!confirm(`${val ? 'Gør' : 'Fjern'} ${nameOf(b.dataset.admin)} ${val ? 'til admin' : 'som admin'}?`)) return;

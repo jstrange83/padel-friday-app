@@ -128,3 +128,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   padding: 12px 18px; border-radius: 12px; font-weight: 600; opacity: 0; pointer-events: none; transition: .25s; max-width: calc(100% - 32px); z-index: 20; }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #toast.bad { background: var(--dn); color: #fff; }
+
+/* Etape 2 */
+.editteams { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 4px; }
+.editteams label { margin: 8px 0; }
+.editteams select { padding: 10px; }
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.invite { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-family: ui-monospace, monospace; font-size: 14px; word-break: break-all; margin: 8px 0; }
+#shareEvent { margin-bottom: 4px; }
