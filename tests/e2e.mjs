@@ -25,6 +25,8 @@ const shot = async (name) => page.screenshot({ path: path.join(shots, `${String(
 const ok = (cond, msg) => { if (!cond) throw new Error('FEJL: ' + msg); console.log('✓', msg); };
 const text = async () => (await page.locator('#app').innerText()).toLowerCase();
 const wait = (ms = 300) => page.waitForTimeout(ms);
+// Siden må aldrig være bredere end skærmen
+const noOverflow = async (where) => ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `ingen sidelæns scroll (${where})`);
 
 try {
   await page.goto('http://localhost:8765/');
@@ -44,6 +46,7 @@ try {
   ok((await page.inputValue('input[name=minutes]')) === '20', 'ét sæt sætter 20 min pr. runde');
   ok((await page.locator('#roundsHint').innerText()).includes('6 runder'), '2 timer giver 6 runder');
   await shot('ny-fredag');
+  await noOverflow('ny spilledag');
   await page.click('#createBtn');
   await page.waitForSelector('a.ev');
   ok((await page.locator('a.ev').count()) === 4, '4 fredage oprettet');
@@ -71,6 +74,7 @@ try {
   ok((await page.locator('details.rounds summary').first().innerText()).toLowerCase().includes('dagsplan (6)'), 'dagsplan med 6 runder');
   ok((await page.locator('.mine-card').innerText()).match(/Runde 1|pause/i), 'Din aften viser første runde');
   await shot('dagsplan');
+  await noOverflow('spilledag');
 
   // Start runde 1
   await page.click('#nextRound');
@@ -129,6 +133,7 @@ try {
   await page.click('#pf button.primary');
   await wait(300);
   ok((await page.locator('#toast').innerText()).includes('Ugyldigt telefonnummer'), 'ugyldigt nummer afvist');
+  await noOverflow('profil');
   await page.fill('#pf input[name=phone]', '12 34 56 78');
   await page.click('#pf button.primary');
   await wait(400);
@@ -150,6 +155,7 @@ try {
   await page.waitForSelector('.prow');
   await page.locator('.prow summary').nth(1).click();
   await shot('admin');
+  await noOverflow('admin');
   await page.locator('.prow[open] [data-viewas]').click();
   await page.waitForSelector('#viewAsBar');
   ok(!(await page.locator('#nav').innerText()).includes('Admin'), 'se som skjuler Admin');
@@ -294,7 +300,7 @@ try {
   await ip.waitForSelector('#nav a');
   ok(await ip.locator('.gate').count() === 0, 'iPhone: spring over virker');
   await ip.click('#nav a:has-text("Profil")');
-  await ip.waitForSelector('#pf');
+  await ip.waitForSelector('.me-card');
   ok(await ip.locator('#installRow').count() === 1, 'iPhone: hjemmeskærm ligger under Profil');
   await iphone.close();
 
