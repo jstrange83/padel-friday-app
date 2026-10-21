@@ -121,7 +121,8 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
-    q: 'Hvad kan en admin?',
-    a: `<p>En admin opretter fredage, starter runder, retter hold og resultater, tilmelder og afmelder spillere og bestemmer, om Americano skal tælle på ranglisten.</p>`,
+    q: 'Hvad kan en superbruger og en admin?',
+    a: `<p><b>Superbruger</b> kan køre en fredag: starte runder, lave en runde om, rette hold, til‑ og afmelde spillere, indtaste, godkende og rette resultater og afslutte dagen.</p>
+<p><b>Admin</b> kan det samme og desuden oprette og slette fredage, styre centre og baner, give roller og bestemme, om Americano skal tælle på ranglisten.</p>`,
   },
 ];

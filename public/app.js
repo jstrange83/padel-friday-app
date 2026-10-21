@@ -450,7 +450,8 @@ function teamHtml(l, r, me) {
 }
 
 function renderEvent({ ev, signups, matches, changes }) {
-  const me = S.me.id, admin = S.me.is_admin;
+  // admin = må køre dagen (superbruger eller admin). isAdmin = kun admin (slette dagen, rangliste for Americano)
+  const me = S.me.id, isAdmin = S.me.is_admin, admin = isAdmin || roleOf(S.me) === 'superbruger';
   const signed = signups.map((s) => s.player_id);
   const iAmIn = signed.includes(me);
   const rounds = {};
@@ -579,7 +580,7 @@ function renderEvent({ ev, signups, matches, changes }) {
         : lastDone ? 'Spil en ekstra runde' : `Start runde ${ev.current_round + 1}${isRot ? ` af ${totalRounds}` : ''}`}</button>
       ${curAllPlanned ? `<button class="btn" id="redoRound">Lav runde ${ev.current_round} om</button>` : ''}
       ${ev.status === 'igang' && !lastDone ? '<button class="btn ghost" id="finish">Afslut dagen</button>' : ''}
-      ${!matches.length ? '<button class="btn ghost danger" id="delEvent">Slet fredag</button>' : ''}
+      ${isAdmin && !matches.length ? '<button class="btn ghost danger" id="delEvent">Slet fredag</button>' : ''}
     </div>` : ''}
     ${admin && ev.status === 'afsluttet' ? '<button class="btn ghost" id="reopen">Genåbn dagen</button>' : ''}
 
@@ -595,9 +596,9 @@ function renderEvent({ ev, signups, matches, changes }) {
     </div>` : ''}
 
     ${isAm ? `<div class="card ranked">${ev.ranked
-      ? `✅ Dagen tæller på den officielle rangliste.${admin ? '<button class="btn sm" id="unrank">Fjern fra ranglisten</button>' : ''}`
+      ? `✅ Dagen tæller på den officielle rangliste.${isAdmin ? '<button class="btn sm" id="unrank">Fjern fra ranglisten</button>' : ''}`
       : `ℹ️ Americano tæller ikke på ranglisten, før en admin tilføjer dagen. ${confirmedCount ? 'Kolonnen "Point" viser cirka, hvad hver spiller ville få.' : ''}
-         ${admin && confirmedCount ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>` : ''}
+         ${isAdmin && confirmedCount ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>` : ''}
 
     <h3>Tilmeldte (${signed.length})</h3>
     ${ev.status === 'planlagt' ? (iAmIn
@@ -669,7 +670,7 @@ function renderEvent({ ev, signups, matches, changes }) {
       const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo });
       if (res.error) { toast(res.error, true); return; }
       await q(sb.from('padel_matches').insert(res.matches.map((m) => ({ ...m, event_id: ev.id, round_no: roundNo }))));
-      await q(sb.from('padel_events').update({ current_round: roundNo, round_started_at: new Date().toISOString(), status: 'igang' }).eq('id', ev.id));
+      await q(sb.rpc('padel_start_round', { p_event: ev.id, p_round: roundNo }));
       await reload();
     } catch (e) { console.error(e); } finally { busy(btn, false); }
   };
@@ -689,11 +690,11 @@ function renderEvent({ ev, signups, matches, changes }) {
   });
   document.getElementById('finish')?.addEventListener('click', async () => {
     if (!confirm('Afslut dagen? Tilmelding og nye runder lukkes.')) return;
-    await q(sb.from('padel_events').update({ status: 'afsluttet', round_started_at: null }).eq('id', ev.id));
+    await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: 'afsluttet' }));
     await reload();
   });
   document.getElementById('reopen')?.addEventListener('click', async () => {
-    await q(sb.from('padel_events').update({ status: matches.length ? 'igang' : 'planlagt' }).eq('id', ev.id));
+    await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: matches.length ? 'igang' : 'planlagt' }));
     await reload();
   });
   document.getElementById('delEvent')?.addEventListener('click', async () => {
