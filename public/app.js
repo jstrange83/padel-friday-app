@@ -15,6 +15,8 @@ const SIDE = { venstre: 'Venstre', hojre: 'Højre', begge: 'Begge sider' };
 const SIDE_SHORT = { venstre: 'V', hojre: 'H', begge: 'V/H' };
 const GENDER = { mand: 'Mand', kvinde: 'Kvinde' };
 const FORMAT = { rotation: 'Rotation på tid', saet: 'Ét sæt pr. runde', americano: 'Americano', klassisk: 'Klassisk' };
+const ROLE = { bruger: 'Bruger', superbruger: 'Superbruger', admin: 'Admin' };
+const roleOf = (p) => p?.role || (p?.is_admin ? 'admin' : 'bruger');
 const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -295,7 +297,7 @@ async function viewPlayer(id) {
   <div class="page">
     <button class="back" onclick="history.back()">‹ Tilbage</button>
     <h1>${esc(p.name)}</h1>
-    <p class="muted">${GENDER[p.gender]} · ${SIDE[p.side]}${p.is_admin ? ' · Admin' : ''}</p>
+    <p class="muted">${GENDER[p.gender]} · ${SIDE[p.side]}${roleOf(p) !== 'bruger' ? ` · ${ROLE[roleOf(p)]}` : ''}</p>
     <div class="stats">
       <div><b>${p.elo}</b><span>Point</span></div>
       <div><b>${ms.length}</b><span>Kampe</span></div>
@@ -897,10 +899,11 @@ async function viewAdmin() {
     <h3>Spillere (${players.length})</h3>
     <div class="list">${players.map((p) => `
       <div class="row wrap" id="p-${p.id}">
-        <div class="grow"><b>${esc(p.name)}</b>${p.is_admin ? ' <span class="badge">Admin</span>' : ''}
+        <div class="grow"><b>${esc(p.name)}</b>${roleOf(p) !== 'bruger' ? ` <span class="badge role-${roleOf(p)}">${ROLE[roleOf(p)]}</span>` : ''}
           <small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${p.elo} point</small></div>
         <button class="btn sm" data-edit="${p.id}">Ret</button>
-        ${p.id !== S.me.id ? `<button class="btn sm" data-admin="${p.id}" data-val="${!p.is_admin}">${p.is_admin ? 'Fjern admin' : 'Gør til admin'}</button>` : ''}
+        <select class="rolesel" data-role="${p.id}" aria-label="Rolle for ${esc(p.name)}">${Object.entries(ROLE).map(([k, v]) =>
+          `<option value="${k}" ${roleOf(p) === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
       </div>`).join('')}</div>
 
     <h3>Centre og baner</h3>
@@ -918,10 +921,13 @@ async function viewAdmin() {
   const refresh = async () => { await loadBase(); viewAdmin(); };
   document.getElementById('invite').onclick = () =>
     share(`${location.origin}/#/velkommen`, 'Kom med til fredagspadel! Opret en profil her, så kan du tilmelde dig og komme på ranglisten:');
-  app.querySelectorAll('[data-admin]').forEach((b) => (b.onclick = async () => {
-    const val = b.dataset.val === 'true';
-    if (!confirm(`${val ? 'Gør' : 'Fjern'} ${nameOf(b.dataset.admin)} ${val ? 'til admin' : 'som admin'}?`)) return;
-    await q(sb.rpc('padel_set_admin', { p_user: b.dataset.admin, p_admin: val }));
+  app.querySelectorAll('[data-role]').forEach((sel) => (sel.onchange = async () => {
+    const uid = sel.dataset.role, role = sel.value, prev = roleOf(S.profiles[uid]);
+    const self = uid === S.me.id;
+    if (!confirm(`${self ? 'Gør dig selv' : `Gør ${nameOf(uid)}`} til ${ROLE[role].toLowerCase()}?${self && role !== 'admin' ? ' Du mister selv adgangen til Admin.' : ''}`)) { sel.value = prev; return; }
+    try { await q(sb.rpc('padel_set_role', { p_user: uid, p_role: role })); toast(`${nameOf(uid)} er nu ${ROLE[role].toLowerCase()}`); }
+    catch { sel.value = prev; return; }
+    if (self && role !== 'admin') { await loadBase(); location.hash = '#/profil'; return boot(); }
     refresh();
   }));
   app.querySelectorAll('[data-edit]').forEach((b) => (b.onclick = () => {
