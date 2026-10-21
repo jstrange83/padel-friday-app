@@ -59,7 +59,9 @@ function playersTab() {
 function groupsTab() {
   const g = S.groupId;
   const allowed = groupCenterIds();
-  const admins = S.members.filter((m) => m.group_id === g && m.status === 'aktiv' && m.role === 'admin').map((m) => S.profiles[m.player_id]).filter(Boolean);
+  const mem = S.members.filter((m) => m.group_id === g && m.status === 'aktiv' && S.profiles[m.player_id])
+    .sort((a, b) => ['admin', 'superbruger', 'bruger'].indexOf(a.role) - ['admin', 'superbruger', 'bruger'].indexOf(b.role) || S.profiles[a.player_id].name.localeCompare(S.profiles[b.player_id].name));
+  const admins = mem.filter((m) => m.role === 'admin');
   const count = (id) => S.members.filter((m) => m.group_id === id && m.status === 'aktiv').length;
   return `
     <div class="chips groups">${S.groups.map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>
@@ -67,9 +69,16 @@ function groupsTab() {
       <div class="head"><b class="big">${esc(group()?.name || '')}</b><button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
       <div class="lbl">Centre gruppen må bruge</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
-      <div class="lbl">Admins</div>
-      <p class="adminlist">${admins.map((p) => `<span class="badge role-admin">${esc(p.name)}</span>`).join(' ') || '<span class="muted small">Ingen endnu</span>'}</p>
-      <input type="search" id="superAdd" placeholder="➕ Tilføj spiller eller admin: søg blandt alle…" autocomplete="off"><div id="superHits" class="hits"></div>
+      <div class="lbl">Tilføj en eksisterende spiller</div>
+      <input type="search" id="superAdd" placeholder="➕ Søg blandt alle spillere…" autocomplete="off"><div id="superHits" class="hits"></div>
+      <div class="lbl">Medlemmer (${mem.length}) ${admins.length ? '' : '<span class="warn">· gruppen har ingen admin</span>'}</div>
+      <div class="mlist">${mem.map((m) => {
+        const p = S.profiles[m.player_id];
+        return `<div class="mrow"><span class="grow">${esc(p.name)}</span>
+          <select class="rolesel sm" data-role="${p.id}" aria-label="Rolle for ${esc(p.name)}">${Object.entries(ROLE).map(([k, v]) =>
+            `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+          <button class="icon sm" data-remove="${p.id}" aria-label="Fjern ${esc(p.name)} fra gruppen">✕</button></div>`;
+      }).join('') || '<p class="muted small">Ingen endnu.</p>'}</div>
     </div>` : ''}
 
     <details class="card newgroup"><summary><b>＋ Ny gruppe</b></summary>
@@ -171,11 +180,11 @@ function bind() {
     const hits = t ? Object.values(S.profiles).filter((p) => member(p.id)?.status !== 'aktiv' && p.name.toLowerCase().includes(t)).slice(0, 8) : [];
     const box = document.getElementById('superHits');
     box.innerHTML = hits.map((p) => `<div class="hitrow"><span class="grow">${esc(p.name)}</span>
-      <button class="btn sm" data-sadd="${p.id}" data-r="bruger">Som spiller</button><button class="btn sm primary" data-sadd="${p.id}" data-r="admin">Som admin</button></div>`).join('')
+      <button class="btn sm" data-sadd="${p.id}" data-r="bruger">Bruger</button><button class="btn sm" data-sadd="${p.id}" data-r="superbruger">Superbruger</button><button class="btn sm primary" data-sadd="${p.id}" data-r="admin">Admin</button></div>`).join('')
       || (t ? '<p class="muted small">Ingen fundet. Spilleren skal have oprettet en profil først.</p>' : '');
     box.querySelectorAll('[data-sadd]').forEach((b) => (b.onclick = async () => {
       await setMember(b.dataset.sadd, b.dataset.r, 'aktiv');
-      toast(`${nameOf(b.dataset.sadd)} er tilføjet${b.dataset.r === 'admin' ? ' som admin' : ''}`);
+      toast(`${nameOf(b.dataset.sadd)} er tilføjet som ${ROLE[b.dataset.r].toLowerCase()}`);
       refresh();
     }));
   };

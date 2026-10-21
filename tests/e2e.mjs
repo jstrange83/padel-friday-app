@@ -169,7 +169,15 @@ try {
   await page.fill('#superAdd', 'bri');
   await page.locator('#superHits [data-sadd][data-r="admin"]').click();
   await wait(500);
-  ok((await text()).includes('brian'), 'Brian tilføjet som admin');
+  ok((await page.locator('.mrow:has-text("Brian") select').inputValue()) === 'admin', 'Brian tilføjet som admin');
+  // Superadmin tilføjer en eksisterende spiller som superbruger og fjerner ham igen
+  await page.fill('#superAdd', 'carsten');
+  await page.locator('#superHits [data-sadd][data-r="superbruger"]').click();
+  await wait(400);
+  ok((await page.locator('.mrow:has-text("Test Carsten") select').inputValue()) === 'superbruger', 'Carsten tilføjet som superbruger');
+  await page.locator('.mrow:has-text("Test Carsten") [data-remove]').click();
+  await wait(400);
+  ok(!(await page.locator('.mrow:has-text("Test Carsten")').count()), 'Carsten fjernet igen');
   await shot('superadmin');
   await page.click('[data-tab="baner"]');
   await page.locator('details.centerbox summary').first().click();
