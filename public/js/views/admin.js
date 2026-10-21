@@ -4,6 +4,7 @@ import {
   esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
+import { showQR } from '../qr.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin)
@@ -69,7 +70,7 @@ function playersTab() {
   return `
     ${playersBar()}
     <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
-      <button class="btn sm primary" id="invite">📤 Inviter</button></div>
+      <button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm primary" id="invite">📤 Inviter</button></div>
 
     ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
@@ -164,6 +165,8 @@ function bind() {
   const on = (sel, fn) => app.querySelectorAll(sel).forEach((el) => (el.onclick = () => fn(el)));
   const setMember = (p, role, status) => q(sb.rpc('padel_set_member', { g, p, p_role: role, p_status: status }));
 
+  document.getElementById('inviteQR')?.addEventListener('click', () =>
+    showQR(`${location.origin}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}`, 'Scan med telefonens kamera for at oprette dig eller logge ind'));
   document.getElementById('invite')?.addEventListener('click', () =>
     share(`${location.origin}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}! Opret en profil (eller log ind) her, så godkender jeg dig:`));
 

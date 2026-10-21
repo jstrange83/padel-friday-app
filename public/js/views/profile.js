@@ -1,4 +1,5 @@
 // Egen profil (og velkomst første gang).
+import { installHow, renderInstall } from '../install.js';
 import { sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
 
 export function renderProfile(isNew) {
@@ -21,8 +22,8 @@ export function renderProfile(isNew) {
       <div class="list links">
         <a class="row" href="#/spiller/${p.id}"><span class="grow">📊 Min statistik</span><span class="muted">›</span></a>
         <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
+        ${installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
       </div>
-      <p class="muted small tipline">Tip: Vælg "Føj til hjemmeskærm" i Safari eller Chrome, så ligger appen på telefonen.</p>
       <button class="btn ghost" id="logout">Log ud</button>`}
   </div>`;
 
@@ -39,6 +40,11 @@ export function renderProfile(isNew) {
     } catch {} finally { busy(btn, false); }
   };
   document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+  document.getElementById('installRow')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('nav').innerHTML = '';
+    renderInstall(() => hooks.boot());
+  });
 }
 
 // Mine grupper med point og rolle, samt anmodninger der venter

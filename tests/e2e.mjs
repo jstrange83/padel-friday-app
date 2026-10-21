@@ -204,6 +204,11 @@ try {
   await shot('admin-baner');
   await page.click('[data-tab="spillere"]');
   await shot('admin-spillere');
+  await page.click('#inviteQR');
+  ok(await page.locator('.qrmodal svg').count() === 1, 'QR-kode vises');
+  await shot('qr');
+  await page.click('.qrmodal button');
+  ok(await page.locator('.qrmodal').count() === 0, 'QR-kode lukkes');
   // Alle spillere: tilføj Test Carsten til Lørdagspadel og gør ham til superbruger der
   await page.click('[data-allp]');
   await page.fill('#playerSearch', 'carsten');
@@ -270,6 +275,28 @@ try {
   await page.click('[data-approve]');
   await wait(500);
   ok((await text()).includes('2 spillere'), 'Anne godkendt i Lørdagspadel');
+
+  // Hjemmeskærm: på en iPhone vises vejledningen efter login, og den kan springes over
+  const iphone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
+  const ip = await iphone.newPage();
+  ip.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await ip.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'tests', 'mock-supabase.js'), 'utf8') }));
+  await ip.goto('http://localhost:8765/');
+  await ip.waitForSelector('#authForm');
+  await ip.fill('input[name=email]', 'test2@fredagspadel.test');
+  await ip.fill('input[name=password]', 'whatever');
+  await ip.click('button[type=submit]');
+  await ip.waitForSelector('.gate');
+  ok((await ip.locator('.gate').innerText()).includes('Føj til hjemmeskærm'), 'iPhone: vejledning til hjemmeskærm');
+  await ip.screenshot({ path: path.join(shots, 'install-iphone.png') });
+  await ip.click('#skipInstall');
+  await ip.waitForSelector('#nav a');
+  ok(await ip.locator('.gate').count() === 0, 'iPhone: spring over virker');
+  await ip.click('#nav a:has-text("Profil")');
+  await ip.waitForSelector('#pf');
+  ok(await ip.locator('#installRow').count() === 1, 'iPhone: hjemmeskærm ligger under Profil');
+  await iphone.close();
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

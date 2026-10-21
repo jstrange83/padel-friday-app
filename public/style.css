@@ -267,3 +267,27 @@ details.centerbox .mact { margin-top: 12px; }
 .phone { font-weight: 600; margin-right: 4px; }
 .phonetip { display: block; font-size: 15px; }
 .editp input[name=phone] { margin-bottom: 8px; }
+
+/* QR-kode */
+.qrmodal { position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, .75); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.qrcard { background: #fff; color: #0c1b2a; border-radius: 20px; padding: 22px; width: 100%; max-width: 360px; text-align: center; }
+.qrcard b { font-size: 20px; }
+.qrimg { margin: 14px auto; width: 100%; max-width: 300px; aspect-ratio: 1; }
+.qrimg svg { width: 100%; height: 100%; display: block; }
+.qrcard p { color: #4a5b6c; margin: 0 0 14px; }
+
+/* Læg på hjemmeskærmen */
+.gate { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; margin-bottom: calc(-76px - env(safe-area-inset-bottom)); }
+.gtop { background: linear-gradient(160deg, #1a3350, #0c1b2a); text-align: center; padding: calc(24px + env(safe-area-inset-top)) 22px 28px; position: relative; display: flex; flex-direction: column; align-items: center; }
+.gtop h1 { font-size: 26px; margin: 12px 0 6px; }
+.gtop p { margin: 0; color: var(--muted); max-width: 380px; }
+.gicon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
+.gskip { position: absolute; right: 14px; top: calc(12px + env(safe-area-inset-top)); background: rgba(255, 255, 255, .1); border: 0; color: var(--text); font: inherit; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 99px; cursor: pointer; }
+.gbody { padding: 22px 18px; display: flex; flex-direction: column; gap: 14px; max-width: 520px; width: 100%; margin: 0 auto; }
+.gwhy { display: flex; gap: 12px; align-items: center; font-weight: 600; }
+.gwhy i { width: 36px; height: 36px; border-radius: 11px; background: var(--card); display: grid; place-items: center; font-style: normal; flex: none; }
+.gbig { padding: 16px; font-size: 17px; margin-top: 6px; }
+.gsteps { display: flex; flex-direction: column; gap: 10px; }
+.gst { display: flex; gap: 12px; align-items: center; background: var(--card); border-radius: 14px; padding: 12px 14px; font-weight: 600; }
+.gn { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-weight: 800; flex: none; }
+.gpill { display: inline-flex; align-items: center; gap: 5px; background: var(--card2); border-radius: 9px; padding: 3px 8px; white-space: nowrap; }
