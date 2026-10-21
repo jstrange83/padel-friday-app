@@ -238,3 +238,23 @@ h2.sect { font-size: 20px; margin: 34px 0 6px; padding-top: 18px; border-top: 1p
 .segbtn { flex: 1; min-width: 80px; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
 .segbtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .segbtn:disabled { opacity: .5; }
+
+/* ---------- Admin med faner ---------- */
+.tabbar { display: flex; background: var(--card); border-radius: 12px; padding: 4px; gap: 4px; margin: 10px 0 14px; }
+.tab { flex: 1; background: none; border: 0; color: var(--muted); font: inherit; font-weight: 600; font-size: 14px; padding: 10px 4px; border-radius: 9px; cursor: pointer; }
+.tab.on { background: var(--card2); color: var(--text); }
+.invitebar { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.invitebar small { display: block; color: var(--muted); font-size: 13px; }
+.pendingbox { border-left: 4px solid var(--warn); }
+.pendingbox > b { display: block; margin-bottom: 6px; }
+.list.compact .prow > summary { padding: 10px 14px; }
+.list.compact .prow > summary b { font-size: 15px; }
+.crow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.icon.sm { width: 34px; height: 34px; font-size: 15px; }
+details.centerbox > summary, details.newgroup > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; }
+details.centerbox > summary::-webkit-details-marker, details.newgroup > summary::-webkit-details-marker { display: none; }
+details.centerbox[open] > summary, details.newgroup[open] > summary { margin-bottom: 10px; }
+details.centerbox .mact { margin-top: 12px; }
+.big { font-size: 18px; }
+.adminlist { margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip small { opacity: .7; margin-left: 2px; }

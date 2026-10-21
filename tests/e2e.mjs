@@ -158,6 +158,8 @@ try {
 
   // Grupper: Jimmy opretter Lørdagspadel i Helsinge og gør Brian til admin
   await page.click('#nav a:has-text("Admin")');
+  await page.click('[data-tab="grupper"]');
+  await page.click('details.newgroup summary');
   await page.waitForSelector('#newGroup');
   await page.fill('#newGroup input[name=name]', 'Lørdagspadel');
   await page.locator('#newGroup label:has-text("Helsinge")').click();
@@ -169,6 +171,11 @@ try {
   await wait(500);
   ok((await text()).includes('brian'), 'Brian tilføjet som admin');
   await shot('superadmin');
+  await page.click('[data-tab="baner"]');
+  await page.locator('details.centerbox summary').first().click();
+  await shot('admin-baner');
+  await page.click('[data-tab="spillere"]');
+  await shot('admin-spillere');
   const lordag = await page.evaluate(() => localStorage.getItem('fp-group'));
 
   // Log ind som Brian: ser kun Lørdagspadel, kan kun vælge Helsinge
@@ -218,7 +225,7 @@ try {
   await shot('godkend');
   await page.click('[data-approve]');
   await wait(500);
-  ok((await text()).includes('spillere (2)'), 'Anne godkendt i Lørdagspadel');
+  ok((await text()).includes('2 spillere'), 'Anne godkendt i Lørdagspadel');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

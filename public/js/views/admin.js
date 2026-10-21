@@ -1,97 +1,105 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
-  sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds,
+  sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
   esc, nameOf, courtById, centerById, toast, q, busy, radios, share,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
 
 export async function viewAdmin() {
-  const g = S.groupId;
-  const gm = S.members.filter((m) => m.group_id === g);
-  const pending = gm.filter((m) => m.status === 'afventer' && S.profiles[m.player_id]);
-  const players = gm.filter((m) => m.status === 'aktiv' && S.profiles[m.player_id]).map((m) => S.profiles[m.player_id]).sort((a, b) => a.name.localeCompare(b.name));
-  const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${ROLE[r]}</span>` : ''; };
-
+  // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin)
+  const tabs = [isAdmin() && S.groupId ? ['spillere', '👥 Spillere'] : null, isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null].filter(Boolean);
+  if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab }[S.adminTab];
   app.innerHTML = `
-  <div class="page">
+  <div class="page admin">
     <h1>Admin</h1>
-    ${g ? `<p class="muted">${esc(group()?.name || '')}</p>${groupBar(viewAdmin)}` : ''}
-
-    ${g && isAdmin() ? `
-    <div class="card">
-      <b>Inviter spillere til ${esc(group()?.name || '')}</b>
-      <p class="muted small">Send linket i jeres gruppechat. Nye opretter en konto, og eksisterende spillere logger bare ind. Du godkender dem herunder.</p>
-      <button class="btn primary" id="invite">📤 Del invitationslink</button>
-    </div>
-
-    ${pending.length ? `<h3>Venter på godkendelse (${pending.length})</h3><div class="list">${pending.map((m) => {
-      const p = S.profiles[m.player_id];
-      return `<div class="row wrap"><div class="grow"><b>${esc(p.name)}</b><small>${GENDER[p.gender]} · ${SIDE[p.side]}</small></div>
-        <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
-    }).join('')}</div>` : ''}
-
-    <h3>Spillere (${players.length})</h3>
-    <input type="search" id="playerSearch" placeholder="Find spiller…" autocomplete="off">
-    <div class="list" id="players">${players.map((p) => `
-      <details class="prow" data-name="${esc(p.name.toLowerCase())}">
-        <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}<small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point</small></span><span class="muted">›</span></summary>
-        <div class="ppanel" id="p-${p.id}">
-          <label>Rolle i ${esc(group()?.name || 'gruppen')}<select class="rolesel" data-role="${p.id}">${Object.entries(ROLE).map(([k, v]) =>
-            `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
-          <div class="mact">
-            <button class="btn sm" data-edit="${p.id}">✏️ Ret navn, køn, side</button>
-            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
-            <a class="btn sm" href="#/spiller/${p.id}">📊 Statistik</a>
-            ${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button>` : ''}
-          </div>
-        </div>
-      </details>`).join('') || '<p class="muted pad">Ingen spillere endnu.</p>'}</div>` : ''}
-
-    ${isSuper() ? superSection() : ''}
+    ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
+    ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
   </div>`;
+  app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
+  app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); viewAdmin(); }));
   bind();
 }
 
-// ---------- Kun superadmin ----------
-function superSection() {
+// ---------- Spillere i den valgte gruppe ----------
+function playersTab() {
+  const gm = S.members.filter((m) => m.group_id === S.groupId);
+  const pending = gm.filter((m) => m.status === 'afventer' && S.profiles[m.player_id]);
+  const players = gm.filter((m) => m.status === 'aktiv' && S.profiles[m.player_id]).map((m) => S.profiles[m.player_id]).sort((a, b) => a.name.localeCompare(b.name));
+  const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${ROLE[r]}</span>` : ''; };
+  return `
+    ${groupBar(viewAdmin)}
+    <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
+      <button class="btn sm primary" id="invite">📤 Inviter</button></div>
+
+    ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
+      const p = S.profiles[m.player_id];
+      return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}</small></span>
+        <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
+    }).join('')}</div>` : ''}
+
+    <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
+    <div class="list compact" id="players">${players.map((p) => `
+      <details class="prow" data-name="${esc(p.name.toLowerCase())}">
+        <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}<small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point</small></span><span class="muted">›</span></summary>
+        <div class="ppanel" id="p-${p.id}">
+          <label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(ROLE).map(([k, v]) =>
+            `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+          <div class="mact">
+            <button class="btn sm" data-edit="${p.id}">✏️ Ret</button>
+            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
+            <a class="btn sm" href="#/spiller/${p.id}">📊 Statistik</a>
+            ${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern</button>` : ''}
+          </div>
+        </div>
+      </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div>`;
+}
+
+// ---------- Grupper (superadmin) ----------
+function groupsTab() {
   const g = S.groupId;
   const allowed = groupCenterIds();
+  const admins = S.members.filter((m) => m.group_id === g && m.status === 'aktiv' && m.role === 'admin').map((m) => S.profiles[m.player_id]).filter(Boolean);
+  const count = (id) => S.members.filter((m) => m.group_id === id && m.status === 'aktiv').length;
   return `
-    <h2 class="sect">Superadmin</h2>
+    <div class="chips groups">${S.groups.map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>
     ${g ? `<div class="card">
-      <div class="head"><b>${esc(group()?.name || '')}</b><button class="btn sm" id="renameGroup">Omdøb</button></div>
+      <div class="head"><b class="big">${esc(group()?.name || '')}</b><button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
       <div class="lbl">Centre gruppen må bruge</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
-      <div class="lbl">Tilføj en spiller direkte (fx en ny gruppeadmin)</div>
-      <input type="search" id="superAdd" placeholder="Søg blandt alle spillere…" autocomplete="off"><div id="superHits" class="hits"></div>
+      <div class="lbl">Admins</div>
+      <p class="adminlist">${admins.map((p) => `<span class="badge role-admin">${esc(p.name)}</span>`).join(' ') || '<span class="muted small">Ingen endnu</span>'}</p>
+      <input type="search" id="superAdd" placeholder="➕ Tilføj spiller eller admin: søg blandt alle…" autocomplete="off"><div id="superHits" class="hits"></div>
     </div>` : ''}
 
-    <div class="card">
-      <b>Ny gruppe</b>
+    <details class="card newgroup"><summary><b>＋ Ny gruppe</b></summary>
       <form id="newGroup">
         <input name="name" placeholder="Fx Lørdagspadel" required maxlength="60">
         <div class="lbl">Centre</div>
         <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="nc" value="${c.id}"><span>${esc(c.name)}</span></label>`).join('')}</div>
         <button class="btn primary">Opret gruppe</button>
       </form>
-    </div>
+    </details>
 
     <div class="card">
       <label class="switch"><input type="checkbox" id="globalPublic" ${S.settings.global_ranking_public ? 'checked' : ''}>
-        <span>Vis den fælles rangliste for alle spillere</span></label>
+        <span>Vis den fælles rangliste for alle</span></label>
       <p class="muted small">Slået fra kan kun du se den fælles rangliste på tværs af grupper.</p>
-    </div>
+    </div>`;
+}
 
-    <h3>Centre og baner</h3>
-    ${S.centers.map((c) => `<div class="card">
-      <div class="head"><b>${esc(c.name)}</b><button class="btn sm" data-rencenter="${c.id}">Omdøb</button></div>
-      ${S.courts.filter((x) => x.center_id === c.id).map((x) => `<div class="row">
-        <div class="grow">${esc(x.name)}</div>
-        <button class="btn sm" data-rencourt="${x.id}">Omdøb</button>
-        <button class="btn sm ghost" data-delcourt="${x.id}">Slet</button></div>`).join('')}
-      <button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button>
-    </div>`).join('')}
-    <button class="btn" id="addCenter">+ Nyt center</button>`;
+// ---------- Centre og baner (superadmin) ----------
+function courtsTab() {
+  return `${S.centers.map((c) => {
+    const cs = S.courts.filter((x) => x.center_id === c.id);
+    return `<details class="card centerbox"><summary><b>${esc(c.name)}</b><small class="muted">${cs.length} baner</small></summary>
+      ${cs.map((x) => `<div class="crow"><span class="grow">${esc(x.name)}</span>
+        <button class="icon sm" data-rencourt="${x.id}" aria-label="Omdøb ${esc(x.name)}">✏️</button>
+        <button class="icon sm" data-delcourt="${x.id}" aria-label="Slet ${esc(x.name)}">🗑</button></div>`).join('')}
+      <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button><button class="btn sm ghost" data-rencenter="${c.id}">✏️ Omdøb center</button></div>
+    </details>`;
+  }).join('')}
+  <button class="btn" id="addCenter">+ Nyt center</button>`;
 }
 
 function bind() {
@@ -172,7 +180,8 @@ function bind() {
     }));
   };
 
-  document.getElementById('newGroup').onsubmit = async (e) => {
+  const ng = document.getElementById('newGroup');
+  if (ng) ng.onsubmit = async (e) => {
     e.preventDefault();
     const f = e.target, ids = [...f.querySelectorAll('[name=nc]:checked')].map((x) => x.value);
     if (!ids.length) return toast('Vælg mindst ét center', true);
@@ -187,7 +196,8 @@ function bind() {
     } catch { busy(btn, false); }
   };
 
-  document.getElementById('globalPublic').onchange = async (e) => {
+  const gp = document.getElementById('globalPublic');
+  if (gp) gp.onchange = async (e) => {
     try { await q(sb.rpc('padel_set_global_public', { p_public: e.target.checked })); toast(e.target.checked ? 'Den fælles rangliste er nu synlig for alle' : 'Kun du kan se den fælles rangliste'); await hooks.loadBase(); }
     catch { e.target.checked = !e.target.checked; }
   };
@@ -212,7 +222,8 @@ function bind() {
     await q(sb.from('padel_courts').insert({ center_id: b.dataset.addcourt, name: n.trim(), sort }));
     refresh();
   });
-  document.getElementById('addCenter').onclick = async () => {
+  const ac = document.getElementById('addCenter');
+  if (ac) ac.onclick = async () => {
     const n = prompt('Navn på centret');
     if (n?.trim()) { await q(sb.from('padel_centers').insert({ name: n.trim() })); refresh(); }
   };
