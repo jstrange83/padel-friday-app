@@ -126,6 +126,7 @@ async function route() {
     if (page === 'rangliste') return await viewRanking();
     if (page === 'fredag' && id) return await viewEvent(id);
     if (page === 'ny-fredag') return viewNewEvent();
+    if (page === 'ret-fredag' && id) return viewEventForm(await q(sb.from('padel_events').select('*').eq('id', id).single()));
     if (page === 'profil') return renderProfileForm(false);
     if (page === 'faq') return viewFaq();
     if (page === 'spiller' && id) return await viewPlayer(id);
@@ -376,37 +377,51 @@ function nextFriday() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T19:00`;
 }
 
-function viewNewEvent() {
+function toLocalInput(d) {
+  const x = new Date(d), pad = (n) => String(n).padStart(2, '0');
+  return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
+}
+
+const viewNewEvent = () => viewEventForm(null);
+
+// Opret nye fredage, eller ret en eksisterende (ev)
+async function viewEventForm(ev) {
   if (!S.me.is_admin) return (location.hash = '#/fredage');
-  const c0 = S.centers[0]?.id;
+  let confirmed = 0;
+  if (ev) {
+    const ms = await q(sb.from('padel_matches').select('id,status').eq('event_id', ev.id));
+    confirmed = ms.filter((m) => m.status === 'bekraeftet').length;
+  }
+  const v = ev || { center_id: S.centers[0]?.id, format: 'rotation', team_mode: 'aaben', duration_minutes: 120, round_minutes: 30, points_per_match: 24, title: '' };
   app.innerHTML = `
   <div class="page">
     <button class="back" onclick="history.back()">‹ Tilbage</button>
-    <h1>Ny fredag</h1>
+    <h1>${ev ? 'Ret fredag' : 'Ny fredag'}</h1>
+    ${ev && confirmed ? `<div class="card tip">Der er allerede ${confirmed} godkendt${confirmed === 1 ? '' : 'e'} kamp${confirmed === 1 ? '' : 'e'}. De beholder deres point. Ændringer gælder de kommende runder.</div>` : ''}
     <form class="card" id="nf">
       <label>Center<select name="center">${S.centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
       <div class="lbl">Baner</div><div id="courts" class="checks"></div>
-      <label>Dato og tid (første fredag)<input type="datetime-local" name="when" value="${nextFriday()}" required></label>
-      <label>Antal fredage<select name="count">${[1, 2, 3, 4, 6, 8].map((v) => `<option value="${v}" ${v === 4 ? 'selected' : ''}>${v === 1 ? 'Kun denne' : `${v} uger i træk`}</option>`).join('')}</select>
-        <small class="muted" id="countHint"></small></label>
-      <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60"></label>
-      <div class="lbl">Format</div>${radios('format', FORMAT, 'rotation')}
-      <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((v) =>
-        `<option value="${v}" ${v === 120 ? 'selected' : ''}>${v % 60 ? `${Math.floor(v / 60)}½ time` : `${v / 60} ${v === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
-      <label id="ptsWrap" style="display:none">Point pr. kamp<select name="points">${[16, 21, 24, 32].map((v) => `<option value="${v}" ${v === 24 ? 'selected' : ''}>${v} point</option>`).join('')}</select>
+      <label>Dato og tid${ev ? '' : ' (første fredag)'}<input type="datetime-local" name="when" value="${ev ? toLocalInput(ev.starts_at) : nextFriday()}" required></label>
+      ${ev ? '' : `<label>Antal fredage<select name="count">${[1, 2, 3, 4, 6, 8].map((n) => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n === 1 ? 'Kun denne' : `${n} uger i træk`}</option>`).join('')}</select>
+        <small class="muted" id="countHint"></small></label>`}
+      <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60" value="${esc(v.title || '')}"></label>
+      <div class="lbl">Spiltype</div>${radios('format', FORMAT, v.format)}
+      <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((n) =>
+        `<option value="${n}" ${n === v.duration_minutes ? 'selected' : ''}>${n % 60 ? `${Math.floor(n / 60)}½ time` : `${n / 60} ${n === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
+      <label id="ptsWrap">Point pr. kamp<select name="points">${[16, 21, 24, 32].map((n) => `<option value="${n}" ${n === (v.points_per_match || 24) ? 'selected' : ''}>${n} point</option>`).join('')}</select>
         <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
-      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
-      <div class="lbl">Hold</div>${radios('mode', MODE, 'aaben')}
-      <button class="btn primary" id="createBtn">Opret fredage</button>
+      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="${v.round_minutes}" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
+      <div class="lbl">Hold</div>${radios('mode', MODE, v.team_mode)}
+      <button class="btn primary" id="createBtn">${ev ? 'Gem ændringer' : 'Opret fredage'}</button>
     </form>
   </div>`;
   const f = document.getElementById('nf');
-  const drawCourts = () => {
+  const drawCourts = (selected) => {
     document.getElementById('courts').innerHTML = S.courts.filter((c) => c.center_id === f.center.value)
-      .map((c) => `<label><input type="checkbox" name="court" value="${c.id}" checked><span>${esc(c.name)}</span></label>`).join('');
+      .map((c) => `<label><input type="checkbox" name="court" value="${c.id}" ${!selected || selected.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('');
   };
-  f.center.value = c0; drawCourts();
-  f.center.onchange = drawCourts;
+  f.center.value = v.center_id; drawCourts(ev?.court_ids);
+  f.center.onchange = () => drawCourts();
   const hint = () => {
     const n = Math.floor(+f.duration.value / (+f.minutes.value || 30));
     document.getElementById('roundsHint').textContent = n ? `Giver ${n} runder` : '';
@@ -416,25 +431,37 @@ function viewNewEvent() {
     document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none';
     document.getElementById('ptsWrap').style.display = f.format.value === 'americano' ? '' : 'none';
   };
-  f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt));
-  const countHint = () => {
-    const ds = weekDates(f.when.value, +f.count.value);
-    document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
-    document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} fredage` : 'Opret fredag';
-  };
-  f.count.onchange = countHint; f.when.onchange = countHint; countHint();
+  f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt)); fmt();
+  if (!ev) {
+    const countHint = () => {
+      const ds = weekDates(f.when.value, +f.count.value);
+      document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
+      document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} fredage` : 'Opret fredag';
+    };
+    f.count.onchange = countHint; f.when.onchange = countHint; countHint();
+  }
   f.onsubmit = async (e) => {
     e.preventDefault();
     const courts = [...f.querySelectorAll('[name=court]:checked')].map((x) => x.value);
     if (!courts.length) return toast('Vælg mindst én bane', true);
+    const base = {
+      center_id: f.center.value, title: f.title.value.trim() || null,
+      format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, points_per_match: f.format.value === 'americano' ? +f.points.value : null,
+      duration_minutes: +f.duration.value || 120, court_ids: courts,
+    };
     const btn = f.querySelector('button.primary');
     busy(btn, true);
     try {
-      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({
-        center_id: f.center.value, starts_at: d.toISOString(), title: f.title.value.trim() || null,
-        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, points_per_match: f.format.value === 'americano' ? +f.points.value : null,
-        ranked: f.format.value !== 'americano', duration_minutes: +f.duration.value || 120, court_ids: courts, created_by: S.me.id,
-      }));
+      if (ev) {
+        // Ranglisten: uden godkendte kampe følger den spiltypen. Med godkendte kampe ændres den ikke her.
+        const upd = { ...base, starts_at: new Date(f.when.value).toISOString() };
+        if (!confirmed) upd.ranked = base.format !== 'americano';
+        await q(sb.from('padel_events').update(upd).eq('id', ev.id));
+        toast('Fredagen er opdateret');
+        location.hash = '#/fredag/' + ev.id;
+        return;
+      }
+      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id }));
       const evs = await q(sb.from('padel_events').insert(rows).select());
       toast(evs.length === 1 ? 'Fredagen er oprettet' : `${evs.length} fredage er oprettet`);
       location.hash = evs.length === 1 ? '#/fredag/' + evs[0].id : '#/fredage';
@@ -621,7 +648,7 @@ function renderEvent({ ev, signups, matches, changes, log = [] }) {
     <p class="muted cap">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })} · ${hm(ev.starts_at)}–${hm(endsAt)} · ${esc(center?.name || '')}</p>
     <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : isAm ? ` · ${ev.points_per_match} point` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
       <span class="chip">${courts.length} baner</span>${ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : ''}</div>
-    ${isAdmin && ev.status !== 'afsluttet' ? '<button class="btn sm" id="shareEvent">📤 Del fredagen</button>' : ''}
+    ${isAdmin ? `<div class="mact top">${ev.status !== 'afsluttet' ? '<button class="btn sm" id="shareEvent">📤 Del fredagen</button>' : ''}<a class="btn sm" href="#/ret-fredag/${ev.id}">✏️ Ret fredag</a></div>` : ''}
 
     ${timer}
 

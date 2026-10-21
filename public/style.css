@@ -166,3 +166,4 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .logrow { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
 .logrow:last-child { border-bottom: 0; }
 .logrow small { font-size: 12px; white-space: nowrap; }
+.mact.top { margin: 4px 0 8px; }
