@@ -122,6 +122,21 @@ try {
   await wait(400);
   ok((await text()).includes('1 kampe') || (await text()).includes('kampe'), 'ranglisten viser kampe');
   await shot('rangliste');
+  for (const k of ['maaned', 'aeg', 'streak']) { await page.click(`[data-kind="${k}"]`); await wait(300); }
+  ok((await page.locator('.list .row').count()) >= 1, 'ranglistefaner (måned, æg, streak) virker');
+  await page.click('[data-kind="maaned"]');
+  await wait(300);
+  await shot('rangliste-maaned');
+  await page.locator('.list a.row').first().click();
+  await page.waitForSelector('.stats-page');
+  await page.fill('#cmpSearch', 'test');
+  await page.locator('#cmpHits .hit').first().click();
+  await wait(400);
+  ok(await page.locator('.legend').count() === 1, 'sammenlign med spiller viser to kurver');
+  await shot('statistik-sammenlign');
+  await page.click('[data-per="all"]');
+  await page.click('[data-st="opp"]');
+  await wait(200);
 
   // Telefonnummer: påmindelse, ugyldigt nummer afvises, gyldigt gemmes og vises for admin
   await page.click('#nav a:has-text("Spilledage")');
