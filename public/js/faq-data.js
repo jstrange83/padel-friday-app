@@ -39,7 +39,7 @@ export const FAQ = [
     q: 'Hvad er "Ét sæt pr. runde"?',
     a: `<p>I spiller <b>ét sæt</b> (først til 6 partier, 7‑5 eller 7‑6 ved tiebreak), og når sættet er færdigt, skifter alle makker og modstandere. Et hold kan højst få 7. Løber I tør for tid, indtaster I bare stillingen, fx 4‑4 eller 3‑1.</p>
 <p>Indtast antal partier hvert hold vandt i sættet, fx 6‑4. Jo større sejren er, jo flere point giver den på ranglisten.</p>
-<p>Der er ingen nedtælling. Admin starter næste runde, når alle sæt er færdige.</p>`,
+<p>Der er ingen nedtælling, og ingen skal starte runderne. Når jeres sæt er færdigt, trykker I på jeres kamp og taster resultatet. Så går I videre til jeres næste kamp, selv om de andre baner ikke er færdige endnu.</p>`,
   },
   {
     cat: 'Formater',
@@ -57,7 +57,7 @@ export const FAQ = [
   {
     cat: 'Formater',
     q: 'Hvad er klassisk?',
-    a: `<p>Almindelig padel med sæt. Indtast hvor mange <b>sæt</b> hvert hold vandt, fx 2‑1. Der er ingen nedtælling, og admin starter næste runde, når kampene er færdige.</p>`,
+    a: `<p>Almindelig padel med sæt. Indtast hvor mange <b>sæt</b> hvert hold vandt, fx 2‑1. Der er ingen nedtælling. Hver bane taster selv sit resultat, når kampen er færdig, og går videre til næste kamp.</p>`,
   },
   {
     cat: 'Formater',
@@ -83,7 +83,8 @@ export const FAQ = [
     q: 'Hvad er dagsplanen?',
     a: `<p>Når spillerne er tilmeldt, kan admin eller en superbruger trykke <b>Lav dagsplan</b>. Så lægger appen alle dagens runder ud på forhånd med hold, baner, pauser og cirka‑tider.</p>
 <p>Et sæt tager ca. 20 minutter, så 2 timer giver 6 runder. En 30‑minutters rotation giver 4. Du kan altså se hele aftenen, inden I går på banen.</p>
-<p>Melder nogen til eller fra, kan dagsplanen laves om, og runder der allerede er spillet, bliver ikke rørt.</p>`,
+<p>Ingen skal starte runderne (undtagen ved Rotation på tid, hvor der er fælles nedtælling). Tryk på jeres kamp og tast resultatet, når I er færdige. <b>Din aften</b> viser altid din næste kamp, og runder hvor alle kampe er spillet, foldes sammen.</p>
+<p>Melder nogen til eller fra, kan dagsplanen laves om, og runder der allerede er påbegyndt, bliver ikke rørt.</p>`,
   },
   {
     cat: 'Hold og runder',

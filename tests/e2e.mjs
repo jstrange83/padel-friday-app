@@ -76,11 +76,8 @@ try {
   await shot('dagsplan');
   await noOverflow('spilledag');
 
-  // Start runde 1
-  await page.click('#nextRound');
-  await wait(500);
-  ok((await text()).includes('i gang'), 'runde 1 i gang');
-  await shot('runde1');
+  ok(await page.locator('#nextRound').count() === 0, 'ingen "Start runde" ved Ét sæt');
+  ok(await page.locator('[data-act=enter]').count() >= 12, 'alle kampe i dagsplanen kan indtastes med det samme');
 
   // Indtast resultat via Din aften (admin godkender direkte)
   const mine = await page.locator('.mine-card').innerText();
@@ -96,6 +93,8 @@ try {
   await f.locator('button').click();
   await wait(500);
   ok((await text()).includes('dagens stilling'), 'stilling vises efter resultat');
+  ok((await page.locator('.chips .chip.live').count()) === 1, 'dagen er i gang efter første resultat');
+  await shot('runde1');
   ok(await page.locator('.badge:has-text("Point")').count() >= 1, 'kampen har point');
 
   // Ret hold i runde 1: byt to spillere
@@ -109,8 +108,28 @@ try {
   ok(!errors.length, 'ret hold uden fejl');
   await shot('efter-resultat');
 
-  // Start resten og afslut
-  for (let r = 2; r <= 6; r++) { await page.click('#nextRound'); await wait(300); }
+  // Indtast et resultat i en senere runde uden at nogen har startet den (banerne følges ikke ad)
+  const late = page.locator('.match:has([data-act=enter].primary)').last();
+  const lateId = (await late.getAttribute('id')).slice(2);
+  await late.locator('[data-act=enter]').click();
+  const lf = page.locator(`form.enter[data-id="${lateId}"]`);
+  await lf.locator('input[name=a]').fill('3'); await lf.locator('input[name=b]').fill('6');
+  await lf.locator('button').click();
+  await wait(500);
+  ok((await page.locator(`#m-${lateId} .score`).innerText()).includes('3'), 'resultat i senere runde gemt');
+  // Spil resten af kampene færdige
+  for (let i = 0; i < 40; i++) {
+    const btn = page.locator('[data-act=enter].primary').first();
+    if (!(await btn.count())) break;
+    const id = await btn.getAttribute('data-id');
+    await btn.click();
+    const ff = page.locator(`form.enter[data-id="${id}"]`);
+    await ff.locator('input[name=a]').fill('6'); await ff.locator('input[name=b]').fill(String(i % 5));
+    await ff.locator('button').click();
+    await wait(250);
+  }
+  const sums = await page.locator('details.rounds summary').allInnerTexts();
+  ok(sums.some((x) => x.toLowerCase().includes('spillede runder (6)')), 'spillede runder foldes sammen');
   ok((await page.locator('#finish').first().innerText()).includes('Afslut'), 'afslut-knap efter sidste runde');
   await page.locator('#finish').first().click();
   await wait(400);

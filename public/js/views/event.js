@@ -73,7 +73,13 @@ function context({ ev, signups, matches, changes, log }) {
   const roundNos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
   const inRound = (r) => new Set((rounds[r] || []).flatMap((x) => [x.a_left, x.a_right, x.b_left, x.b_right]));
   const cur = rounds[ev.current_round] || [];
-  const futureRounds = roundNos.filter((r) => r > ev.current_round);
+  // Rotation styres af en fælles nedtælling (admin starter runderne). Alle andre spiltyper er "frie":
+  // hver bane indtaster sit resultat, når kampen er færdig, uden at nogen starter en runde.
+  const free = ev.format !== 'rotation';
+  const touched = Math.max(0, ...matches.filter((m) => m.status !== 'planlagt').map((m) => m.round_no));
+  const base = free ? touched : ev.current_round;
+  const futureRounds = roundNos.filter((r) => r > base);
+  const roundDone = (r) => (rounds[r] || []).every((m) => m.status === 'bekraeftet');
   const planPlayers = new Set(futureRounds.flatMap((r) => [...inRound(r)]));
 
   const delta = {};
@@ -83,6 +89,7 @@ function context({ ev, signups, matches, changes, log }) {
   const totalRounds = Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes));
   return {
     ev, signups, matches, log, me, signed, courts, L, rounds, roundNos, inRound, cur, futureRounds, delta, totalRounds,
+    free, base, roundDone,
     center: centerById(ev.center_id),
     isRot: f === 'rotation', isAm: f === 'americano', isSet: f === 'saet',
     isShare: f !== 'klassisk',
@@ -186,26 +193,39 @@ function myNight(c, st) {
       ${t.pts ? `<span class="delta ${signCls(t.pts)}">${st.estimate ? '≈' : ''}${sign(t.pts)} point</span>` : ''}</p></div>`;
   }
 
-  // Næste (eller igangværende) runde med mig
-  // Er min kamp i den igangværende runde færdig, viser vi i stedet den næste
-  const startR = ev.status === 'igang' ? ev.current_round : ev.current_round + 1;
   const myDone = (n) => rounds[n]?.some((x) => x.status === 'bekraeftet' && [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
-  const r = Object.keys(rounds).map(Number).filter((n) => n >= startR && !(n === ev.current_round && myDone(n))).sort((a, b) => a - b)[0];
-  if (!r) return `<div class="card mine-card"><p>✅ Du er med. ${L.courts ? '' : esc(lineupText(L, c.courts.length))}</p>${signBtn}</div>`;
-  const now = r === ev.current_round && ev.status === 'igang';
-  const when = now ? `Runde ${r} · nu` : `Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} · ca. ${hm(roundStart(r))}`;
+  const nos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
+  let r, pauseR = null, now;
+  if (c.free) {
+    // Min næste kamp uden godkendt resultat. Holder jeg pause i en runde inden, nævnes det også.
+    r = nos.find((n) => inRound(n).has(me) && !myDone(n));
+    pauseR = nos.find((n) => (!r || n < r) && !inRound(n).has(me) && !c.roundDone(n) && n > Math.max(0, ...nos.filter((x) => x < (r || 1e9) && myDone(x))));
+    if (!r && pauseR) r = pauseR;
+    now = !!r && (ev.status === 'igang' || r === nos[0]);
+  } else {
+    // Rotation: næste (eller igangværende) runde. Er min kamp i runden færdig, vises den næste.
+    const startR = ev.status === 'igang' ? ev.current_round : ev.current_round + 1;
+    r = nos.filter((n) => n >= startR && !(n === ev.current_round && myDone(n)))[0];
+    now = r === ev.current_round && ev.status === 'igang';
+  }
+  if (!r) {
+    const allDone = c.free && nos.length && nos.every((n) => !inRound(n).has(me) || myDone(n));
+    return `<div class="card mine-card"><p>✅ ${allDone ? 'Du har spillet alle dine kampe.' : `Du er med. ${L.courts ? '' : esc(lineupText(L, c.courts.length))}`}</p>${signBtn}</div>`;
+  }
+  const when = now && !c.free ? `Runde ${r} · nu` : `Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} · ca. ${hm(roundStart(r))}`;
   if (!inRound(r).has(me)) return `<div class="card mine-card"><small>${when}</small><p>☕ Du holder pause i denne runde.</p>${signBtn}</div>`;
   const m = rounds[r].find((x) => [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const onA = [m.a_left, m.a_right].includes(me);
   const mate = onA ? (m.a_left === me ? m.a_right : m.a_left) : (m.b_left === me ? m.b_right : m.b_left);
   const opps = onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right];
   const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
-  const todo = now && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
+  const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
+  const todo = (now || c.free) && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
     : m.status === 'indtastet' && (onA ? 'a' : 'b') !== m.reported_team ? '<a class="btn sm primary" href="#m-' + m.id + '">Godkend resultat</a>' : '';
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
-    <p>Du spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
-    ${todo}${signBtn}</div>`;
+    <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
+    ${pause}${todo}${signBtn}</div>`;
 }
 
 function timer(c) {
@@ -222,6 +242,7 @@ function runBar(c) {
   const next = ev.current_round + 1;
   const nextLabel = !ev.current_round ? 'Start første runde'
     : lastDone && !nextPlanned ? 'Spil en ekstra runde' : `Start runde ${next}${next <= totalRounds ? ` af ${totalRounds}` : ''}`;
+  if (c.free) return freeBar(c);
   const canPlan = !futureRounds.length && !lastDone;
   const canRedoPlan = futureRounds.length && futureRounds.every((r) => c.rounds[r].every((m) => m.status === 'planlagt'));
   const canRedoRound = ev.status === 'igang' && cur.length && cur.every((m) => m.status === 'planlagt');
@@ -244,6 +265,27 @@ function runBar(c) {
     ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>Lav dagsplanen om</b> for at få dem med.</div>' : ''}`;
 }
 
+// Frie spiltyper: ingen "Start runde". Lav dagsplanen, og afslut dagen til sidst.
+function freeBar(c) {
+  const { ev, admin, futureRounds, totalRounds, matches, roundNos, planOutdated } = c;
+  const canPlan = !matches.length;
+  const canRedoPlan = futureRounds.length > 0;
+  const allDone = roundNos.length && roundNos.every(c.roundDone);
+  const extra = roundNos.length && !futureRounds.length;
+  let primary = '';
+  if (canPlan) primary = `<button class="btn primary" id="makePlan">📋 Lav dagsplan (${totalRounds} runder)</button>`;
+  else if (allDone || ev.status === 'igang') primary = `<button class="btn ${allDone ? 'primary' : 'ghost'}" id="finish">Afslut dagen</button>`;
+  const small = [
+    canRedoPlan ? `<button class="btn sm" id="redoPlan">🔄 Lav ${c.base ? 'resten af ' : ''}dagsplanen om</button>` : '',
+    extra ? '<button class="btn sm" id="extraRound">➕ Spil en ekstra runde</button>' : '',
+    admin && !matches.length ? '<button class="btn sm ghost danger" id="delEvent">Slet dagen</button>' : '',
+  ].filter(Boolean).join('');
+  if (!primary && !small) return '';
+  return `<div class="card runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}
+    ${!canPlan && !allDone ? '<small class="muted">Hver bane taster selv sit resultat, når kampen er færdig.</small>' : ''}</div>
+    ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>Lav dagsplanen om</b> for at få dem med.</div>' : ''}`;
+}
+
 function teamHtml(l, r, me) {
   const n = (pid, s) => `<span class="${pid === me ? 'meName' : ''}">${esc(nameOf(pid))}<em>${s}</em></span>`;
   return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
@@ -253,7 +295,7 @@ function matchCard(c, m) {
   const { ev, me, run, delta, isAm, isSet, unit } = c;
   const onA = [m.a_left, m.a_right].includes(me), onB = [m.b_left, m.b_right].includes(me);
   const myTeam = onA ? 'a' : onB ? 'b' : null;
-  const future = m.round_no > ev.current_round;
+  const future = !c.free && m.round_no > ev.current_round;
   const mic = SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '';
   let status = '', actions = '';
   if (m.status === 'planlagt' && future) {
@@ -304,7 +346,8 @@ function teamForm(c, m) {
 
 function roundBlock(c, r) {
   const { ev, me, L, inRound, totalRounds, roundStart, rounds } = c;
-  const tag = r === ev.current_round && ev.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
+  const live = c.free ? !c.roundDone(r) && rounds[r].some((m) => m.status !== 'planlagt') : r === ev.current_round && ev.status === 'igang';
+  const tag = live ? '<span class="badge live">I gang</span>' : c.free && c.roundDone(r) ? '<span class="badge">✅ Spillet</span>' : '';
   const sit = L.playing.filter((p) => !inRound(r).has(p));
   return `<div class="rhead"><h3>Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} <span class="rtime">ca. ${hm(roundStart(r))}</span></h3>${tag}</div>
     ${sit.length ? `<div class="sitline">☕ Pause: ${sit.map((p) => `<b class="${p === me ? 'meName' : ''}">${esc(first(p))}</b>`).join(', ')}</div>` : ''}
@@ -314,9 +357,18 @@ function roundBlock(c, r) {
 // Igangværende runde vises åben. Spillede og kommende runder foldes sammen, så siden er kort.
 function roundsSection(c) {
   const { ev, roundNos, futureRounds } = c;
+  const block = (rs) => rs.map((r) => roundBlock(c, r)).join('');
+  if (c.free) {
+    // Runder hvor alle kampe er spillet foldes sammen. Resten er åbne, så hver bane kan taste sit resultat.
+    const done = roundNos.filter(c.roundDone);
+    const open = roundNos.filter((r) => !c.roundDone(r));
+    const openHtml = ev.status === 'planlagt' && open.length
+      ? `<details class="rounds" open><summary>📋 Dagsplan (${open.length})</summary>${block(open)}</details>` : block(open);
+    return `${openHtml}
+      ${done.length ? `<details class="rounds" ${ev.status === 'afsluttet' ? 'open' : ''}><summary>✅ Spillede runder (${done.length})</summary>${block(done.slice().reverse())}</details>` : ''}`;
+  }
   const past = roundNos.filter((r) => r < ev.current_round || (r === ev.current_round && ev.status === 'afsluttet'));
   const now = roundNos.filter((r) => r === ev.current_round && ev.status === 'igang');
-  const block = (rs) => rs.map((r) => roundBlock(c, r)).join('');
   return `
     ${block(now)}
     ${futureRounds.length ? `<details class="rounds" ${ev.current_round ? '' : 'open'}><summary>📋 ${ev.current_round ? 'Kommende runder' : 'Dagsplan'} (${futureRounds.length})</summary>${block(futureRounds)}</details>` : ''}
@@ -365,7 +417,7 @@ function render(data) {
   const c = context(data);
   const st = standingsOf(c);
   // Før dagen starter er tilmeldingen det vigtigste. Når den er i gang, er det runderne.
-  const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0;
+  const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0 || c.base > 0;
   app.innerHTML = `
   <div class="page event">
     ${header(c)}
@@ -475,12 +527,17 @@ function bind(c) {
   });
   act($('makePlan'), async () => {
     if (!lineupOk()) return;
-    if (await buildRounds(ev.current_round + 1, totalRounds)) { toast('Dagsplanen er lavet'); await reload(); }
+    if (await buildRounds(c.base + 1, totalRounds)) { toast('Dagsplanen er lavet'); await reload(); }
   });
   act($('redoPlan'), async () => {
     if (!confirm('Lav alle kommende runder om med de nuværende tilmeldte?') || !lineupOk()) return;
-    await q(sb.from('padel_matches').delete().eq('event_id', ev.id).gt('round_no', ev.current_round).eq('status', 'planlagt'));
-    if (await buildRounds(ev.current_round + 1, Math.max(totalRounds, ...futureRounds))) { toast('Dagsplanen er lavet om'); await reload(); }
+    await q(sb.from('padel_matches').delete().eq('event_id', ev.id).gt('round_no', c.base).eq('status', 'planlagt'));
+    if (await buildRounds(c.base + 1, Math.max(totalRounds, ...futureRounds))) { toast('Dagsplanen er lavet om'); await reload(); }
+  });
+  act($('extraRound'), async () => {
+    if (!lineupOk()) return;
+    const r = Math.max(0, ...c.roundNos) + 1;
+    if (await buildRounds(r, r)) { toast(`Runde ${r} er lavet`); await reload(); }
   });
   act($('redoRound'), async () => {
     if (!confirm(`Lav runde ${ev.current_round} om med nye hold?`)) return;
@@ -488,7 +545,8 @@ function bind(c) {
     await startRound(ev.current_round, true);
   });
   act($('finish'), async () => {
-    if (!confirm('Afslut dagen? Tilmelding og nye runder lukkes.')) return;
+    const open = matches.filter((m) => m.status !== 'bekraeftet' && (m.status !== 'planlagt' || c.roundNos.some((r) => r === m.round_no && rounds[r].some((x) => x.status !== 'planlagt')))).length;
+    if (!confirm(`Afslut dagen? Tilmelding og nye runder lukkes.${open ? `\n\n${open} kamp(e) i påbegyndte runder mangler godkendt resultat.` : ''}`)) return;
     await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: 'afsluttet' })); await reload();
   });
   act($('reopen'), async () => { await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: matches.length ? 'igang' : 'planlagt' })); await reload(); });
@@ -531,7 +589,7 @@ function bind(c) {
       // Kampe der ikke er spillet endnu flyttes over på de valgte baner (i banernes rækkefølge)
       const chosen = S.courts.filter((x) => next.includes(x.id)).sort((a, b2) => a.sort - b2.sort).map((x) => x.id);
       for (const [r, ms] of Object.entries(rounds)) {
-        if (+r < ev.current_round) continue;
+        if (!c.free && +r < ev.current_round) continue;
         const open = ms.filter((m) => m.status === 'planlagt');
         if (open.length > chosen.length) continue;
         // Behold banen hvis den stadig er valgt og ledig, ellers tag den næste ledige

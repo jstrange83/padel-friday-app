@@ -183,6 +183,10 @@ const RPC = {
     const fm = db.padel_events.find((e) => e.id === M(p_match).event_id).format;
     if (['saet', 'klassisk'].includes(fm) && (p_a > 7 || p_b > 7 || (p_a === 7 && p_b === 7))) throw new Error('Et hold kan højst få 7 i et sæt');
     const m = M(p_match);
+    // Første resultat sætter dagen i gang (frie spiltyper har ingen "Start runde")
+    const ev = db.padel_events.find((e) => e.id === m.event_id);
+    if (ev.status === 'planlagt') Object.assign(ev, { status: 'igang', current_round: Math.max(ev.current_round, m.round_no) });
+    else if (ev.status === 'igang' && ev.format !== 'rotation') ev.current_round = Math.max(ev.current_round, m.round_no);
     if (superuser()) { if (m.status === 'bekraeftet') revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet' }); return applyElo(m); }
     const t = teamOf(m); if (!t) throw new Error('Du spiller ikke i denne kamp');
     Object.assign(m, { score_a: p_a, score_b: p_b, status: 'indtastet', reported_team: t });
