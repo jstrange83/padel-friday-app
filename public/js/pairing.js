@@ -1,6 +1,7 @@
 // Holdsætning til Fredagspadel.
 // Prioriteter: 1) ikke samme makker igen, 2) favoritside (venstre/højre), 3) mix hvis valgt,
 // 4) lige stærke hold (Elo), 5) ikke de samme modstandere. Pauser fordeles retfærdigt.
+// De stærkeste kampe kommer på de bedste baner (øverst i banernes rækkefølge).
 
 const SPLITS = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
 const key = (a, b) => (a < b ? a + '|' + b : b + '|' + a);
@@ -67,6 +68,9 @@ export function generateRound({ players, courts, history, eventId, mode, roundNo
       let c = teamCost(t1[0], t1[1]) + teamCost(t2[0], t2[1]);
       c += Math.abs((t1[0].elo + t1[1].elo) / 2 - (t2[0].elo + t2[1].elo) / 2) * 0.4;
       for (const x of t1) for (const y of t2) c += opp[key(x.id, y.id)] || 0;
+      // Spillere på nogenlunde samme niveau i samme kamp, så de bedste ender sammen på den bedste bane
+      const es = q.map((p) => p.elo);
+      c += (Math.max(...es) - Math.min(...es)) * 0.6;
       if (!best || c < best.cost) best = { cost: c, t1, t2 };
     }
     return best;
@@ -97,8 +101,10 @@ export function generateRound({ players, courts, history, eventId, mode, roundNo
 
   // Venstre/højre inden for holdet
   const orient = (x, y) => (x.side === 'hojre' || y.side === 'venstre' ? [y, x] : [x, y]);
+  // Stærkeste kamp på den bedste bane (banerne kommer i rækkefølge fra bedst til dårligst)
   const sortedCourts = courts.slice(0, nC);
-  const quads = shuffle(best.quads);
+  const avg = (q) => q.reduce((s, p) => s + p.elo, 0) / q.length;
+  const quads = best.quads.slice().sort((a, b) => avg(b) - avg(a));
   const matches = quads.map((q, i) => {
     const { t1, t2 } = quadBest(q);
     const [al, ar] = orient(t1[0], t1[1]);

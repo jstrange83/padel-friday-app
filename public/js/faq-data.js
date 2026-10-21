@@ -70,6 +70,7 @@ export const FAQ = [
     q: 'Hvordan bliver holdene sat?',
     a: `<p>Appen sætter holdene automatisk og prøver i denne rækkefølge at:</p>
 <ol><li>Undgå at du spiller med samme makker igen, både i dag og fra tidligere fredage</li><li>Give dig din favoritside (venstre eller højre)</li><li>Lave mixhold, hvis dagen er mix</li><li>Gøre holdene nogenlunde lige stærke</li><li>Undgå de samme modstandere</li></ol>
+<p>Spillere på samme niveau kommer i samme kamp, og <b>de stærkeste spiller på den bedste bane</b> (fx Center Court i Helsinge og Bane 1 i Gilleleje), derefter nedad.</p>
 <p>Admin kan altid rette holdene bagefter.</p>`,
   },
   {

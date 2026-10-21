@@ -141,9 +141,12 @@ function groupsTab() {
 // ---------- Centre og baner (superadmin) ----------
 function courtsTab() {
   return `${S.centers.map((c) => {
-    const cs = S.courts.filter((x) => x.center_id === c.id);
+    const cs = S.courts.filter((x) => x.center_id === c.id).sort((a, b) => a.sort - b.sort);
     return `<details class="card centerbox"><summary><b>${esc(c.name)}</b><small class="muted">${cs.length} baner</small></summary>
-      ${cs.map((x) => `<div class="crow"><span class="grow">${esc(x.name)}</span>
+      <p class="muted small">Øverst er den bedste bane. Det stærkeste hold kommer på den øverste.</p>
+      ${cs.map((x, i) => `<div class="crow"><span class="rk">${i + 1}</span><span class="grow">${esc(x.name)}</span>
+        <button class="icon sm" data-cmove="${x.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} op">↑</button>
+        <button class="icon sm" data-cmove="${x.id}" data-dir="1" ${i === cs.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} ned">↓</button>
         <button class="icon sm" data-rencourt="${x.id}" aria-label="Omdøb ${esc(x.name)}">✏️</button>
         <button class="icon sm" data-delcourt="${x.id}" aria-label="Slet ${esc(x.name)}">🗑</button></div>`).join('')}
       <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button><button class="btn sm ghost" data-rencenter="${c.id}">✏️ Omdøb center</button></div>
@@ -284,6 +287,17 @@ function bind() {
   on('[data-rencenter]', async (b) => {
     const c = centerById(b.dataset.rencenter), n = prompt('Nyt navn', c.name);
     if (n?.trim()) { await q(sb.from('padel_centers').update({ name: n.trim() }).eq('id', c.id)); refresh(); }
+  });
+  on('[data-cmove]', async (b) => {
+    const c = courtById(b.dataset.cmove);
+    const cs = S.courts.filter((x) => x.center_id === c.center_id).sort((a, x) => a.sort - x.sort);
+    const i = cs.indexOf(c), j = i + +b.dataset.dir;
+    if (j < 0 || j >= cs.length) return;
+    [cs[i], cs[j]] = [cs[j], cs[i]];
+    // Gem den nye rækkefølge 1, 2, 3 …
+    for (const [k, x] of cs.entries()) if (x.sort !== k + 1) await q(sb.from('padel_courts').update({ sort: k + 1 }).eq('id', x.id));
+    await hooks.loadBase(); viewAdmin();
+    document.querySelectorAll('details.centerbox').forEach((d) => { if (d.querySelector(`[data-cmove="${c.id}"]`)) d.open = true; });
   });
   on('[data-rencourt]', async (b) => {
     const c = courtById(b.dataset.rencourt), n = prompt('Nyt navn', c.name);

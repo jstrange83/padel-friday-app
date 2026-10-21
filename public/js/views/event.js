@@ -442,7 +442,8 @@ function bind(c) {
 
   // Runder: lav hold til en eller flere runder. Hver ny runde tager højde for dem, der lige er lavet.
   const buildRounds = async (from, to) => {
-    const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean);
+    // Gruppens point bruges til at gøre holdene lige og fordele baner efter niveau
+    const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean).map((p) => ({ ...p, elo: groupElo(p.id) }));
     const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
       .order('created_at', { ascending: false }).limit(800));
     const rows = [];

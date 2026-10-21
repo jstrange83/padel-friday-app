@@ -330,3 +330,5 @@ details.centerbox .mact { margin-top: 12px; }
 .legend .link { margin-left: auto; font-size: 13px; padding: 0; }
 .cmpbox { margin: 0 0 12px; }
 .trio b + small { display: block; }
+.crow .rk { width: 20px; color: var(--muted); font-weight: 700; }
+.icon.sm:disabled { opacity: .3; }
