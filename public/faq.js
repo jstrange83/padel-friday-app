@@ -89,6 +89,13 @@ export const FAQ = [
   },
   {
     cat: 'Resultater',
+    q: 'Kan jeg sige resultatet i stedet for at skrive det?',
+    a: `<p>Ja. Tryk <b>🎤 Sig resultat</b> på kampkortet og sig fx:</p>
+<ul><li>"seks fire" eller "otte otte": første tal er holdet til venstre på kortet</li><li>"vi vandt ni tre" eller "vi tabte fire seks": så ved appen selv, hvilket hold der er jeres</li><li>"uafgjort tolv"</li></ul>
+<p>Resultatet bliver udfyldt, og du trykker <b>Gem</b>, når det ser rigtigt ud. Første gang skal du give appen lov til at bruge mikrofonen. Virker knappen ikke på din telefon, kan du bruge mikrofonen på tastaturet.</p>`,
+  },
+  {
+    cat: 'Resultater',
     q: 'Hvad hvis resultatet er forkert?',
     a: `<p>Er det ikke godkendt endnu, kan modstanderne trykke <b>Afvis</b>, så skal det indtastes igen. Er det allerede godkendt, kan en admin rette det, og pointene bliver regnet om.</p>`,
   },

@@ -148,3 +148,5 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .faq p { margin: 0 0 10px; } .faq ul, .faq ol { margin: 0 0 10px; padding-left: 20px; } .faq li { margin: 4px 0; }
 .ranked { font-size: 15px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .ranked .btn { width: auto; }
+.btn.listening { background: var(--dn); border-color: var(--dn); color: #fff; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: .6; } }
