@@ -317,22 +317,49 @@ async function viewEvents() {
   const upcoming = evs.filter((e) => e.status !== 'afsluttet' && new Date(e.starts_at).getTime() >= now).reverse();
   const running = evs.filter((e) => e.status === 'igang' && !upcoming.includes(e));
   const past = evs.filter((e) => !upcoming.includes(e) && !running.includes(e));
+  const allowed = (e) => e.team_mode === 'aaben' || e.team_mode === 'mix' || (e.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
   const card = (e) => {
     const n = e.padel_signups.length;
     const mine = e.padel_signups.some((s) => s.player_id === S.me.id);
+    const ids = e.padel_signups.slice().sort((x, y) => x.created_at.localeCompare(y.created_at)).map((x) => x.player_id);
+    const L = lineup(ids, e.court_ids.length);
+    const waitNo = L.courts ? L.waiting.indexOf(S.me.id) : -1;
+    const status = L.courts ? `${L.courts} ${L.courts === 1 ? 'bane' : 'baner'} klar${L.waiting.length ? `, ${L.waiting.length} venter` : ''}` : `mangler ${4 - n} til første bane`;
+    const btn = e.status === 'planlagt'
+      ? mine ? `<button class="btn sm quick" data-off="${e.id}">Afmeld</button>`
+        : allowed(e) ? `<button class="btn sm primary quick" data-on="${e.id}">Tilmeld</button>` : ''
+      : e.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
     return `<a class="ev" href="#/fredag/${e.id}">
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
       <div class="grow"><b>${esc(e.title || 'Fredagspadel')}</b>
         <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>
-        <small>${n} tilmeldt · ${(() => { const L = lineup(e.padel_signups.map((x) => x.player_id), e.court_ids.length); return L.courts ? `${L.courts} ${L.courts === 1 ? 'bane' : 'baner'} klar${L.waiting.length ? `, ${L.waiting.length} venter` : ''}` : `mangler ${4 - n}`; })()}${mine ? ' · <span class="ok">Du er med</span>' : ''}</small></div>
-      ${e.status === 'igang' ? '<span class="badge live">I gang</span>' : ''}</a>`;
+        <small>${n} tilmeldt · ${status}${mine ? (waitNo >= 0 ? ` · <span class="warn">Du er nr. ${waitNo + 1} på venteliste</span>` : ' · <span class="ok">Du er med</span>') : ''}</small></div>
+      ${btn}</a>`;
   };
+  const coming = [...running, ...upcoming];
   app.innerHTML = `
   <div class="page">
-    <div class="head"><h1>Fredage</h1>${S.me.is_admin ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
-    ${[...running, ...upcoming].map(card).join('') || '<p class="muted pad">Ingen kommende fredage endnu.</p>'}
+    <div class="head"><h1>Fredage</h1>${S.me.is_admin && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
+    ${coming.map(card).join('') || (S.me.is_admin
+      ? '<div class="card empty"><p>Der er ingen kommende fredage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret fredag</a></div>'
+      : '<p class="muted pad">Der er ingen kommende fredage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
     ${past.length ? `<h3>Tidligere</h3>${past.map(card).join('')}` : ''}
   </div>`;
+  const quick = async (e, fn) => {
+    e.preventDefault(); e.stopPropagation();
+    const btn = e.currentTarget;
+    busy(btn, true);
+    try { await fn(); await viewEvents(); } catch { busy(btn, false); }
+  };
+  app.querySelectorAll('[data-on]').forEach((b) => (b.onclick = (e) => quick(e, async () => {
+    await q(sb.from('padel_signups').insert({ event_id: b.dataset.on, player_id: S.me.id }));
+    toast('Du er tilmeldt');
+  })));
+  app.querySelectorAll('[data-off]').forEach((b) => (b.onclick = (e) => quick(e, async () => {
+    if (!confirm('Afmeld dig denne fredag?')) throw new Error('fortrudt');
+    await q(sb.from('padel_signups').delete().eq('event_id', b.dataset.off).eq('player_id', S.me.id));
+    toast('Du er afmeldt');
+  })));
 }
 
 function nextFriday() {
@@ -406,9 +433,10 @@ async function loadEvent(id) {
     q(sb.from('padel_signups').select('*').eq('event_id', id).order('created_at')),
     q(sb.from('padel_matches').select('*').eq('event_id', id).order('round_no', { ascending: false }).order('created_at')),
   ]);
+  const log = await q(sb.from('padel_signup_log').select('*').eq('event_id', id).order('created_at', { ascending: false }).limit(200));
   const ids = matches.map((m) => m.id);
   const changes = ids.length ? await q(sb.from('padel_elo_changes').select('*').in('match_id', ids).eq('active', true)) : [];
-  return { ev, signups, matches, changes };
+  return { ev, signups, matches, changes, log };
 }
 
 async function viewEvent(id) {
@@ -449,7 +477,7 @@ function teamHtml(l, r, me) {
   return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
 }
 
-function renderEvent({ ev, signups, matches, changes }) {
+function renderEvent({ ev, signups, matches, changes, log = [] }) {
   // admin = må køre dagen (superbruger eller admin). isAdmin = kun admin (slette dagen, rangliste for Americano)
   const me = S.me.id, isAdmin = S.me.is_admin, admin = isAdmin || roleOf(S.me) === 'superbruger';
   const signed = signups.map((s) => s.player_id);
@@ -618,6 +646,12 @@ function renderEvent({ ev, signups, matches, changes }) {
     ${admin ? `<div class="addp"><select id="addPlayer"><option value="">Tilmeld en spiller…</option>${Object.values(S.profiles)
       .filter((p) => !signed.includes(p.id)).sort((a, b) => a.name.localeCompare(b.name))
       .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>` : ''}
+    ${log.length ? `<details class="faq log"><summary>Til‑ og afmeldinger (${log.length})</summary><div>${log.map((l) => {
+      const by = l.done_by && l.done_by !== l.player_id ? ` <small>af ${esc(first(l.done_by))}</small>` : '';
+      return `<div class="logrow"><span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
+        <span class="grow">${esc(nameOf(l.player_id))} ${l.action === 'til' ? 'meldte til' : 'meldte fra'}${by}</span>
+        <small class="muted">${fmtDate(l.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>`;
+    }).join('')}</div></details>` : ''}
   </div>`;
 
   const reload = async () => { await loadBase(); renderEvent(await loadEvent(ev.id)); };

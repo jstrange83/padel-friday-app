@@ -158,3 +158,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .person small { color: var(--muted); font-size: 11px; min-width: 14px; }
 .person.wait { opacity: .75; border: 1px dashed var(--line); background: transparent; }
 .person.meP { outline: 1px solid var(--accent); }
+.ev .quick { flex-shrink: 0; }
+.warn { color: var(--warn); }
+.dn { color: var(--dn); }
+.empty p { margin: 0 0 10px; }
+.log { margin-top: 20px; }
+.logrow { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.logrow:last-child { border-bottom: 0; }
+.logrow small { font-size: 12px; white-space: nowrap; }
