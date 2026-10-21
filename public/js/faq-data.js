@@ -179,7 +179,7 @@ export const FAQ = [
   {
     cat: 'Padelregler',
     q: 'Må man tage serven på flugt?',
-    a: `<p>Nej. Modtageren skal lade serven hoppe i sit felt og slå den, før den hopper anden gang. Rammer serven modtageren eller ketsjeren, før den hopper, vinder serveholdet bolden.</p>`,
+    a: `<p>Nej. Modtageren skal lade serven hoppe i sit felt og slå den, før den hopper anden gang. Rammer serven modtageren eller battet, før den hopper, vinder serveholdet bolden.</p>`,
   },
   {
     cat: 'Padelregler',
@@ -194,7 +194,7 @@ export const FAQ = [
   {
     cat: 'Padelregler',
     q: 'Må man røre nettet?',
-    a: `<p>Nej. Rører du eller din ketsjer nettet, stolperne eller modstandernes banehalvdel, mens bolden er i spil, taber I bolden. Det gælder også tøj og ting, du har på. Du må heller ikke hoppe over nettet.</p>`,
+    a: `<p>Nej. Rører du eller dit bat nettet, stolperne eller modstandernes banehalvdel, mens bolden er i spil, taber I bolden. Det gælder også tøj og ting, du har på. Du må heller ikke hoppe over nettet.</p>`,
   },
   {
     cat: 'Padelregler',
@@ -211,7 +211,7 @@ export const FAQ = [
   {
     cat: 'Padelregler',
     q: 'Bolden rammer en spiller. Hvem får bolden?',
-    a: `<ul><li>Rammer modstandernes slag dig eller din makker (andet end ketsjeren), taber I bolden, også selvom du stod uden for banen</li>
+    a: `<ul><li>Rammer modstandernes slag dig eller din makker (andet end battet), taber I bolden, også selvom du stod uden for banen</li>
 <li>Rammer dit eget slag dig selv eller din makker, taber I bolden</li>
 <li>Rammer dit slag en modspiller, vinder I bolden</li></ul>`,
   },
@@ -221,7 +221,7 @@ export const FAQ = [
     a: `<ul><li>Bolden hopper to gange på jeres side</li><li>Dit slag rammer modstandernes glas eller hegn uden at hoppe først</li>
 <li>Dit slag rammer nettet og bliver på jeres side</li><li>Du rører nettet eller modstandernes banehalvdel</li>
 <li>Du slår bolden to gange, eller både du og din makker rammer den</li><li>Bolden rammer dig eller din makker</li>
-<li>Du kaster ketsjeren efter bolden eller taber den</li></ul>`,
+<li>Du kaster battet efter bolden eller taber den</li></ul>`,
   },
   {
     cat: 'Padelregler',
