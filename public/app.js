@@ -351,7 +351,9 @@ function viewNewEvent() {
       <label>Dato og tid<input type="datetime-local" name="when" value="${nextFriday()}" required></label>
       <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60"></label>
       <div class="lbl">Format</div>${radios('format', FORMAT, 'rotation')}
-      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"></label>
+      <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((v) =>
+        `<option value="${v}" ${v === 120 ? 'selected' : ''}>${v % 60 ? `${Math.floor(v / 60)}½ time` : `${v / 60} ${v === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
+      <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, 'aaben')}
       <button class="btn primary">Opret fredag</button>
     </form>
@@ -363,6 +365,11 @@ function viewNewEvent() {
   };
   f.center.value = c0; drawCourts();
   f.center.onchange = drawCourts;
+  const hint = () => {
+    const n = Math.floor(+f.duration.value / (+f.minutes.value || 30));
+    document.getElementById('roundsHint').textContent = n ? `Giver ${n} runder` : '';
+  };
+  f.duration.onchange = hint; f.minutes.oninput = hint; hint();
   const fmt = () => (document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none');
   f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt));
   f.onsubmit = async (e) => {
@@ -374,7 +381,7 @@ function viewNewEvent() {
     try {
       const ev = await q(sb.from('padel_events').insert({
         center_id: f.center.value, starts_at: new Date(f.when.value).toISOString(), title: f.title.value.trim() || null,
-        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, court_ids: courts, created_by: S.me.id,
+        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, duration_minutes: +f.duration.value || 120, court_ids: courts, created_by: S.me.id,
       }).select().single());
       location.hash = '#/fredag/' + ev.id;
     } catch {} finally { busy(btn, false); }
@@ -444,6 +451,10 @@ function renderEvent({ ev, signups, matches, changes }) {
   const center = centerById(ev.center_id);
   const courts = ev.court_ids.map(courtById).filter(Boolean).sort((a, b) => a.sort - b.sort);
   const isRot = ev.format === 'rotation';
+  const totalRounds = isRot ? Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes)) : null;
+  const lastDone = isRot && ev.current_round >= totalRounds;
+  const endsAt = new Date(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3);
+  const hm = (d) => fmtDate(d, { hour: '2-digit', minute: '2-digit' });
   const unit = isRot ? 'partier' : 'sæt';
 
   const canGender = ev.team_mode === 'aaben' || ev.team_mode === 'mix' || (ev.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
@@ -519,13 +530,13 @@ function renderEvent({ ev, signups, matches, changes }) {
 
   const roundNos = Object.keys(rounds).map(Number).sort((a, b) => b - a);
   const timer = isRot && ev.status === 'igang' && ev.round_started_at
-    ? `<div class="timer card"><small>Runde ${ev.current_round}</small><div id="clock">--:--</div><small id="clockSub">tilbage</small></div>` : '';
+    ? `<div class="timer card"><small>Runde ${ev.current_round} af ${totalRounds}</small><div id="clock">--:--</div><small id="clockSub">tilbage</small></div>` : '';
 
   app.innerHTML = `
   <div class="page">
     <button class="back" onclick="location.hash='#/fredage'">‹ Fredage</button>
     <h1>${esc(ev.title || 'Fredagspadel')}</h1>
-    <p class="muted cap">${fmtDate(ev.starts_at)} · ${esc(center?.name || '')}</p>
+    <p class="muted cap">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })} · ${hm(ev.starts_at)}–${hm(endsAt)} · ${esc(center?.name || '')}</p>
     <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
       <span class="chip">${courts.length} baner</span>${ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : ''}</div>
     ${ev.status !== 'afsluttet' ? '<button class="btn sm" id="shareEvent">📤 Del fredagen</button>' : ''}
@@ -533,9 +544,11 @@ function renderEvent({ ev, signups, matches, changes }) {
     ${timer}
 
     ${admin && ev.status !== 'afsluttet' ? `<div class="card adminbar">
-      <button class="btn primary" id="nextRound">${ev.current_round ? `Start runde ${ev.current_round + 1}` : 'Start første runde'}</button>
+      ${lastDone && ev.status === 'igang' ? '<button class="btn primary" id="finish">Afslut dagen</button>' : ''}
+      <button class="btn ${lastDone ? '' : 'primary'}" id="nextRound">${!ev.current_round ? 'Start første runde'
+        : lastDone ? 'Spil en ekstra runde' : `Start runde ${ev.current_round + 1}${isRot ? ` af ${totalRounds}` : ''}`}</button>
       ${curAllPlanned ? `<button class="btn" id="redoRound">Lav runde ${ev.current_round} om</button>` : ''}
-      ${ev.status === 'igang' ? '<button class="btn ghost" id="finish">Afslut dagen</button>' : ''}
+      ${ev.status === 'igang' && !lastDone ? '<button class="btn ghost" id="finish">Afslut dagen</button>' : ''}
       ${!matches.length ? '<button class="btn ghost danger" id="delEvent">Slet fredag</button>' : ''}
     </div>` : ''}
     ${admin && ev.status === 'afsluttet' ? '<button class="btn ghost" id="reopen">Genåbn dagen</button>' : ''}
