@@ -332,3 +332,13 @@ details.centerbox .mact { margin-top: 12px; }
 .trio b + small { display: block; }
 .crow .rk { width: 20px; color: var(--muted); font-weight: 700; }
 .icon.sm:disabled { opacity: .3; }
+
+/* Overskrift på Din aften og kortet med rettelser der venter på godkendelse */
+.mtitle { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--accent); margin-bottom: 6px; }
+.approvals { border-left: 4px solid var(--warn); }
+.approvals .mtitle { color: var(--warn); }
+.approvals .appr + .appr { border-top: 1px solid var(--line, rgba(255,255,255,.08)); margin-top: 10px; padding-top: 10px; }
+.approvals .appr p { margin: 2px 0; font-size: 15px; }
+.approvals .appr .sc { margin: 0 6px; font-size: 17px; }
+.approvals small { font-size: 13px; }
+.approvals .mact { margin-top: 8px; }

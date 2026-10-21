@@ -221,11 +221,28 @@ function myNight(c, st) {
   const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
   const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
   const todo = (now || c.free) && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
-    : m.status === 'indtastet' && (onA ? 'a' : 'b') !== m.reported_team ? '<a class="btn sm primary" href="#m-' + m.id + '">' + (m.changed ? 'Godkend ændring' : 'Godkend resultat') + '</a>' : '';
+    : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<small>Venter på at modstanderne godkender rettelsen.</small>' : '';
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
     <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
     ${pause}${todo}${signBtn}</div>`;
+}
+
+// Rettelser der venter på mig (modstanderholdet), eller på admin/superbruger. Vises øverst, så de ikke overses.
+function approvals(c) {
+  const { matches, me, run } = c;
+  const team = (m) => ([m.a_left, m.a_right].includes(me) ? 'a' : [m.b_left, m.b_right].includes(me) ? 'b' : null);
+  const list = matches.filter((m) => m.status === 'indtastet' && ((team(m) && team(m) !== m.reported_team) || run))
+    .sort((x, y) => x.round_no - y.round_no);
+  if (!list.length) return '';
+  const names = (l, r) => `${esc(first(l))} & ${esc(first(r))}`;
+  return `<div class="card approvals"><div class="mtitle">✋ Venter på ${run ? 'godkendelse' : 'din godkendelse'} (${list.length})</div>
+    ${list.map((m) => `<div class="appr">
+      <small>Runde ${m.round_no} · ${esc(courtById(m.court_id)?.name || '')}</small>
+      <p>${names(m.a_left, m.a_right)} <b class="sc">${m.score_a}–${m.score_b}</b> ${names(m.b_left, m.b_right)}</p>
+      <small class="muted">${m.changed ? `Rettet${m.prev_score_a != null ? ` fra ${m.prev_score_a}–${m.prev_score_b}` : ''}` : 'Indtastet'}${m.reported_by ? ` af ${esc(first(m.reported_by))}` : ''}</small>
+      <div class="mact"><button class="btn sm primary" data-act="confirm" data-id="${m.id}">Godkend</button><button class="btn sm" data-act="reject" data-id="${m.id}" data-changed="${m.changed && m.prev_score_a != null ? 1 : ''}">Afvis</button></div>
+    </div>`).join('')}</div>`;
 }
 
 function timer(c) {
@@ -429,7 +446,8 @@ function render(data) {
   app.innerHTML = `
   <div class="page event">
     ${header(c)}
-    ${myNight(c, st)}
+    ${approvals(c)}
+    ${myNight(c, st).replace(/(<div class="card mine-card[^"]*">)/, '$1<div class="mtitle">🎾 Din aften</div>')}
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}

@@ -168,6 +168,10 @@ try {
   ok(!(await page.locator(`#m-${cm.id} [data-act=confirm]`).count()), 'makkeren kan ikke godkende ændringen');
   await loginAs(cm.b);
   ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend ændring'), 'modstander kan godkende ændringen');
+  ok((await page.locator('.approvals').innerText()).toLowerCase().includes('venter på din godkendelse'), 'rettelsen vises øverst hos modstanderen');
+  ok((await page.locator('.mine-card .mtitle').innerText()).toLowerCase().includes('din aften'), 'Din aften har overskrift');
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await shot('godkend-rettelse');
   await page.locator(`#m-${cm.id} [data-act=reject]`).click();
   await wait(500);
   await openAll();
