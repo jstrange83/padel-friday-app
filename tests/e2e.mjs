@@ -121,9 +121,9 @@ try {
 
   // FAQ-søgning
   await page.goto('http://localhost:8765/#/faq');
-  await page.fill('#faqSearch', 'venteliste');
+  await page.fill('#faqSearch', 'røre nettet');
   await wait(200);
-  ok((await page.locator('details.faq').count()) >= 1, 'FAQ finder venteliste');
+  ok((await page.locator('details.faq').count()) >= 1, 'FAQ finder regel om nettet');
 
   // Admin: se som
   await page.click('#nav a:has-text("Admin")');

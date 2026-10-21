@@ -146,4 +146,123 @@ export const FAQ = [
 <p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller og lægge Americano på ranglisten.</p>
 <p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper.</p>`,
   },
+
+  // ---------- Padelregler (efter FIP's officielle regler, skrevet kort) ----------
+  {
+    cat: 'Padelregler',
+    q: 'Hvordan skal man serve?',
+    a: `<ul><li>Stå med fødderne bag servelinjen i din egen halvdel af banen (mellem midterlinjen og sidevæggen). Du må ikke træde på linjerne</li>
+<li>Lad bolden hoppe én gang på jorden i dit servefelt, og slå den, mens den er i <b>hoftehøjde eller lavere</b></li>
+<li>Mindst én fod skal røre jorden, når du rammer bolden</li>
+<li>Server <b>diagonalt</b> over nettet. Første bold i et parti serveres fra højre side</li>
+<li>Du har to forsøg. Fejler begge, mister I bolden</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Må man løbe eller hoppe, når man server?',
+    a: `<p>Nej. Du skal stå bag servelinjen og blive der, indtil du har ramt bolden, og mindst én fod skal røre jorden i slaget. Du må altså hverken tage tilløb, hoppe eller træde ind over linjen.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvornår er en serv fejl?',
+    a: `<ul><li>Bolden lander uden for modstanderens servefelt (rammer den linjen, er den god)</li>
+<li>Bolden lander i feltet, men rammer så <b>hegnet/metalnettet</b>, før den hopper anden gang</li>
+<li>Du slår over hoftehøjde, træder på linjen eller rammer slet ikke bolden</li>
+<li>Bolden rammer dig selv eller din makker</li></ul>
+<p>Rammer bolden <b>glasset</b> efter at have landet i feltet, er serven god.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Serven rammer nettet. Hvad nu?',
+    a: `<p>Rammer serven nettet og lander i det rigtige felt (uden at ramme hegnet bagefter), er det en <b>net‑bold</b>, og serven tages om. Det gælder også, hvis den rammer en modspiller efter nettet. En net‑bold tæller ikke som et forsøg.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Må man tage serven på flugt?',
+    a: `<p>Nej. Modtageren skal lade serven hoppe i sit felt og slå den, før den hopper anden gang. Rammer serven modtageren eller ketsjeren, før den hopper, vinder serveholdet bolden.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Var bolden ude eller inde?',
+    a: `<p>I padel er der stort set kun linjer ved serven. Under en bold gælder:</p>
+<ul><li>Dit slag skal <b>hoppe på jorden i modstandernes halvdel</b>, før det rammer deres glas eller hegn. Rammer det glasset eller hegnet direkte, er bolden ude, og I taber den</li>
+<li>Når bolden har hoppet på deres side, må den gerne ramme glas og hegn bagefter. Så er det et godt slag</li>
+<li>Går bolden ud over glasset eller ud af banen efter at have hoppet på jeres side, mister I bolden</li>
+<li>Lander bolden præcis i hjørnet mellem gulv og glas, er den god</li></ul>
+<p><b>God skik</b> (ikke en officiel regel): uden dommer afgør hvert par de bolde, der lander på deres egen side. Er I i tvivl, så tag bolden om.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Må man røre nettet?',
+    a: `<p>Nej. Rører du eller din ketsjer nettet, stolperne eller modstandernes banehalvdel, mens bolden er i spil, taber I bolden. Det gælder også tøj og ting, du har på. Du må heller ikke hoppe over nettet.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Må man slå bolden, før den er kommet over nettet?',
+    a: `<p>Nej. Du må gerne tage bolden på flugt (før den hopper), men først når den er kommet over nettet til din side. Rækker du ind over nettet og slår den på modstandernes side, taber I bolden.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvad med glasset og hegnet på min egen side?',
+    a: `<ul><li>Når bolden har hoppet på din side, må du gerne lade den ramme dit glas eller hegn og spille den bagefter, så længe den ikke hopper på gulvet igen</li>
+<li>Du må også slå bolden ind i dit <b>eget glas</b>, så den derfra går over nettet. Den skal så hoppe i modstandernes halvdel som normalt</li>
+<li>Rammer dit slag dit eget <b>hegn</b> (metalnettet) på vej over, taber I bolden</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Bolden rammer en spiller. Hvem får bolden?',
+    a: `<ul><li>Rammer modstandernes slag dig eller din makker (andet end ketsjeren), taber I bolden, også selvom du stod uden for banen</li>
+<li>Rammer dit eget slag dig selv eller din makker, taber I bolden</li>
+<li>Rammer dit slag en modspiller, vinder I bolden</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvornår taber man bolden? (oversigt)',
+    a: `<ul><li>Bolden hopper to gange på jeres side</li><li>Dit slag rammer modstandernes glas eller hegn uden at hoppe først</li>
+<li>Dit slag rammer nettet og bliver på jeres side</li><li>Du rører nettet eller modstandernes banehalvdel</li>
+<li>Du slår bolden to gange, eller både du og din makker rammer den</li><li>Bolden rammer dig eller din makker</li>
+<li>Du kaster ketsjeren efter bolden eller taber den</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Må man spille bolden uden for banen?',
+    a: `<p>Kun på baner, hvor der er sikkerhedszone udenfor, og centret tillader det. Så må du løbe ud gennem døren og slå bolden tilbage, så længe den ikke har hoppet to gange eller ramt noget uden for banen. Er det ikke tilladt i jeres center, er bolden død, når den forlader banen.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Bolden hopper tilbage over nettet (backspin). Må modstanderen tage den?',
+    a: `<p>Ja. Hopper bolden i modstandernes halvdel og ruller eller hopper tilbage til jeres side, må de gerne slå den, men de må ikke røre nettet eller jeres banehalvdel. Når du har slået et godt slag, der går tilbage over nettet, har du vundet bolden, hvis de ikke når den.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvordan tæller man point, parti og sæt?',
+    a: `<ul><li><b>Point:</b> 15, 30, 40, parti. Ved 40‑40 (lige) skal man vinde to bolde i træk</li>
+<li><b>Gyldent point:</b> mange spiller i stedet én afgørende bold ved 40‑40. Modtagerne vælger, hvem af dem der tager serven</li>
+<li><b>Sæt:</b> først til 6 partier med 2 i forskel. Ved 5‑5 spilles til 7‑5, ved 6‑6 en tiebreak</li>
+<li><b>Kamp:</b> bedst af tre sæt</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvordan spiller man tiebreak?',
+    a: `<ul><li>Man tæller 1, 2, 3 … og først til 7 med 2 i forskel vinder sættet 7‑6</li>
+<li>Den, der står for tur, server én bold fra højre. Derefter server modstanderne to bolde (første fra venstre), og så skiftes man med to serv hver</li>
+<li>Man skifter side for hver 6 point</li></ul>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvornår skifter man side?',
+    a: `<p>Efter 1. parti, 3. parti og derefter efter hvert ulige parti (5., 7. …). I en tiebreak skifter man for hver 6 point.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvornår tager man bolden om?',
+    a: `<ul><li>Bolden går i stykker under spillet</li><li>En bold eller ting fra en anden bane ruller ind og forstyrrer</li>
+<li>Noget uventet afbryder spillet, som ikke skyldes spillerne</li><li>Serven var en net‑bold</li></ul>
+<p>Sig det med det samme. Spiller I videre, er retten til at tage bolden om væk.</p>`,
+  },
+  {
+    cat: 'Padelregler',
+    q: 'Hvor kommer reglerne fra?',
+    a: `<p>Svarene bygger på det internationale padelforbund FIP's officielle regler, skrevet kort og i vores egne ord. Er I i tvivl om noget særligt, så tjek <a class="link" href="https://www.padelfip.com/wp-content/uploads/2025/12/FIP_Rules-of-Padel.pdf" target="_blank" rel="noopener">FIP's regler (PDF)</a>. Spørgsmål om at spille uden for banen afhænger også af jeres center.</p>`,
+  },
 ];
