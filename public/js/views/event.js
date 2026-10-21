@@ -271,15 +271,16 @@ function matchCard(c, m) {
     if (run) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button><button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
   }
   const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
-  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6' : `Antal ${unit}`;
+  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
+  const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b>${status}</div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     <form class="enter" hidden data-id="${m.id}">
-      <input type="number" name="a" min="0" max="99" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score hold 1">
+      <input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score hold 1">
       <span>–</span>
-      <input type="number" name="b" min="0" max="99" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
+      <input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
       <button class="btn sm primary">Gem</button>
       <small class="muted">${hint}</small>
     </form>
@@ -568,6 +569,10 @@ function bind(c) {
   app.querySelectorAll('form.enter').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const a = +f.a.value, bb = +f.b.value;
+    if (['saet', 'klassisk'].includes(ev.format)) {
+      if (a > 7 || bb > 7) return toast('Et hold kan højst få 7 i et sæt', true);
+      if (a === 7 && bb === 7) return toast('Begge hold kan ikke have 7', true);
+    }
     if (isAm && ev.points_per_match && a + bb !== ev.points_per_match &&
       !confirm(`Det giver ${a + bb} point i alt, men I spiller til ${ev.points_per_match}. Gem alligevel?`)) return;
     const btn = f.querySelector('button');

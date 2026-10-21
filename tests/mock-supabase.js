@@ -167,6 +167,8 @@ const RPC = {
   padel_set_role: ({ p_user, p_role }) => { Object.assign(db.padel_profiles.find((p) => p.id === p_user), { role: p_role, is_admin: p_role === 'admin' }); },
   padel_admin_update_player: ({ p_user, p_name, p_gender, p_side }) => { Object.assign(db.padel_profiles.find((p) => p.id === p_user), { name: p_name, gender: p_gender, side: p_side }); },
   padel_report_result: ({ p_match, p_a, p_b }) => {
+    const fm = db.padel_events.find((e) => e.id === M(p_match).event_id).format;
+    if (['saet', 'klassisk'].includes(fm) && (p_a > 7 || p_b > 7 || (p_a === 7 && p_b === 7))) throw new Error('Et hold kan højst få 7 i et sæt');
     const m = M(p_match);
     if (superuser()) { if (m.status === 'bekraeftet') revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet' }); return applyElo(m); }
     const t = teamOf(m); if (!t) throw new Error('Du spiller ikke i denne kamp');

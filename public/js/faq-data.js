@@ -37,7 +37,7 @@ export const FAQ = [
   {
     cat: 'Formater',
     q: 'Hvad er "Ét sæt pr. runde"?',
-    a: `<p>I spiller <b>ét sæt</b> (først til 6 partier, 7‑6 ved tiebreak), og når sættet er færdigt, skifter alle makker og modstandere.</p>
+    a: `<p>I spiller <b>ét sæt</b> (først til 6 partier, 7‑5 eller 7‑6 ved tiebreak), og når sættet er færdigt, skifter alle makker og modstandere. Et hold kan højst få 7. Løber I tør for tid, indtaster I bare stillingen, fx 4‑4 eller 3‑1.</p>
 <p>Indtast antal partier hvert hold vandt i sættet, fx 6‑4. Jo større sejren er, jo flere point giver den på ranglisten.</p>
 <p>Der er ingen nedtælling. Admin starter næste runde, når alle sæt er færdige.</p>`,
   },
