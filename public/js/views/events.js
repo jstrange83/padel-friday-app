@@ -1,9 +1,9 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
 
 export async function viewEvents() {
-  const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id, created_at)').order('starts_at', { ascending: false }).limit(60));
+  const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id, created_at)').eq('group_id', S.groupId).order('starts_at', { ascending: false }).limit(60));
   const now = Date.now() - 6 * 3600e3;
   const upcoming = evs.filter((e) => e.status !== 'afsluttet' && new Date(e.starts_at).getTime() >= now).reverse();
   const running = evs.filter((e) => e.status === 'igang' && !upcoming.includes(e));
@@ -21,7 +21,7 @@ export async function viewEvents() {
       : e.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
     return `<a class="ev" href="#/fredag/${e.id}">
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
-      <div class="grow"><b>${esc(e.title || 'Fredagspadel')}</b>
+      <div class="grow"><b>${esc(e.title || group()?.name || 'Padel')}</b>
         <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>
         <small>${n} tilmeldt · ${status}${mine ? (waitNo >= 0 ? ` · <span class="warn">Du er nr. ${waitNo + 1} på venteliste</span>` : ' · <span class="ok">Du er med</span>') : ''}</small></div>
       ${btn}</a>`;
@@ -29,11 +29,12 @@ export async function viewEvents() {
   const coming = [...running, ...upcoming];
   app.innerHTML = `
   <div class="page">
-    <div class="head"><h1>Fredage</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
+    <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
+    ${groupBar(viewEvents)}
     ${coming.map(card).join('') || (isAdmin()
-      ? '<div class="card empty"><p>Der er ingen kommende fredage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret fredag</a></div>'
-      : '<p class="muted pad">Der er ingen kommende fredage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
-    ${past.length ? `<details class="past"><summary>Tidligere fredage (${past.length})</summary>${past.map(card).join('')}</details>` : ''}
+      ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
+      : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
+    ${past.length ? `<details class="past"><summary>Tidligere (${past.length})</summary>${past.map(card).join('')}</details>` : ''}
   </div>`;
   const quick = async (e, fn) => {
     e.preventDefault(); e.stopPropagation();
@@ -46,7 +47,7 @@ export async function viewEvents() {
     toast('Du er tilmeldt');
   })));
   app.querySelectorAll('[data-off]').forEach((b) => (b.onclick = (e) => quick(e, async () => {
-    if (!confirm('Afmeld dig denne fredag?')) throw new Error('fortrudt');
+    if (!confirm('Afmeld dig denne dag?')) throw new Error('fortrudt');
     await q(sb.from('padel_signups').delete().eq('event_id', b.dataset.off).eq('player_id', S.me.id));
     toast('Du er afmeldt');
   })));
@@ -73,25 +74,31 @@ function toLocalInput(d) {
 
 // Opret nye fredage, eller ret en eksisterende (ev)
 export async function viewEventForm(ev) {
+  if (ev) S.groupId = ev.group_id;
   if (!isAdmin()) return (location.hash = '#/fredage');
+  // Kun de centre gruppen må bruge
+  const allowed = groupCenterIds();
+  const centers = S.centers.filter((c) => allowed.includes(c.id) || c.id === ev?.center_id);
+  if (!centers.length) { app.innerHTML = '<div class="page"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Ingen centre</h1><p class="muted">Gruppen har ikke fået nogen centre endnu. Superadmin vælger dem under Admin.</p></div>'; return; }
   let confirmed = 0;
   if (ev) {
     const ms = await q(sb.from('padel_matches').select('id,status').eq('event_id', ev.id));
     confirmed = ms.filter((m) => m.status === 'bekraeftet').length;
   }
-  const v = ev || { center_id: S.centers[0]?.id, format: 'rotation', team_mode: 'aaben', duration_minutes: 120, round_minutes: 30, points_per_match: 24, title: '' };
+  const v = ev || { center_id: centers[0].id, format: 'rotation', team_mode: 'aaben', duration_minutes: 120, round_minutes: 30, points_per_match: 24, title: '' };
   app.innerHTML = `
   <div class="page">
     <button class="back" onclick="history.back()">‹ Tilbage</button>
-    <h1>${ev ? 'Ret fredag' : 'Ny fredag'}</h1>
+    <h1>${ev ? 'Ret spilledag' : 'Ny spilledag'}</h1>
+    <p class="muted">${esc(group()?.name || '')}</p>
     ${ev && confirmed ? `<div class="card tip">Der er allerede ${confirmed} godkendt${confirmed === 1 ? '' : 'e'} kamp${confirmed === 1 ? '' : 'e'}. De beholder deres point. Ændringer gælder de kommende runder.</div>` : ''}
     <form class="card" id="nf">
-      <label>Center<select name="center">${S.centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+      <label>Center<select name="center">${centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
       <div class="lbl">Baner</div><div id="courts" class="checks"></div>
-      <label>Dato og tid${ev ? '' : ' (første fredag)'}<input type="datetime-local" name="when" value="${ev ? toLocalInput(ev.starts_at) : nextFriday()}" required></label>
-      ${ev ? '' : `<label>Antal fredage<select name="count">${[1, 2, 3, 4, 6, 8].map((n) => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n === 1 ? 'Kun denne' : `${n} uger i træk`}</option>`).join('')}</select>
+      <label>Dato og tid${ev ? '' : ' (første gang)'}<input type="datetime-local" name="when" value="${ev ? toLocalInput(ev.starts_at) : nextFriday()}" required></label>
+      ${ev ? '' : `<label>Gentag<select name="count">${[1, 2, 3, 4, 6, 8].map((n) => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n === 1 ? 'Kun denne dag' : `${n} uger i træk`}</option>`).join('')}</select>
         <small class="muted" id="countHint"></small></label>`}
-      <label>Titel (valgfri)<input name="title" placeholder="Fredagspadel" maxlength="60" value="${esc(v.title || '')}"></label>
+      <label>Titel (valgfri)<input name="title" placeholder="${esc(group()?.name || '')}" maxlength="60" value="${esc(v.title || '')}"></label>
       <div class="lbl">Spiltype</div>${radios('format', FORMAT, v.format)}
       <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((n) =>
         `<option value="${n}" ${n === v.duration_minutes ? 'selected' : ''}>${n % 60 ? `${Math.floor(n / 60)}½ time` : `${n / 60} ${n === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
@@ -99,7 +106,7 @@ export async function viewEventForm(ev) {
         <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
       <label id="minWrap"><span id="minLabel">Minutter pr. runde</span><input type="number" name="minutes" value="${v.round_minutes}" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, v.team_mode)}
-      <button class="btn primary" id="createBtn">${ev ? 'Gem ændringer' : 'Opret fredage'}</button>
+      <button class="btn primary" id="createBtn">${ev ? 'Gem ændringer' : 'Opret'}</button>
     </form>
   </div>`;
   const f = document.getElementById('nf');
@@ -126,7 +133,7 @@ export async function viewEventForm(ev) {
     const countHint = () => {
       const ds = weekDates(f.when.value, +f.count.value);
       document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
-      document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} fredage` : 'Opret fredag';
+      document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} spilledage` : 'Opret spilledag';
     };
     f.count.onchange = countHint; f.when.onchange = countHint; countHint();
   }
@@ -147,13 +154,13 @@ export async function viewEventForm(ev) {
         const upd = { ...base, starts_at: new Date(f.when.value).toISOString() };
         if (!confirmed) upd.ranked = base.format !== 'americano';
         await q(sb.from('padel_events').update(upd).eq('id', ev.id));
-        toast('Fredagen er opdateret');
+        toast('Dagen er opdateret');
         location.hash = '#/fredag/' + ev.id;
         return;
       }
-      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id }));
+      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id, group_id: S.groupId }));
       const evs = await q(sb.from('padel_events').insert(rows).select());
-      toast(evs.length === 1 ? 'Fredagen er oprettet' : `${evs.length} fredage er oprettet`);
+      toast(evs.length === 1 ? 'Dagen er oprettet' : `${evs.length} spilledage er oprettet`);
       location.hash = evs.length === 1 ? '#/fredag/' + evs[0].id : '#/fredage';
     } catch {} finally { busy(btn, false); }
   };

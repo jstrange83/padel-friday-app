@@ -1,6 +1,6 @@
-// En fredag: din aften, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
+// En spilledag: din aften, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
-  sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin,
+  sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
@@ -21,7 +21,10 @@ async function loadEvent(id) {
 }
 
 export async function viewEvent(id) {
-  render(await loadEvent(id));
+  const data = await loadEvent(id);
+  // Rettigheder og point følger dagens gruppe
+  if (data.ev.group_id !== S.groupId) setGroup(data.ev.group_id);
+  render(data);
 
   // Genindlæs når kampe, tilmeldinger eller dagen ændres. Skriver man et resultat, venter vi til man er færdig.
   let timer = null, pending = false;
@@ -74,7 +77,7 @@ function context({ ev, signups, matches, changes, log }) {
   const planPlayers = new Set(futureRounds.flatMap((r) => [...inRound(r)]));
 
   const delta = {};
-  for (const c of changes) delta[c.match_id + c.player_id] = c.delta;
+  for (const c of changes) delta[c.match_id + c.player_id] = c.group_delta ?? c.delta;
 
   const f = ev.format;
   const totalRounds = Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes));
@@ -89,7 +92,8 @@ function context({ ev, signups, matches, changes, log }) {
     roundStart: (r) => new Date(new Date(ev.starts_at).getTime() + (r - 1) * ev.round_minutes * 60e3),
     endsAt: new Date(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3),
     planOutdated: futureRounds.length > 0 && ev.status !== 'afsluttet' &&
-      (L.playing.some((p) => !planPlayers.has(p)) || [...planPlayers].some((p) => !L.playing.includes(p))),
+      (L.playing.some((p) => !planPlayers.has(p)) || [...planPlayers].some((p) => !L.playing.includes(p)) ||
+       futureRounds.some((r) => rounds[r].length > courts.length || rounds[r].some((m) => !ev.court_ids.includes(m.court_id)))),
     run: canRun(), admin: isAdmin(),
   };
 }
@@ -108,7 +112,7 @@ function standingsOf(c) {
   }
   const estimate = isAm && !ev.ranked;
   if (estimate) {
-    const elo = Object.fromEntries(Object.values(S.profiles).map((p) => [p.id, p.elo]));
+    const elo = Object.fromEntries(Object.values(S.profiles).map((p) => [p.id, groupElo(p.id)]));
     for (const t of Object.values(table)) t.pts = 0;
     for (const m of done.sort((x, y) => x.round_no - y.round_no || x.created_at.localeCompare(y.created_at))) {
       if (m.score_a + m.score_b === 0) continue;
@@ -131,12 +135,30 @@ function header(c) {
   const { ev, center, isRot, isAm, courts, admin } = c;
   const status = ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : '';
   return `
-    <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ Fredage</button>
-      ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del fredagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret fredag">✏️</a></div>` : ''}</div>
-    <h1>${esc(ev.title || 'Fredagspadel')}</h1>
+    <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
+      ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}</div>
+    <h1>${esc(ev.title || group()?.name || 'Padel')}</h1>
     <p class="muted cap">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })} · ${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}</p>
-    <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : isAm ? ` · ${ev.points_per_match} point` : ''}</span>
-      <span class="chip">${MODE[ev.team_mode]}</span><span class="chip">${plural(courts.length, 'bane', 'baner')}</span>${status}</div>`;
+    ${quickSettings(c, status)}`;
+}
+
+// Spiltype, hold og baner som knapper. Tryk for at ændre direkte på dagen (baner tildeles ofte først på dagen).
+function quickSettings(c, status) {
+  const { ev, isRot, isAm, courts, run, admin } = c;
+  const fmtLabel = `${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : isAm ? ` · ${ev.points_per_match} point` : ''}`;
+  const editable = run && ev.status !== 'afsluttet';
+  const chip = (key, label) => editable ? `<button class="chip edit" data-qs="${key}">${label} ▾</button>` : `<span class="chip">${label}</span>`;
+  const all = S.courts.filter((x) => x.center_id === ev.center_id).sort((a, b) => a.sort - b.sort);
+  const seg = (name, opts, val, can) => `<div class="seg qs">${Object.entries(opts).map(([k, v]) =>
+    `<button class="segbtn ${k === val ? 'on' : ''}" data-set="${name}" data-val="${k}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</div>`;
+  return `
+    <div class="chips static">${admin ? chip('format', fmtLabel) : `<span class="chip">${fmtLabel}</span>`}${admin ? chip('mode', MODE[ev.team_mode]) : `<span class="chip">${MODE[ev.team_mode]}</span>`}${chip('courts', plural(courts.length, 'bane', 'baner'))}${status}</div>
+    ${editable ? `<div class="card qspanel" id="qspanel" hidden>
+      ${admin ? `<div class="lbl">Spiltype</div>${seg('format', FORMAT, ev.format, true)}
+      <div class="lbl">Hold</div>${seg('mode', MODE, ev.team_mode, true)}` : ''}
+      <div class="lbl">Baner i dag <small class="muted">(tryk for at slå til og fra)</small></div>
+      <div class="seg qs">${all.map((x) => `<button class="segbtn ${ev.court_ids.includes(x.id) ? 'on' : ''}" data-court="${x.id}">${esc(x.name)}</button>`).join('')}</div>
+    </div>` : ''}`;
 }
 
 // "Din aften": det vigtigste for spilleren selv, øverst
@@ -215,7 +237,7 @@ function runBar(c) {
     canRedoPlan ? '<button class="btn sm" id="redoPlan">🔄 Lav dagsplanen om</button>' : '',
     canRedoRound ? `<button class="btn sm" id="redoRound">Lav runde ${ev.current_round} om</button>` : '',
     ev.status === 'igang' && !primary.includes('finish') ? '<button class="btn sm ghost" id="finish">Afslut dagen</button>' : '',
-    admin && !matches.length ? '<button class="btn sm ghost danger" id="delEvent">Slet fredag</button>' : '',
+    admin && !matches.length ? '<button class="btn sm ghost danger" id="delEvent">Slet dagen</button>' : '',
   ].filter(Boolean).join('');
 
   return `<div class="card runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}</div>
@@ -322,13 +344,13 @@ function signupsSection(c) {
     return `<div class="person ${wait ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
       ${run ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld ${esc(p.name)}">×</button>` : ''}</div>`;
   }).join('')}</div>`;
-  const others = Object.values(S.profiles).filter((p) => !signed.includes(p.id)).sort((a, b) => a.name.localeCompare(b.name));
   return `
     <h3>Tilmeldte (${signed.length})</h3>
     <div class="card lineup ${L.courts ? 'ok' : ''}">🎾 ${lineupText(L, courts.length)}</div>
     ${signed.length ? person(L.courts ? L.playing : signed, false) : '<p class="muted">Ingen endnu.</p>'}
     ${L.courts && L.waiting.length ? `<h3>Venteliste (${L.waiting.length})</h3>${person(L.waiting, true, L.playing.length)}` : ''}
-    ${run && ev.status !== 'afsluttet' ? `<select id="addPlayer" class="addp"><option value="">+ Tilmeld en spiller…</option>${others.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select>` : ''}
+    ${run && ev.status !== 'afsluttet' ? `<div class="addp"><input type="search" id="addSearch" placeholder="➕ Tilmeld en spiller: søg på navn…" autocomplete="off">
+      <div id="addHits" class="hits"></div></div>` : ''}
     ${log.length ? `<details class="faq log"><summary>Til‑ og afmeldinger (${log.length})</summary><div>${log.map((l) => {
       const by = l.done_by && l.done_by !== l.player_id ? ` <small>af ${esc(first(l.done_by))}</small>` : '';
       return `<div class="logrow"><span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
@@ -387,7 +409,7 @@ function bind(c) {
   // Tilmelding
   act($('signon'), async () => { await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: me })); toast('Du er tilmeldt'); await reload(); });
   act($('signoff'), async () => {
-    if (!confirm('Afmeld dig denne fredag?')) return;
+    if (!confirm('Afmeld dig denne dag?')) return;
     await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', me)); await reload();
   });
   app.querySelectorAll('[data-unsign]').forEach((b) => (b.onclick = async () => {
@@ -395,11 +417,27 @@ function bind(c) {
     await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', b.dataset.unsign));
     await reload();
   }));
-  $('addPlayer')?.addEventListener('change', async (e) => {
-    if (!e.target.value) return;
-    await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: e.target.value }));
-    await reload();
-  });
+  // Søg og tilmeld en spiller fra gruppen
+  const search = $('addSearch');
+  if (search) {
+    const others = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter((p) => p && !c.signed.includes(p.id));
+    const draw = () => {
+      const t = search.value.trim().toLowerCase();
+      const hits = t ? others.filter((p) => p.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(t)) || p.name.toLowerCase().includes(t)).slice(0, 8) : [];
+      $('addHits').innerHTML = hits.map((p) => `<button class="hit" data-add="${p.id}">${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em></button>`).join('')
+        || (t ? '<p class="muted small">Ingen i gruppen matcher.</p>' : '');
+      $('addHits').querySelectorAll('[data-add]').forEach((b) => (b.onclick = async () => {
+        busy(b, true);
+        try {
+          await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: b.dataset.add }));
+          toast(`${nameOf(b.dataset.add)} er tilmeldt`);
+          await reload();
+          $('addSearch')?.focus();
+        } catch { busy(b, false); }
+      }));
+    };
+    search.oninput = draw;
+  }
 
   // Runder: lav hold til en eller flere runder. Hver ny runde tager højde for dem, der lige er lavet.
   const buildRounds = async (from, to) => {
@@ -453,12 +491,12 @@ function bind(c) {
   });
   act($('reopen'), async () => { await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: matches.length ? 'igang' : 'planlagt' })); await reload(); });
   act($('delEvent'), async () => {
-    if (!confirm('Slet denne fredag?')) return;
+    if (!confirm('Slet denne spilledag?')) return;
     await q(sb.from('padel_events').delete().eq('id', ev.id));
     location.hash = '#/fredage';
   });
   $('shareEvent')?.addEventListener('click', () =>
-    share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || 'Fredagspadel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
+    share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
   act($('rank'), async () => {
     if (!confirm('Tilføj dagen til den officielle rangliste? Pointene beregnes kamp for kamp.')) return;
     await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: true })); toast('Dagen tæller nu på ranglisten'); await reload();
@@ -467,6 +505,46 @@ function bind(c) {
     if (!confirm('Fjern dagen fra ranglisten? Pointene rulles tilbage.')) return;
     await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: false })); await reload();
   });
+
+  // Hurtige indstillinger: spiltype, hold og baner
+  app.querySelectorAll('[data-qs]').forEach((b) => (b.onclick = () => { const p = $('qspanel'); p.hidden = !p.hidden; }));
+  const ROUND_MIN = { rotation: 30, saet: 20, americano: 20, klassisk: 40 };
+  app.querySelectorAll('[data-set]').forEach((b) => (b.onclick = async () => {
+    const { set, val } = b.dataset;
+    if (b.classList.contains('on')) return;
+    const upd = set === 'mode' ? { team_mode: val } : {
+      format: val, round_minutes: ROUND_MIN[val], points_per_match: val === 'americano' ? (ev.points_per_match || 24) : null,
+      ...(matches.some((m) => m.status === 'bekraeftet') ? {} : { ranked: val !== 'americano' }),
+    };
+    busy(b, true);
+    try { await q(sb.from('padel_events').update(upd).eq('id', ev.id)); toast('Gemt'); await reload(); $('qspanel').hidden = false; } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-court]').forEach((b) => (b.onclick = async () => {
+    const id = b.dataset.court;
+    const next = ev.court_ids.includes(id) ? ev.court_ids.filter((x) => x !== id) : [...ev.court_ids, id];
+    if (!next.length) return toast('Der skal være mindst én bane', true);
+    busy(b, true);
+    try {
+      await q(sb.rpc('padel_set_event_courts', { p_event: ev.id, p_courts: next }));
+      // Kampe der ikke er spillet endnu flyttes over på de valgte baner (i banernes rækkefølge)
+      const chosen = S.courts.filter((x) => next.includes(x.id)).sort((a, b2) => a.sort - b2.sort).map((x) => x.id);
+      for (const [r, ms] of Object.entries(rounds)) {
+        if (+r < ev.current_round) continue;
+        const open = ms.filter((m) => m.status === 'planlagt');
+        if (open.length > chosen.length) continue;
+        // Behold banen hvis den stadig er valgt og ledig, ellers tag den næste ledige
+        const taken = new Set(ms.filter((m) => m.status !== 'planlagt').map((m) => m.court_id));
+        const plan = new Map();
+        for (const m of open) if (chosen.includes(m.court_id) && !taken.has(m.court_id)) { plan.set(m.id, m.court_id); taken.add(m.court_id); }
+        for (const m of open) if (!plan.has(m.id)) { const fr = chosen.find((x) => !taken.has(x)); plan.set(m.id, fr); taken.add(fr); }
+        for (const m of open) {
+          const t = plan.get(m.id);
+          if (t && t !== m.court_id) await q(sb.rpc('padel_admin_set_teams', { p_match: m.id, p_al: m.a_left, p_ar: m.a_right, p_bl: m.b_left, p_br: m.b_right, p_court: t }));
+        }
+      }
+      await reload(); $('qspanel').hidden = false;
+    } catch { busy(b, false); }
+  }));
 
   // Kampkort
   const form = (cls, id) => app.querySelector(`form.${cls}[data-id="${id}"]`);

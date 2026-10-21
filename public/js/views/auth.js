@@ -3,14 +3,14 @@ import { sb, S, app, hooks, esc, toast, q, busy } from '../core.js';
 
 export function renderAuth(mode = 'login') {
   const signup = mode === 'signup';
-  const invited = signup && location.hash === '#/velkommen';
+  const invited = signup && location.hash.startsWith('#/velkommen');
   app.innerHTML = `
   <div class="auth">
     <div class="logo">🎾</div>
-    <h1>Fredagspadel</h1>
+    <h1>Padel</h1>
     <p class="muted">${invited
-      ? 'Du er inviteret med til fredagspadel! Opret en konto, så kan du tilmelde dig og komme på ranglisten.'
-      : 'Rangliste, hold og resultater til fredagspadel.'}</p>
+      ? 'Du er inviteret med til padel! Opret en konto, eller log ind hvis du har en, så kan du komme med i gruppen.'
+      : 'Rangliste, hold og resultater til jeres padelgruppe.'}</p>
     <form class="card" id="authForm">
       <label>E-mail<input type="email" name="email" required autocomplete="email"></label>
       <label>Adgangskode<input type="password" name="password" required minlength="6" autocomplete="${signup ? 'new-password' : 'current-password'}"></label>

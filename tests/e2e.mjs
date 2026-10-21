@@ -33,12 +33,12 @@ try {
   await page.fill('input[name=email]', 'jimmy@test');
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
-  await page.waitForSelector('text=Opret fredag');
-  ok((await text()).includes('ingen kommende fredage'), 'tom oversigt viser opret-knap');
+  await page.waitForSelector('text=Opret spilledag');
+  ok((await text()).includes('ingen kommende spilledage'), 'tom oversigt viser opret-knap');
   await shot('fredage-tom');
 
   // Opret 4 fredage med ét sæt pr. runde
-  await page.click('a:has-text("Opret fredag")');
+  await page.click('a:has-text("Opret spilledag")');
   await page.waitForSelector('#nf');
   await page.click('label:has-text("Ét sæt pr. runde")');
   ok((await page.inputValue('input[name=minutes]')) === '20', 'ét sæt sætter 20 min pr. runde');
@@ -58,8 +58,8 @@ try {
   await page.locator('a.ev').first().click();
   await page.waitForSelector('.page.event');
   for (let i = 0; i < 8; i++) {
-    const opt = await page.locator('#addPlayer option').nth(1).getAttribute('value');
-    await page.selectOption('#addPlayer', opt);
+    await page.fill('#addSearch', 'test');
+    await page.locator('#addHits .hit').first().click();
     await wait(250);
   }
   ok((await text()).includes('2 baner klar · 1 på venteliste'), 'venteliste ved 9 tilmeldte');
@@ -140,6 +140,85 @@ try {
   await page.click('#stopViewAs');
   await wait(400);
   ok(!(await page.locator('#viewAsBar').count()), 'tilbage til mig');
+
+  // Hurtige indstillinger på dagen: åbn en ny dag, slå en bane fra
+  await page.click('#nav a:has-text("Spilledage")');
+  await page.waitForSelector('a.ev');
+  await page.locator('a.ev').first().click();
+  await page.waitForSelector('.page.event');
+  await page.click('[data-qs="courts"]');
+  ok(await page.locator('#qspanel').isVisible(), 'tryk på "5 baner" åbner panel');
+  await page.locator('[data-court]').last().click();
+  await wait(400);
+  ok((await page.locator('[data-qs="courts"]').innerText()).includes('4 baner'), 'bane slået fra (4 baner)');
+  await page.locator('[data-set="format"][data-val="rotation"]').click();
+  await wait(400);
+  ok((await page.locator('[data-qs="format"]').innerText()).includes('Rotation'), 'spiltype skiftet til rotation');
+  await shot('hurtige-indstillinger');
+
+  // Grupper: Jimmy opretter Lørdagspadel i Helsinge og gør Brian til admin
+  await page.click('#nav a:has-text("Admin")');
+  await page.waitForSelector('#newGroup');
+  await page.fill('#newGroup input[name=name]', 'Lørdagspadel');
+  await page.locator('#newGroup label:has-text("Helsinge")').click();
+  await page.click('#newGroup button');
+  await wait(500);
+  ok((await text()).includes('lørdagspadel'), 'gruppe oprettet og valgt');
+  await page.fill('#superAdd', 'bri');
+  await page.locator('#superHits [data-sadd][data-r="admin"]').click();
+  await wait(500);
+  ok((await text()).includes('brian'), 'Brian tilføjet som admin');
+  await shot('superadmin');
+  const lordag = await page.evaluate(() => localStorage.getItem('fp-group'));
+
+  // Log ind som Brian: ser kun Lørdagspadel, kan kun vælge Helsinge
+  await page.click('#nav a:has-text("Profil")');
+  await page.click('#logout');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'brian@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a');
+  await page.click('#nav a:has-text("Spilledage")');
+  await wait(400);
+  ok((await text()).includes('lørdagspadel') && !(await text()).includes('fredagspadel'), 'Brian ser kun Lørdagspadel');
+  await page.click('a:has-text("Opret spilledag")');
+  await page.waitForSelector('#nf');
+  const centerOpts = await page.locator('select[name=center] option').allTextContents();
+  ok(centerOpts.length === 1 && centerOpts[0] === 'Helsinge', 'Brian kan kun vælge Helsinge');
+  await page.locator('select[name=count]').selectOption('1');
+  await page.click('#createBtn');
+  await wait(500);
+
+  // Test Anne bruger invitationslinket og venter på godkendelse
+  await page.click('#nav a:has-text("Profil")');
+  await page.click('#logout');
+  await page.waitForSelector('#authForm');
+  await page.goto('http://localhost:8765/#/velkommen/' + lordag);
+  await page.waitForSelector('#authForm');
+  await page.click('#switch');
+  await page.fill('input[name=email]', 'test7@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await wait(700);
+  ok((await page.locator('#toast').innerText()).includes('bedt om at komme med') || (await text()).includes('lørdagspadel'), 'anmodning sendt');
+  await page.click('#nav a:has-text("Profil")').catch(() => {});
+  await wait(300);
+  ok((await text()).includes('venter på godkendelse'), 'profil viser ventende anmodning');
+  await page.click('#logout');
+
+  // Brian godkender Anne
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'brian@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a:has-text("Admin")');
+  await page.click('#nav a:has-text("Admin")');
+  await page.waitForSelector('[data-approve]');
+  await shot('godkend');
+  await page.click('[data-approve]');
+  await wait(500);
+  ok((await text()).includes('spillere (2)'), 'Anne godkendt i Lørdagspadel');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

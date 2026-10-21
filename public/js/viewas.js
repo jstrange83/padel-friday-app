@@ -6,7 +6,10 @@ const KEY = 'fp-viewas';
 export function readViewAs() {
   let id = null;
   try { id = sessionStorage.getItem(KEY); } catch {}
-  if (id && (!S.realMe?.is_admin || !S.profiles[id])) { id = null; try { sessionStorage.removeItem(KEY); } catch {} }
+  // Superadmin, eller admin i en gruppe som spilleren er med i
+  const allowed = id && S.profiles[id] && (S.realMe?.is_superadmin || S.members.some((m) => m.player_id === S.realMe?.id && m.role === 'admin' && m.status === 'aktiv' &&
+    S.members.some((x) => x.group_id === m.group_id && x.player_id === id)));
+  if (id && !allowed) { id = null; try { sessionStorage.removeItem(KEY); } catch {} }
   return id;
 }
 

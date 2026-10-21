@@ -6,7 +6,10 @@ export const sb = createClient('https://mxdgspfhakomblprhvto.supabase.co', 'sb_p
 });
 
 // S.me er den man ser appen som (kan være en anden spiller i "se som"), S.realMe er den der er logget ind.
-export const S = { session: null, me: null, realMe: null, viewAs: null, profiles: {}, centers: [], courts: [], filter: 'alle', recovery: false };
+export const S = {
+  session: null, me: null, realMe: null, viewAs: null, profiles: {}, centers: [], courts: [], filter: 'alle', recovery: false,
+  groups: [], groupCenters: [], members: [], settings: {}, groupId: null,
+};
 export const app = document.getElementById('app');
 export const navEl = document.getElementById('nav');
 
@@ -21,11 +24,26 @@ export const FORMAT = { rotation: 'Rotation på tid', saet: 'Ét sæt pr. runde'
 export const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
 export const ROLE = { bruger: 'Bruger', superbruger: 'Superbruger', admin: 'Admin' };
 
-// ---------- Roller ----------
-export const roleOf = (p) => p?.role || (p?.is_admin ? 'admin' : 'bruger');
-export const isAdmin = () => !!S.me?.is_admin;
+// ---------- Grupper og roller ----------
+// Superadmin ser og styrer alt. Ellers gælder rollen i den valgte gruppe.
+export const isSuper = () => !!S.me?.is_superadmin;
+export const member = (pid, g = S.groupId) => S.members.find((m) => m.group_id === g && m.player_id === pid);
+export const roleIn = (pid, g = S.groupId) => (member(pid, g)?.status === 'aktiv' ? member(pid, g).role : null);
+export const roleOf = (p, g = S.groupId) => roleIn(p?.id, g) || 'bruger';
+export const isAdmin = (g = S.groupId) => isSuper() || roleIn(S.me?.id, g) === 'admin';
 // Må køre en fredag: starte runder, rette hold, til-/afmelde andre, godkende resultater
-export const canRun = () => isAdmin() || roleOf(S.me) === 'superbruger';
+export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g));
+// Grupper jeg kan vælge imellem
+export const myGroups = () => S.groups.filter((g) => isSuper() || member(S.me?.id, g.id)?.status === 'aktiv');
+export const group = (g = S.groupId) => S.groups.find((x) => x.id === g);
+export const activeMembers = (g = S.groupId) => S.members.filter((m) => m.group_id === g && m.status === 'aktiv');
+// Point i gruppens egen rangliste
+export const groupElo = (pid, g = S.groupId) => member(pid, g)?.elo ?? 1000;
+export const groupCenterIds = (g = S.groupId) => S.groupCenters.filter((c) => c.group_id === g && c.enabled).map((c) => c.center_id);
+export function setGroup(g) {
+  S.groupId = g;
+  try { localStorage.setItem('fp-group', g); } catch {}
+}
 // Må tilmelde sig en fredag ud fra herre/dame
 export const canJoin = (ev) => ev.team_mode === 'aaben' || ev.team_mode === 'mix' ||
   (ev.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
@@ -84,7 +102,7 @@ export function radios(name, opts, val) {
 }
 
 export async function share(url, text) {
-  if (navigator.share) { try { await navigator.share({ title: 'Fredagspadel', text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  if (navigator.share) { try { await navigator.share({ title: 'Padel', text, url }); return; } catch (e) { if (e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(url); toast('Linket er kopieret'); }
   catch { prompt('Kopiér linket', url); }
 }
@@ -94,4 +112,12 @@ const cleanups = [];
 export const onLeave = (fn) => cleanups.push(fn);
 export function leavePage() {
   while (cleanups.length) { try { cleanups.pop()(); } catch {} }
+}
+
+// Vælger mellem grupper (vises kun hvis man har flere)
+export function groupBar(onChange) {
+  const gs = myGroups();
+  if (gs.length < 2) return '';
+  setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); onChange(); })), 0);
+  return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}</button>`).join('')}</div>`;
 }

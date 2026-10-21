@@ -215,3 +215,26 @@ details.rounds .rhead:first-of-type { margin-top: 6px; }
 .ppanel { padding: 4px 14px 14px; background: var(--card2); }
 .ppanel label { margin: 6px 0 10px; }
 .fresh { margin-top: 14px; }
+
+/* ---------- Grupper ---------- */
+.chips.groups .chip, .chips.tabs .chip { font-weight: 600; }
+h2.sect { font-size: 20px; margin: 34px 0 6px; padding-top: 18px; border-top: 1px solid var(--line); }
+.hits { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.hit { display: flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--line); color: var(--text); border-radius: 10px; padding: 12px 14px; font: inherit; font-weight: 600; text-align: left; cursor: pointer; }
+.hit em { font-style: normal; font-size: 12px; color: var(--accent); margin-left: auto; }
+.hitrow { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hitrow:last-child { border-bottom: 0; }
+.switch { display: flex; align-items: center; gap: 10px; color: var(--text); font-size: 15px; margin: 0; cursor: pointer; }
+.switch input { width: 22px; height: 22px; margin: 0; accent-color: var(--accent); }
+#newGroup input[name=name] { margin-bottom: 4px; }
+#newGroup .btn { margin-top: 12px; }
+#superAdd { margin-top: 6px; }
+
+/* Hurtige indstillinger på dagen */
+.chip.edit { border-color: var(--accent); color: var(--accent); }
+.qspanel { margin-top: 0; }
+.qspanel .lbl:first-child { margin-top: 0; }
+.seg.qs { gap: 6px; }
+.segbtn { flex: 1; min-width: 80px; padding: 10px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+.segbtn.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.segbtn:disabled { opacity: .5; }

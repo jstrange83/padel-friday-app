@@ -9,6 +9,10 @@ Padelapp til fredagspadel: rangliste med Elo, tilmelding, automatisk holdsætnin
 - **Database:** Supabase (lige nu i TaskHero-projektet, alle tabeller og funktioner har præfikset `padel_`).
 - **Hosting:** Vercel. Hver ændring på `main` udgives automatisk.
 
+## Grupper
+Hver gruppe har egne medlemmer (rolle: bruger, superbruger, admin; status: afventer, aktiv, fjernet), spilledage, centre og point.
+Superadmin (`padel_profiles.is_superadmin`) ser alt. Adgang håndhæves i databasen med RLS (restrictive policies pr. gruppe).
+
 ## Elo
 Holdets styrke = gennemsnit af de to spillere, K = 32, start 1000.
 Rotation på tid: resultat = andel vundne partier (9-3 = 0,75, 8-8 = 0,5). Klassisk: sejr/uafgjort/nederlag.

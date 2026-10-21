@@ -13,16 +13,24 @@ function seed() {
   ];
   const names = ['Anders', 'Bo', 'Carsten', 'Dennis', 'Erik', 'Frank', 'Anne', 'Berit', 'Camilla', 'Dorthe', 'Eva', 'Freja'];
   const sides = ['venstre', 'hojre', 'begge'];
-  const profiles = [{ id: 'u-admin', name: 'Jimmy', gender: 'mand', side: 'hojre', elo: 1000, is_admin: true, role: 'admin', email: 'jimmy@test' },
-    ...names.map((n, i) => ({ id: 'u-' + (i + 1), name: 'Test ' + n, gender: i < 6 ? 'mand' : 'kvinde', side: sides[i % 3], elo: 1000, is_admin: false, role: 'bruger', email: `test${i + 1}@fredagspadel.test` }))];
-  return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [] };
+  const profiles = [{ id: 'u-admin', name: 'Jimmy', gender: 'mand', side: 'hojre', elo: 1000, is_admin: true, is_superadmin: true, role: 'admin', email: 'jimmy@test' },
+    ...names.map((n, i) => ({ id: 'u-' + (i + 1), name: 'Test ' + n, gender: i < 6 ? 'mand' : 'kvinde', side: sides[i % 3], elo: 1000, is_admin: false, role: 'bruger', email: `test${i + 1}@fredagspadel.test` })),
+    { id: 'u-brian', name: 'Brian', gender: 'mand', side: 'venstre', elo: 1000, is_admin: false, role: 'bruger', email: 'brian@test' }];
+  const groups = [{ id: 'g-fre', name: 'Fredagspadel' }];
+  const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
+  return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
+    padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
+    padel_settings: [{ id: 1, global_ranking_public: false }] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
 const save = () => sessionStorage.setItem(KEY, JSON.stringify(db));
 const uid = () => JSON.parse(sessionStorage.getItem(SKEY) || 'null')?.user.id;
 const me = () => db.padel_profiles.find((p) => p.id === uid());
-const superuser = () => ['admin', 'superbruger'].includes(me()?.role);
+const GM = (g, p) => db.padel_group_members.find((m) => m.group_id === g && m.player_id === p);
+const evGroup = (eid) => db.padel_events.find((e) => e.id === eid)?.group_id;
+const canRun = (g) => me()?.is_superadmin || ['admin', 'superbruger'].includes(GM(g, uid())?.status === 'aktiv' && GM(g, uid()).role);
+const superuser = canRun;
 
 const DEFAULTS = {
   padel_events: () => ({ id: uuid(), status: 'planlagt', current_round: 0, round_started_at: null, ranked: true, duration_minutes: 120, round_minutes: 30, team_mode: 'aaben', format: 'rotation', points_per_match: null, title: null, created_at: now() }),
@@ -102,26 +110,55 @@ class Query {
 
 // ---------- Databasefunktioner ----------
 function applyElo(m) {
-  const ev = db.padel_events.find((e) => e.id === m.event_id);
+  const ev = db.padel_events.find((e) => e.id === m.event_id), g = ev.group_id;
   if (m.status !== 'bekraeftet' || !ev.ranked || db.padel_elo_changes.some((c) => c.match_id === m.id && c.active)) return;
   if (['rotation', 'americano', 'saet'].includes(ev.format) && m.score_a + m.score_b === 0) return;
   const s = ev.format === 'klassisk' ? (m.score_a > m.score_b ? 1 : m.score_a < m.score_b ? 0 : 0.5) : m.score_a / (m.score_a + m.score_b);
   const P = (id) => db.padel_profiles.find((p) => p.id === id);
-  const ra = (P(m.a_left).elo + P(m.a_right).elo) / 2, rb = (P(m.b_left).elo + P(m.b_right).elo) / 2;
-  const d = Math.round(32 * (s - 1 / (1 + 10 ** ((rb - ra) / 400))));
-  for (const [id, dd] of [[m.a_left, d], [m.a_right, d], [m.b_left, -d], [m.b_right, -d]]) {
+  const E = (a, b) => 1 / (1 + 10 ** ((b - a) / 400));
+  const d = Math.round(32 * (s - E((P(m.a_left).elo + P(m.a_right).elo) / 2, (P(m.b_left).elo + P(m.b_right).elo) / 2)));
+  const gd = Math.round(32 * (s - E((GM(g, m.a_left).elo + GM(g, m.a_right).elo) / 2, (GM(g, m.b_left).elo + GM(g, m.b_right).elo) / 2)));
+  for (const [id, sg] of [[m.a_left, 1], [m.a_right, 1], [m.b_left, -1], [m.b_right, -1]]) {
     db.padel_elo_changes = db.padel_elo_changes.filter((c) => !(c.match_id === m.id && c.player_id === id));
-    db.padel_elo_changes.push({ match_id: m.id, player_id: id, elo_before: P(id).elo, delta: dd, active: true, created_at: now() });
-    P(id).elo += dd;
+    db.padel_elo_changes.push({ match_id: m.id, player_id: id, elo_before: P(id).elo, delta: sg * d, group_delta: sg * gd, active: true, created_at: now() });
+    P(id).elo += sg * d; GM(g, id).elo += sg * gd;
   }
 }
 function revertElo(id) {
-  for (const c of db.padel_elo_changes.filter((x) => x.match_id === id && x.active)) { db.padel_profiles.find((p) => p.id === c.player_id).elo -= c.delta; c.active = false; }
+  const g = evGroup(M(id).event_id);
+  for (const c of db.padel_elo_changes.filter((x) => x.match_id === id && x.active)) {
+    db.padel_profiles.find((p) => p.id === c.player_id).elo -= c.delta; GM(g, c.player_id).elo -= c.group_delta; c.active = false;
+  }
 }
 const M = (id) => db.padel_matches.find((m) => m.id === id);
 const teamOf = (m) => ([m.a_left, m.a_right].includes(uid()) ? 'a' : [m.b_left, m.b_right].includes(uid()) ? 'b' : null);
 
 const RPC = {
+  padel_group_name: ({ g }) => db.padel_groups.find((x) => x.id === g)?.name,
+  padel_request_join: ({ g }) => {
+    const m = GM(g, uid());
+    if (m?.status === 'aktiv') return 'aktiv';
+    if (m) m.status = 'afventer'; else db.padel_group_members.push({ group_id: g, player_id: uid(), role: 'bruger', status: 'afventer', elo: 1000 });
+    return 'afventer';
+  },
+  padel_set_member: ({ g, p, p_role, p_status }) => {
+    const m = GM(g, p);
+    if (m) Object.assign(m, { role: p_role, status: p_status }); else db.padel_group_members.push({ group_id: g, player_id: p, role: p_role, status: p_status, elo: 1000 });
+  },
+  padel_create_group: ({ p_name, p_centers }) => {
+    const id = uuid();
+    db.padel_groups.push({ id, name: p_name });
+    p_centers.forEach((c) => db.padel_group_centers.push({ group_id: id, center_id: c, enabled: true }));
+    return id;
+  },
+  padel_set_group_centers: ({ g, p_centers }) => {
+    db.padel_group_centers.filter((x) => x.group_id === g).forEach((x) => (x.enabled = p_centers.includes(x.center_id)));
+    p_centers.filter((c) => !db.padel_group_centers.some((x) => x.group_id === g && x.center_id === c)).forEach((c) => db.padel_group_centers.push({ group_id: g, center_id: c, enabled: true }));
+  },
+  padel_rename_group: ({ g, p_name }) => { db.padel_groups.find((x) => x.id === g).name = p_name; },
+  padel_set_global_public: ({ p_public }) => { db.padel_settings[0].global_ranking_public = p_public; },
+  padel_global_ranking: () => db.padel_profiles.map((p) => ({ id: p.id, name: p.name, gender: p.gender, elo: p.elo, matches: db.padel_elo_changes.filter((c) => c.player_id === p.id && c.active).length })),
+  padel_set_event_courts: ({ p_event, p_courts }) => { db.padel_events.find((e) => e.id === p_event).court_ids = p_courts; },
   padel_save_profile: ({ p_name, p_gender, p_side }) => {
     const p = me();
     if (p) Object.assign(p, { name: p_name, gender: p_gender, side: p_side });
@@ -173,7 +210,7 @@ export function createClient() {
     },
     from: (t) => new Query(t),
     async rpc(name, args) {
-      try { await RPC[name](args); save(); return { data: null, error: null }; }
+      try { const data = await RPC[name](args); save(); return { data: data ?? null, error: null }; }
       catch (e) { return { data: null, error: { message: e.message } }; }
     },
     channel() { const c = { on: () => c, subscribe: () => c }; return c; },

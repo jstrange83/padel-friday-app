@@ -120,7 +120,13 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvordan inviterer jeg en ven?',
-    a: `<p>Det er kun en admin, der kan invitere nye spillere. Spørg en admin, så sender de et link, hvor din ven kan oprette en profil og tilmelde sig.</p>`,
+    a: `<p>Det er kun gruppens admin, der kan invitere. Spørg en admin, så sender de et link. Din ven opretter en profil (eller logger ind), og når admin har godkendt, kan de tilmelde sig.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Hvad er grupper, og kan jeg være med i flere?',
+    a: `<p>Hver gruppe, fx Fredagspadel og Lørdagspadel, har sine egne spilledage, spillere og sin egen rangliste. Du ser kun de grupper, du er med i.</p>
+<p>Du kan godt være med i flere grupper, hvis gruppens admin har godkendt dig. Har du flere grupper, skifter du mellem dem med knapperne øverst på Spilledage og Rangliste. Dine point er separate i hver gruppe.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
@@ -135,7 +141,9 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvad kan en superbruger og en admin?',
-    a: `<p><b>Superbruger</b> kan køre en fredag: starte runder, lave en runde om, rette hold, til‑ og afmelde spillere, indtaste, godkende og rette resultater og afslutte dagen.</p>
-<p><b>Admin</b> kan det samme og desuden oprette og slette fredage, styre centre og baner, give roller og bestemme, om Americano skal tælle på ranglisten.</p>`,
+    a: `<p>Roller gælder pr. gruppe.</p>
+<p><b>Superbruger</b> kan køre en spilledag: starte runder, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater og afslutte dagen.</p>
+<p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller og lægge Americano på ranglisten.</p>
+<p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper.</p>`,
   },
 ];
