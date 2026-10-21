@@ -136,3 +136,15 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
 .invite { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-family: ui-monospace, monospace; font-size: 14px; word-break: break-all; margin: 8px 0; }
 #shareEvent { margin-bottom: 4px; }
+
+/* FAQ */
+#faqSearch { margin: 12px 0 4px; }
+.faq { background: var(--card); border-radius: var(--r); margin: 8px 0; overflow: hidden; }
+.faq summary { padding: 14px 40px 14px 14px; font-weight: 600; cursor: pointer; list-style: none; position: relative; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; position: absolute; right: 16px; top: 12px; font-size: 20px; color: var(--accent); }
+.faq[open] summary::after { content: '–'; }
+.faq > div { padding: 0 14px 14px; color: #cfdbe7; font-size: 15px; }
+.faq p { margin: 0 0 10px; } .faq ul, .faq ol { margin: 0 0 10px; padding-left: 20px; } .faq li { margin: 4px 0; }
+.ranked { font-size: 15px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.ranked .btn { width: auto; }

@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { generateRound } from './pairing.js';
+import { FAQ } from './faq.js';
 
 const sb = createClient('https://mxdgspfhakomblprhvto.supabase.co', 'sb_publishable_0ZKQoqCX5a6okJl_Lh0Leg_URrexVdI', {
   auth: { persistSession: true, storageKey: 'fredagspadel-auth' },
@@ -13,7 +14,7 @@ const navEl = document.getElementById('nav');
 const SIDE = { venstre: 'Venstre', hojre: 'Højre', begge: 'Begge sider' };
 const SIDE_SHORT = { venstre: 'V', hojre: 'H', begge: 'V/H' };
 const GENDER = { mand: 'Mand', kvinde: 'Kvinde' };
-const FORMAT = { rotation: 'Rotation på tid', klassisk: 'Klassisk' };
+const FORMAT = { rotation: 'Rotation på tid', americano: 'Americano', klassisk: 'Klassisk' };
 const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -124,6 +125,7 @@ async function route() {
     if (page === 'fredag' && id) return await viewEvent(id);
     if (page === 'ny-fredag') return viewNewEvent();
     if (page === 'profil') return renderProfileForm(false);
+    if (page === 'faq') return viewFaq();
     if (page === 'spiller' && id) return await viewPlayer(id);
     if (page === 'admin' && S.me.is_admin) return await viewAdmin();
     return await viewEvents();
@@ -210,6 +212,7 @@ function renderProfileForm(isNew) {
     </form>
     ${isNew ? '' : `
       <a class="btn" href="#/spiller/${S.me.id}">Se min statistik</a>
+      <a class="btn" href="#/faq">❓ Spørgsmål og svar</a>
       <div class="card tip"><b>Tip:</b> Åbn appen i Safari eller Chrome og vælg "Føj til hjemmeskærm", så ligger den som en app på telefonen.</div>
       <button class="btn ghost" id="logout">Log ud</button>`}
   </div>`;
@@ -259,7 +262,7 @@ async function viewRanking() {
     <div class="list">${active.map(row).join('') || '<p class="muted pad">Ingen kampe spillet endnu.</p>'}</div>
     ${fresh.length ? `<h3>Ikke spillet endnu</h3><div class="list">${fresh.map((p) =>
       `<a class="row" href="#/spiller/${p.id}"><div class="grow"><b>${esc(p.name)}</b></div><div class="elo muted">${p.elo}</div></a>`).join('')}</div>` : ''}
-    <p class="muted small">Alle starter på 1000 Elo. Slår man et stærkere hold, giver det flere point.</p>
+    <p class="muted small">Alle starter på 1000 point. Slår man et stærkere hold, giver det flere point. <a class="link" href="#/faq">Læs hvordan point fungerer</a></p>
   </div>`;
   app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
 }
@@ -294,7 +297,7 @@ async function viewPlayer(id) {
     <h1>${esc(p.name)}</h1>
     <p class="muted">${GENDER[p.gender]} · ${SIDE[p.side]}${p.is_admin ? ' · Admin' : ''}</p>
     <div class="stats">
-      <div><b>${p.elo}</b><span>Elo</span></div>
+      <div><b>${p.elo}</b><span>Point</span></div>
       <div><b>${ms.length}</b><span>Kampe</span></div>
       <div><b>${w}/${d}/${l}</b><span>V/U/T</span></div>
       <div><b>${gf - ga > 0 ? '+' : ''}${gf - ga}</b><span>Score</span></div>
@@ -353,6 +356,8 @@ function viewNewEvent() {
       <div class="lbl">Format</div>${radios('format', FORMAT, 'rotation')}
       <label>Varighed<select name="duration">${[60, 90, 120, 150, 180].map((v) =>
         `<option value="${v}" ${v === 120 ? 'selected' : ''}>${v % 60 ? `${Math.floor(v / 60)}½ time` : `${v / 60} ${v === 60 ? 'time' : 'timer'}`}</option>`).join('')}</select></label>
+      <label id="ptsWrap" style="display:none">Point pr. kamp<select name="points">${[16, 21, 24, 32].map((v) => `<option value="${v}" ${v === 24 ? 'selected' : ''}>${v} point</option>`).join('')}</select>
+        <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
       <label id="minWrap">Minutter pr. runde<input type="number" name="minutes" value="30" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, 'aaben')}
       <button class="btn primary">Opret fredag</button>
@@ -370,7 +375,10 @@ function viewNewEvent() {
     document.getElementById('roundsHint').textContent = n ? `Giver ${n} runder` : '';
   };
   f.duration.onchange = hint; f.minutes.oninput = hint; hint();
-  const fmt = () => (document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none');
+  const fmt = () => {
+    document.getElementById('minWrap').style.display = f.format.value === 'rotation' ? '' : 'none';
+    document.getElementById('ptsWrap').style.display = f.format.value === 'americano' ? '' : 'none';
+  };
   f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = fmt));
   f.onsubmit = async (e) => {
     e.preventDefault();
@@ -381,7 +389,8 @@ function viewNewEvent() {
     try {
       const ev = await q(sb.from('padel_events').insert({
         center_id: f.center.value, starts_at: new Date(f.when.value).toISOString(), title: f.title.value.trim() || null,
-        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, duration_minutes: +f.duration.value || 120, court_ids: courts, created_by: S.me.id,
+        format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, points_per_match: f.format.value === 'americano' ? +f.points.value : null,
+        ranked: f.format.value !== 'americano', duration_minutes: +f.duration.value || 120, court_ids: courts, created_by: S.me.id,
       }).select().single());
       location.hash = '#/fredag/' + ev.id;
     } catch {} finally { busy(btn, false); }
@@ -455,7 +464,9 @@ function renderEvent({ ev, signups, matches, changes }) {
   const lastDone = isRot && ev.current_round >= totalRounds;
   const endsAt = new Date(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3);
   const hm = (d) => fmtDate(d, { hour: '2-digit', minute: '2-digit' });
-  const unit = isRot ? 'partier' : 'sæt';
+  const isAm = ev.format === 'americano';
+  const isShare = isRot || isAm;
+  const unit = isRot ? 'partier' : isAm ? 'point' : 'sæt';
 
   const canGender = ev.team_mode === 'aaben' || ev.team_mode === 'mix' || (ev.team_mode === 'herre' ? S.me.gender === 'mand' : S.me.gender === 'kvinde');
 
@@ -475,7 +486,7 @@ function renderEvent({ ev, signups, matches, changes }) {
       if (myTeam === m.reported_team) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>`;
     } else {
       const d = delta[m.id + m.a_left];
-      if (d !== undefined) status = `<span class="badge">Elo ${d > 0 ? '+' : ''}${d} / ${-d > 0 ? '+' : ''}${-d}</span>`;
+      if (d !== undefined) status = `<span class="badge">Point ${d > 0 ? '+' : ''}${d} / ${-d > 0 ? '+' : ''}${-d}</span>`;
       if (admin) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button><button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
     }
     const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
@@ -488,7 +499,7 @@ function renderEvent({ ev, signups, matches, changes }) {
         <span>–</span>
         <input type="number" name="b" min="0" max="99" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
         <button class="btn sm primary">Gem</button>
-        <small class="muted">Antal ${unit}</small>
+        <small class="muted">${isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : `Antal ${unit}`}</small>
       </form>
       ${admin && m.status === 'planlagt' ? teamForm(m) : ''}
     </div>`;
@@ -526,7 +537,23 @@ function renderEvent({ ev, signups, matches, changes }) {
       t.elo += delta[m.id + pl] || 0;
     }
   }
-  const standings = Object.entries(table).sort((x, y) => (isRot ? y[1].f - x[1].f || (y[1].f - y[1].a) - (x[1].f - x[1].a) : y[1].w - x[1].w || (y[1].f - y[1].a) - (x[1].f - x[1].a)));
+  // Americano der ikke er på ranglisten endnu: beregn cirka hvad pointene ville blive
+  const preview = {};
+  const unranked = isAm && !ev.ranked;
+  const confirmedCount = matches.filter((m) => m.status === 'bekraeftet').length;
+  if (unranked) {
+    const elo = Object.fromEntries(Object.values(S.profiles).map((p) => [p.id, p.elo]));
+    const done = matches.filter((m) => m.status === 'bekraeftet').sort((x, y) => x.round_no - y.round_no || x.created_at.localeCompare(y.created_at));
+    for (const m of done) {
+      if (m.score_a + m.score_b === 0) continue;
+      const ra = (elo[m.a_left] + elo[m.a_right]) / 2, rb = (elo[m.b_left] + elo[m.b_right]) / 2;
+      const d = Math.round(32 * (m.score_a / (m.score_a + m.score_b) - 1 / (1 + 10 ** ((rb - ra) / 400))));
+      for (const p of [m.a_left, m.a_right]) { elo[p] += d; preview[p] = (preview[p] || 0) + d; }
+      for (const p of [m.b_left, m.b_right]) { elo[p] -= d; preview[p] = (preview[p] || 0) - d; }
+    }
+    for (const [pid, t] of Object.entries(table)) t.elo = preview[pid] || 0;
+  }
+  const standings = Object.entries(table).sort((x, y) => (isShare ? y[1].f - x[1].f || (y[1].f - y[1].a) - (x[1].f - x[1].a) : y[1].w - x[1].w || (y[1].f - y[1].a) - (x[1].f - x[1].a)));
 
   const roundNos = Object.keys(rounds).map(Number).sort((a, b) => b - a);
   const timer = isRot && ev.status === 'igang' && ev.round_started_at
@@ -537,7 +564,7 @@ function renderEvent({ ev, signups, matches, changes }) {
     <button class="back" onclick="location.hash='#/fredage'">‹ Fredage</button>
     <h1>${esc(ev.title || 'Fredagspadel')}</h1>
     <p class="muted cap">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })} · ${hm(ev.starts_at)}–${hm(endsAt)} · ${esc(center?.name || '')}</p>
-    <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
+    <div class="chips static"><span class="chip">${FORMAT[ev.format]}${isRot ? ` · ${ev.round_minutes} min` : isAm ? ` · ${ev.points_per_match} point` : ''}</span><span class="chip">${MODE[ev.team_mode]}</span>
       <span class="chip">${courts.length} baner</span>${ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : ''}</div>
     ${ev.status !== 'afsluttet' ? '<button class="btn sm" id="shareEvent">📤 Del fredagen</button>' : ''}
 
@@ -558,11 +585,16 @@ function renderEvent({ ev, signups, matches, changes }) {
     ${roundNos.map((r) => `<h3>Runde ${r}</h3>${rounds[r].map(matchCard).join('')}`).join('')}
 
     ${standings.length ? `<h3>Dagens stilling</h3><div class="list table">
-      <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot ? 'Partier' : 'Sejre'}</div><div>Elo</div></div>
+      <div class="row th"><div class="pos">#</div><div class="grow">Spiller</div><div>K</div><div>${isRot ? 'Partier' : isAm ? 'Score' : 'Sejre'}</div><div>Point</div></div>
       ${standings.map(([pid, t], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i === 0 ? '👑' : i + 1}</div>
-        <div class="grow">${esc(nameOf(pid))}</div><div>${t.n}</div><div>${isRot ? `${t.f}–${t.a}` : t.w}</div>
-        <div class="delta ${t.elo > 0 ? 'up' : t.elo < 0 ? 'dn' : ''}">${t.elo > 0 ? '+' : ''}${t.elo}</div></div>`).join('')}
+        <div class="grow">${esc(nameOf(pid))}</div><div>${t.n}</div><div>${isShare ? `${t.f}–${t.a}` : t.w}</div>
+        <div class="delta ${t.elo > 0 ? 'up' : t.elo < 0 ? 'dn' : ''}">${unranked ? '≈' : ''}${t.elo > 0 ? '+' : ''}${t.elo}</div></div>`).join('')}
     </div>` : ''}
+
+    ${isAm ? `<div class="card ranked">${ev.ranked
+      ? `✅ Dagen tæller på den officielle rangliste.${admin ? '<button class="btn sm" id="unrank">Fjern fra ranglisten</button>' : ''}`
+      : `ℹ️ Americano tæller ikke på ranglisten, før en admin tilføjer dagen. ${confirmedCount ? 'Kolonnen "Point" viser cirka, hvad hver spiller ville få.' : ''}
+         ${admin && confirmedCount ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>` : ''}
 
     <h3>Tilmeldte (${signed.length})</h3>
     ${ev.status === 'planlagt' ? (iAmIn
@@ -685,7 +717,7 @@ function renderEvent({ ev, signups, matches, changes }) {
     try {
       if (act === 'confirm') await q(sb.rpc('padel_confirm_result', { p_match: id }));
       if (act === 'reject') { if (!confirm('Afvis resultatet? Det skal så indtastes igen.')) return busy(b, false); await q(sb.rpc('padel_reject_result', { p_match: id })); }
-      if (act === 'reset') { if (!confirm('Nulstil kampen? Elo rulles tilbage.')) return busy(b, false); await q(sb.rpc('padel_admin_reset_match', { p_match: id })); }
+      if (act === 'reset') { if (!confirm('Nulstil kampen? Pointene rulles tilbage.')) return busy(b, false); await q(sb.rpc('padel_admin_reset_match', { p_match: id })); }
       await reload();
     } catch { busy(b, false); }
   }));
@@ -741,8 +773,21 @@ function renderEvent({ ev, signups, matches, changes }) {
   document.getElementById('shareEvent')?.addEventListener('click', () =>
     share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || 'Fredagspadel'} ${fmtDate(ev.starts_at)} i ${center?.name || ''}. Tilmeld dig her:`));
 
+  document.getElementById('rank')?.addEventListener('click', async (e) => {
+    if (!confirm('Tilføj dagen til den officielle rangliste? Pointene beregnes kamp for kamp.')) return;
+    busy(e.target, true);
+    try { await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: true })); toast('Dagen tæller nu på ranglisten'); await reload(); } catch { busy(e.target, false); }
+  });
+  document.getElementById('unrank')?.addEventListener('click', async (e) => {
+    if (!confirm('Fjern dagen fra ranglisten? Pointene rulles tilbage.')) return;
+    busy(e.target, true);
+    try { await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: false })); await reload(); } catch { busy(e.target, false); }
+  });
+
   app.querySelectorAll('form.enter').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
+    if (isAm && ev.points_per_match && +f.a.value + +f.b.value !== ev.points_per_match &&
+      !confirm(`Det giver ${+f.a.value + +f.b.value} point i alt, men I spiller til ${ev.points_per_match}. Gem alligevel?`)) return;
     const btn = f.querySelector('button');
     busy(btn, true);
     try {
@@ -783,7 +828,7 @@ async function viewAdmin() {
     <div class="list">${players.map((p) => `
       <div class="row wrap" id="p-${p.id}">
         <div class="grow"><b>${esc(p.name)}</b>${p.is_admin ? ' <span class="badge">Admin</span>' : ''}
-          <small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${p.elo} Elo</small></div>
+          <small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${p.elo} point</small></div>
         <button class="btn sm" data-edit="${p.id}">Ret</button>
         ${p.id !== S.me.id ? `<button class="btn sm" data-admin="${p.id}" data-val="${!p.is_admin}">${p.is_admin ? 'Fjern admin' : 'Gør til admin'}</button>` : ''}
       </div>`).join('')}</div>
@@ -847,4 +892,27 @@ async function viewAdmin() {
     const n = prompt('Navn på centret');
     if (n?.trim()) { await q(sb.from('padel_centers').insert({ name: n.trim() })); refresh(); }
   };
+}
+
+// ---------- FAQ ----------
+function viewFaq() {
+  const norm = (t) => t.toLowerCase().replace(/<[^>]+>/g, ' ');
+  app.innerHTML = `
+  <div class="page">
+    <button class="back" onclick="history.back()">‹ Tilbage</button>
+    <h1>Spørgsmål og svar</h1>
+    <input type="search" id="faqSearch" placeholder="Søg, fx americano, point, pause…" autocomplete="off">
+    <div id="faqList"></div>
+  </div>`;
+  const list = document.getElementById('faqList');
+  const draw = (term = '') => {
+    const words = norm(term).split(/\s+/).filter(Boolean);
+    const hits = FAQ.filter((f) => words.every((w) => norm(f.q + ' ' + f.a + ' ' + f.cat).includes(w)));
+    if (!hits.length) { list.innerHTML = '<p class="muted pad">Ingen svar matcher. Prøv et andet ord, eller spørg en admin.</p>'; return; }
+    const cats = [...new Set(hits.map((f) => f.cat))];
+    list.innerHTML = cats.map((c) => `<h3>${esc(c)}</h3>${hits.filter((f) => f.cat === c).map((f) =>
+      `<details class="faq" ${words.length ? 'open' : ''}><summary>${esc(f.q)}</summary><div>${f.a}</div></details>`).join('')}`).join('');
+  };
+  draw();
+  document.getElementById('faqSearch').oninput = (e) => draw(e.target.value);
 }
