@@ -106,7 +106,9 @@ export const FAQ = [
   {
     cat: 'Resultater',
     q: 'Hvad hvis resultatet er forkert?',
-    a: `<p>Er det ikke godkendt endnu, kan modstanderne trykke <b>Afvis</b>, så skal det indtastes igen. Er det allerede godkendt, kan en admin rette det, og pointene bliver regnet om.</p>`,
+    a: `<p>Er det ikke godkendt endnu, kan modstanderne trykke <b>Afvis</b>, så skal det indtastes igen.</p>
+<p>Er det allerede godkendt, kan en spiller fra kampen trykke <b>Ret</b>. Ændringen skal så godkendes af en fra <b>modstanderholdet</b> (din makker kan ikke). Indtil da tæller kampen ikke, og afviser de ændringen, gælder det gamle resultat igen.</p>
+<p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
@@ -144,7 +146,7 @@ export const FAQ = [
     cat: 'Tilmelding og konto',
     q: 'Hvad kan en superbruger og en admin?',
     a: `<p>Roller gælder pr. gruppe.</p>
-<p><b>Superbruger</b> kan køre en spilledag: starte runder, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater og afslutte dagen.</p>
+<p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
 <p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller og lægge Americano på ranglisten.</p>
 <p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper.</p>`,
   },

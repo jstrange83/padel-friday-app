@@ -187,16 +187,24 @@ const RPC = {
     const ev = db.padel_events.find((e) => e.id === m.event_id);
     if (ev.status === 'planlagt') Object.assign(ev, { status: 'igang', current_round: Math.max(ev.current_round, m.round_no) });
     else if (ev.status === 'igang' && ev.format !== 'rotation') ev.current_round = Math.max(ev.current_round, m.round_no);
-    if (superuser()) { if (m.status === 'bekraeftet') revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet' }); return applyElo(m); }
+    if (superuser()) { revertElo(m.id); Object.assign(m, { score_a: p_a, score_b: p_b, status: 'bekraeftet', changed: false, prev_score_a: null, prev_score_b: null }); return applyElo(m); }
     const t = teamOf(m); if (!t) throw new Error('Du spiller ikke i denne kamp');
-    Object.assign(m, { score_a: p_a, score_b: p_b, status: 'indtastet', reported_team: t });
+    if (m.status === 'planlagt') return Object.assign(m, { score_a: p_a, score_b: p_b, status: 'indtastet', reported_team: t, reported_by: uid(), changed: false });
+    if (m.score_a === p_a && m.score_b === p_b) return;
+    if (m.status === 'indtastet' && m.reported_by === uid()) return Object.assign(m, { score_a: p_a, score_b: p_b });
+    if (m.status === 'bekraeftet') { revertElo(m.id); Object.assign(m, { prev_score_a: m.score_a, prev_score_b: m.score_b }); }
+    Object.assign(m, { score_a: p_a, score_b: p_b, status: 'indtastet', reported_team: t, reported_by: uid(), changed: true });
   },
   padel_confirm_result: ({ p_match }) => {
     const m = M(p_match), t = teamOf(m);
     if (!superuser() && (!t || t === m.reported_team)) throw new Error('Resultatet skal godkendes af modstanderholdet');
-    m.status = 'bekraeftet'; applyElo(m);
+    Object.assign(m, { status: 'bekraeftet', changed: false, prev_score_a: null, prev_score_b: null }); applyElo(m);
   },
-  padel_reject_result: ({ p_match }) => { Object.assign(M(p_match), { status: 'planlagt', score_a: null, score_b: null, reported_team: null }); },
+  padel_reject_result: ({ p_match }) => {
+    const m = M(p_match);
+    if (m.changed && m.prev_score_a != null) { Object.assign(m, { status: 'bekraeftet', score_a: m.prev_score_a, score_b: m.prev_score_b, changed: false, prev_score_a: null, prev_score_b: null }); return applyElo(m); }
+    Object.assign(m, { status: 'planlagt', score_a: null, score_b: null, reported_team: null, changed: false });
+  },
   padel_admin_reset_match: ({ p_match }) => { revertElo(p_match); Object.assign(M(p_match), { status: 'planlagt', score_a: null, score_b: null, reported_team: null }); },
   padel_admin_set_teams: ({ p_match, p_al, p_ar, p_bl, p_br, p_court }) => { Object.assign(M(p_match), { a_left: p_al, a_right: p_ar, b_left: p_bl, b_right: p_br, court_id: p_court }); },
   padel_start_round: ({ p_event, p_round }) => { Object.assign(db.padel_events.find((e) => e.id === p_event), { current_round: p_round, round_started_at: now(), status: 'igang' }); },

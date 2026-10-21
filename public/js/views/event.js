@@ -221,7 +221,7 @@ function myNight(c, st) {
   const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
   const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
   const todo = (now || c.free) && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
-    : m.status === 'indtastet' && (onA ? 'a' : 'b') !== m.reported_team ? '<a class="btn sm primary" href="#m-' + m.id + '">Godkend resultat</a>' : '';
+    : m.status === 'indtastet' && (onA ? 'a' : 'b') !== m.reported_team ? '<a class="btn sm primary" href="#m-' + m.id + '">' + (m.changed ? 'Godkend ændring' : 'Godkend resultat') + '</a>' : '';
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
     <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
@@ -304,14 +304,22 @@ function matchCard(c, m) {
     if (myTeam || run) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${mic}`;
     if (run) actions += `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
   } else if (m.status === 'indtastet') {
-    status = '<span class="badge wait">Afventer godkendelse</span>';
-    if ((myTeam && myTeam !== m.reported_team) || run) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">Godkend</button><button class="btn sm" data-act="reject" data-id="${m.id}">Afvis</button>`;
-    if (myTeam === m.reported_team) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>${mic}`;
+    // Et (ændret) resultat skal godkendes af en fra modstanderholdet. Admin og superbruger kan altid.
+    const opp = myTeam && myTeam !== m.reported_team;
+    const canOk = opp || run;
+    status = m.changed
+      ? `<span class="badge wait">Ændret${m.prev_score_a != null ? ` fra ${m.prev_score_a}–${m.prev_score_b}` : ''} · afventer modstanderen</span>`
+      : '<span class="badge wait">Afventer godkendelse</span>';
+    if (canOk) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">${m.changed ? 'Godkend ændring' : 'Godkend'}</button>`;
+    if (opp || run) actions += `<button class="btn sm" data-act="reject" data-id="${m.id}" data-changed="${m.changed && m.prev_score_a != null ? 1 : ''}">${m.changed ? 'Afvis ændring' : 'Afvis'}</button>`;
+    if (myTeam === m.reported_team || run) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>${mic}`;
   } else {
     const d = delta[m.id + m.a_left];
     if (d !== undefined) status = `<span class="badge">Point ${sign(d)} / ${sign(-d)}</span>`;
-    if (run) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button><button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
+    if (run || myTeam) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>`;
+    if (run) actions += `<button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
   }
+  const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
   const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
   const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
   const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
@@ -324,7 +332,7 @@ function matchCard(c, m) {
       <span>–</span>
       <input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
       <button class="btn sm primary">Gem</button>
-      <small class="muted">${hint}</small>
+      <small class="muted">${hint}</small>${changeNote}
     </form>
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}
   </div>`;
@@ -618,7 +626,7 @@ function bind(c) {
       const f = form('enter', id); f.hidden = false;
       return listenScore(b, f, team);
     }
-    const ask = { reject: 'Afvis resultatet? Det skal så indtastes igen.', reset: 'Nulstil kampen? Pointene rulles tilbage.' }[a];
+    const ask = { reject: b.dataset.changed ? 'Afvis ændringen? Det tidligere resultat gælder igen.' : 'Afvis resultatet? Det skal så indtastes igen.', reset: 'Nulstil kampen? Pointene rulles tilbage.' }[a];
     if (ask && !confirm(ask)) return;
     const rpc = { confirm: 'padel_confirm_result', reject: 'padel_reject_result', reset: 'padel_admin_reset_match' }[a];
     busy(b, true);
@@ -637,8 +645,10 @@ function bind(c) {
     const btn = f.querySelector('button');
     busy(btn, true);
     try {
+      const old = matches.find((x) => x.id === f.dataset.id);
       await q(sb.rpc('padel_report_result', { p_match: f.dataset.id, p_a: a, p_b: bb }));
-      toast(run ? 'Resultatet er gemt' : 'Gemt. Modstanderne skal godkende');
+      toast(run ? 'Resultatet er gemt' : old.status === 'planlagt' || old.reported_by === me
+        ? 'Gemt. Modstanderne skal godkende' : 'Ændringen er sendt. En fra modstanderholdet skal godkende');
       await reload();
     } catch { busy(btn, false); }
   }));

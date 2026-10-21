@@ -131,6 +131,54 @@ try {
   const sums = await page.locator('details.rounds summary').allInnerTexts();
   ok(sums.some((x) => x.toLowerCase().includes('spillede runder (6)')), 'spillede runder foldes sammen');
   ok((await page.locator('#finish').first().innerText()).includes('Afslut'), 'afslut-knap efter sidste runde');
+
+  // Spiller retter et godkendt resultat: en fra modstanderholdet skal godkende ændringen
+  const evUrl = page.url();
+  const openAll = () => page.evaluate(() => document.querySelectorAll('details.rounds').forEach((d) => (d.open = true)));
+  const loginAs = async (email) => {
+    await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+    await page.goto('http://localhost:8765/');
+    await page.waitForSelector('#authForm');
+    await page.fill('input[name=email]', email);
+    await page.fill('input[name=password]', 'whatever');
+    await page.click('button[type=submit]');
+    await page.waitForSelector('#nav a');
+    await page.goto(evUrl);
+    await page.waitForSelector('.page.event');
+    await wait(400);
+    await openAll();
+  };
+  const cm = await page.evaluate(() => {
+    const db = JSON.parse(sessionStorage.getItem('mockdb'));
+    const m = db.padel_matches.find((x) => x.status === 'bekraeftet' && ![x.a_left, x.a_right, x.b_left, x.b_right].includes('u-admin'));
+    const mail = (id) => db.padel_profiles.find((p) => p.id === id).email;
+    return { id: m.id, a: mail(m.a_left), mate: mail(m.a_right), b: mail(m.b_left), sa: m.score_a, sb: m.score_b };
+  });
+  await loginAs(cm.a);
+  await page.locator(`#m-${cm.id} [data-act=enter]`).click();
+  const cf = page.locator(`form.enter[data-id="${cm.id}"]`);
+  ok((await cf.innerText()).includes('modstanderholdet godkende'), 'spiller får at vide, at en ændring skal godkendes');
+  await cf.locator('input[name=a]').fill('7'); await cf.locator('input[name=b]').fill('5');
+  await cf.locator('button').click();
+  await wait(500);
+  ok((await page.locator(`#m-${cm.id} .badge`).innerText()).toLowerCase().includes(`ændret fra ${cm.sa}–${cm.sb}`), 'ændret resultat afventer modstanderen');
+  ok(!(await page.locator(`#m-${cm.id} [data-act=confirm]`).count()), 'den der ændrer kan ikke selv godkende');
+  await shot('aendring-afventer');
+  await loginAs(cm.mate);
+  ok(!(await page.locator(`#m-${cm.id} [data-act=confirm]`).count()), 'makkeren kan ikke godkende ændringen');
+  await loginAs(cm.b);
+  ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend ændring'), 'modstander kan godkende ændringen');
+  await page.locator(`#m-${cm.id} [data-act=reject]`).click();
+  await wait(500);
+  await openAll();
+  ok((await page.locator(`#m-${cm.id} .score`).innerText()).replace(/\s/g, '') === `${cm.sa}–${cm.sb}`, 'afvist ændring giver det gamle resultat tilbage');
+  await loginAs('jimmy@test');
+  await page.locator(`#m-${cm.id} [data-act=enter]`).click();
+  await cf.locator('input[name=a]').fill('6'); await cf.locator('input[name=b]').fill('0');
+  await cf.locator('button').click();
+  await wait(500);
+  await openAll();
+  ok((await page.locator(`#m-${cm.id} .score`).innerText()).replace(/\s/g, '') === '6–0' && (await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'admin retter direkte');
   await page.locator('#finish').first().click();
   await wait(400);
   ok((await text()).includes('afsluttet'), 'dagen afsluttet');
