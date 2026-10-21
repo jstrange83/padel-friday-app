@@ -174,13 +174,24 @@ try {
   await page.locator('.prow[open] [data-viewas]').click();
   await page.waitForSelector('#viewAsBar');
   ok(!(await page.locator('#nav').innerText()).includes('Admin'), 'se som skjuler Admin');
-  await page.locator('a.ev').first().locator('[data-on], [data-off]').first().click().catch(() => {});
-  await wait(300);
-  ok((await page.locator('#toast').innerText()).includes('Kun visning'), 'se som blokerer ændringer');
+  const qb = page.locator('a.ev').first().locator('[data-on]');
+  if (await qb.count()) {
+    await qb.click();
+    await wait(400);
+    ok((await page.locator('#toast').innerText()).includes('tilmeldt'), 'se som: kan tilmelde spilleren');
+  }
+  await page.click('#nav a:has-text("Profil")');
+  await page.waitForSelector('.me-card');
+  if (!(await page.locator('.editbox[open]').count())) await page.locator('.editbox summary').click();
+  await page.fill('#pf input[name=phone]', '87654321');
+  await page.click('#pf button.primary');
+  await wait(400);
+  ok((await page.locator('.me-card').innerText()).includes('87 65 43 21'), 'se som: retter spillerens telefon');
   await shot('se-som');
   await page.click('#stopViewAs');
   await wait(400);
   ok(!(await page.locator('#viewAsBar').count()), 'tilbage til mig');
+  ok((await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_contacts.find((c) => c.player_id === 'u-admin')?.phone)) === '+4512345678', 'se som: Jimmys eget nummer er ikke ændret');
 
   // Hurtige indstillinger på dagen: åbn en ny dag, slå en bane fra
   await page.click('#nav a:has-text("Spilledage")');

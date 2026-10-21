@@ -41,9 +41,8 @@ export function renderProfile(isNew) {
         <small>${m.status === 'afventer' ? '⏳ Venter på godkendelse' : ROLE[roleIn(p.id, m.group_id)] || 'Bruger'}</small></div>
       ${m.status === 'aktiv' ? `<div class="pts"><b>${groupElo(p.id, m.group_id)}</b><small>point</small></div>` : ''}</div>`).join('')}</div>` : ''}
 
-    ${viewing ? '' : `
-    ${!phone ? '<div class="card warnbox">📱 Tilføj dit telefonnummer, så admin kan få fat i dig.</div>' : ''}
-    <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ Ret mine oplysninger</b><span class="muted">›</span></summary>${form(p, false)}</details>`}
+    ${!phone ? `<div class="card warnbox">📱 ${viewing ? 'Spilleren mangler et telefonnummer.' : 'Tilføj dit telefonnummer, så admin kan få fat i dig.'}</div>` : ''}
+    <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ ${viewing ? 'Ret oplysninger' : 'Ret mine oplysninger'}</b><span class="muted">›</span></summary>${form(p, false)}</details>
 
     <div class="list links">
       <a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>
@@ -62,8 +61,14 @@ function bind(isNew) {
     const btn = f.querySelector('button');
     busy(btn, true);
     try {
-      await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
-      await q(sb.rpc('padel_set_phone', { p_phone: f.phone.value }));
+      if (S.viewAs) {
+        // Admin retter spillerens oplysninger
+        await q(sb.rpc('padel_admin_update_player', { p_user: S.viewAs, p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+        await q(sb.rpc('padel_admin_set_phone', { p_user: S.viewAs, p_phone: f.phone.value }));
+      } else {
+        await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+        await q(sb.rpc('padel_set_phone', { p_phone: f.phone.value }));
+      }
       toast('Profilen er gemt');
       if (isNew) { if (!location.hash.startsWith('#/fredag/')) location.hash = '#/fredage'; return hooks.boot(); }
       await hooks.loadBase();
