@@ -16,7 +16,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
+page.on('console', (m) => { if (m.type() === 'error' && !/mobilepay:|scheme does not have a registered handler/i.test(m.text())) errors.push('console: ' + m.text()); });
 page.on('dialog', (d) => d.accept());
 await page.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'tests', 'mock-supabase.js'), 'utf8') }));
 
@@ -492,7 +492,13 @@ try {
   ok(await evFineRow.count() === 1, 'bøden fra spilledagen står i bødekassen');
   await evFineRow.locator('[data-fstatus]').click();
   await wait(500);
-  await page.locator('details.fset summary').click();
+  await page.locator('details.fset > summary').click();
+  // Slå en takst fra: den kan så ikke vælges, når man giver en bøde
+  await page.locator('.ftype', { hasText: 'Udeblivelse' }).locator('input[data-tactive]').uncheck();
+  await wait(500);
+  ok(await page.locator('details.fset[open]').count() === 1, 'indstillingerne bliver åbne efter til/fra');
+  ok(!(await page.locator('#giveFine select[name=type]').innerText()).includes('Udeblivelse'), 'en takst der er slået fra kan ikke vælges');
+  ok((await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_fine_types.find((t) => t.name === 'Udeblivelse').active)) === false, 'takst slået fra er gemt');
   await page.fill('#fineSettings input[name=payto]', 'MobilePay 12 34 56 78');
   await page.click('#fineSettings button');
   await wait(400);
@@ -521,9 +527,12 @@ try {
   ok(mc.includes('55 kr.') && mc.includes('MobilePay 12 34 56 78'), 'spilleren ser sit udestående og hvor der betales');
   ok(!(await page.locator('#giveFine').count()), 'almindelig spiller kan ikke give bøder');
   ok(await page.locator('.mine-card a.mp').count() === 1, 'MobilePay-knap i Dit udestående');
-  await page.click('#iPaid');
-  await wait(500);
-  ok((await page.locator('.ftile.amber').innerText()).includes('55 kr.'), 'Jeg har betalt sætter bøderne til afventer');
+  await page.click('.mine-card a.mp');
+  await wait(1000);
+  if (!page.url().includes('#/boeder')) { await page.goto('http://localhost:8765/#/boeder'); }
+  await page.waitForSelector('.page.fines');
+  ok((await page.locator('.ftile.amber').innerText()).includes('55 kr.'), 'tryk på MobilePay melder bøderne betalt (afventer)');
+  ok((await page.locator('.mine-card').innerText()).includes('Venter på, at en admin godkender'), 'spilleren kan se, at betalingen afventer');
   await shot('boeder-spiller');
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/boeder');
@@ -532,7 +541,7 @@ try {
   ok((await page.locator('.ftile.green').innerText()).includes('55 kr.'), 'admin godkender betalingerne');
   ok((await page.locator('.list .row').first().innerText()).includes('Test Anders'), 'bødekonge vises');
   // MobilePay Box-link
-  await page.locator('details.fset summary').click();
+  await page.locator('details.fset > summary').click();
   await page.fill('#fineSettings input[name=box]', 'https://qr.mobilepay.dk/box/abc123/pay-in');
   await page.click('#fineSettings button');
   await wait(400);

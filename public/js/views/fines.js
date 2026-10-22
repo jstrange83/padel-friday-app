@@ -14,21 +14,35 @@ export function mpNumber(payTo) {
 // MobilePay Box: admin indsætter linket fra "Del boks" i MobilePay. Det bruges før et mobilnummer.
 const boxUrl = (gr) => (/^https:\/\//i.test(gr?.fines_box_url || '') ? gr.fines_box_url : '');
 export const canPay = (gr) => !!(boxUrl(gr) || mpNumber(gr?.fines_pay_to));
-export function payButtons(gr, amount) {
+// ids: de bøder der betales. Trykker man på knappen, meldes de betalt (afventer admin), og MobilePay åbner.
+export function payButtons(gr, amount, ids = []) {
   const box = boxUrl(gr), nr = mpNumber(gr?.fines_pay_to);
   const amt = Math.round(+amount * 100) / 100;
-  if (box) return `<div class="mact"><a class="btn sm mp" href="${esc(box)}" target="_blank" rel="noopener">📱 Betal ${kr(amt)} i MobilePay Box</a></div>
-    <p class="muted small">Skriv ${kr(amt)} i MobilePay, når boksen åbner.</p>`;
+  const pid = `data-payids="${ids.join(',')}"`;
+  if (box) return `<div class="mact"><a class="btn sm mp" href="${esc(box)}" ${pid}>📱 Betal ${kr(amt)} i MobilePay Box</a></div>
+    <p class="muted small">Skriv ${kr(amt)} i MobilePay, når boksen åbner. Bøderne meldes betalt, når du trykker på knappen.</p>`;
   if (!nr) return '';
   const url = `mobilepay://send?phone=${nr}&amount=${amt}&comment=${encodeURIComponent(`Bøder ${gr.name}`)}&lock=1`;
-  return `<div class="mact"><a class="btn sm mp" href="${url}">📱 Betal ${kr(amt)} med MobilePay</a></div>
+  return `<div class="mact"><a class="btn sm mp" href="${url}" ${pid}>📱 Betal ${kr(amt)} med MobilePay</a></div>
     <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer (${nr.replace(/(\d{2})(?=\d)/g, '$1 ')})</button></div>`;
 }
 // Tekst om hvor man betaler
 const payText = (gr) => (boxUrl(gr) ? 'Betal i bødekassens MobilePay Box' : gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>` : '');
-export function bindCopy(root = app) {
+export function bindCopy(root = app, onPaid = null) {
   root.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); }
+  }));
+  // MobilePay-knap: meld bøderne betalt først, åbn så MobilePay
+  root.querySelectorAll('a.mp[data-payids]').forEach((a) => (a.onclick = async (e) => {
+    e.preventDefault();
+    if (a.classList.contains('busy')) return;
+    a.classList.add('busy');
+    const ids = a.dataset.payids.split(',').filter(Boolean);
+    try { for (const id of ids) await q(sb.rpc('padel_fine_paid', { p_fine: id })); } catch {}
+    if (ids.length) toast('Bøden er meldt betalt. Admin godkender, når pengene er modtaget');
+    const href = a.getAttribute('href');
+    if (onPaid) setTimeout(onPaid, 300);
+    location.href = href;
   }));
 }
 
@@ -86,7 +100,7 @@ export async function viewFines() {
       <div class="fbig">${kr(sum(myOpen))}</div>
       ${myOpen.length ? `${myOpen.map((f) => `<div class="myfine"><span class="grow">${esc(f.title)}${f.minutes ? ` (${f.minutes} min)` : ''}<span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}</span></span><b>${kr(f.amount)}</b></div>`).join('')}
         ${myOpen.some((f) => f.status === 'ubetalt') ? `<p class="small">${payText(gr) ? `${payText(gr)}, og tryk så` : 'Når du har betalt, så tryk'} <b>Jeg har betalt</b>.</p>
-          ${payButtons(gr, sum(myOpen.filter((f) => f.status === 'ubetalt')))}` : ''}
+          ${payButtons(gr, sum(myOpen.filter((f) => f.status === 'ubetalt')), myOpen.filter((f) => f.status === 'ubetalt').map((f) => f.id))}` : ''}
         ${myOpen.some((f) => f.status === 'ubetalt') ? '<div class="mact"><button class="btn sm primary" id="iPaid">✅ Jeg har betalt</button></div>' : ''}
         ${myOpen.some((f) => f.status === 'afventer') ? '<p class="small muted">⏳ Venter på, at en admin godkender din betaling.</p>' : ''}`
         : '<p>😇 Du har opført dig pænt.</p>'}
@@ -172,8 +186,10 @@ export function bindGive(g, eventId, people, onDone) {
   };
 }
 
+const unitSel = (pm) => `<select name="unit" aria-label="Enhed"><option value="fast" ${pm ? '' : 'selected'}>kr.</option><option value="minut" ${pm ? 'selected' : ''}>kr. pr. minut</option></select>`;
+
 function settings(gr, types) {
-  return `<details class="card faq fset"><summary><b>⚙️ Indstillinger (admin)</b></summary><div>
+  return `<details class="card faq fset" ${S.fineSetOpen ? 'open' : ''}><summary><b>⚙️ Indstillinger (admin)</b></summary><div>
     <form id="fineSettings">
       <label>Link til MobilePay Box <small class="muted">(i MobilePay: åbn boksen og tryk <b>Del boks</b>, kopiér linket og sæt det ind her)</small>
         <input name="box" type="url" inputmode="url" value="${esc(gr.fines_box_url || '')}" maxlength="400" placeholder="https://…"></label>
@@ -182,16 +198,18 @@ function settings(gr, types) {
       <button class="btn">Gem</button>
     </form>
     <div class="lbl">Takster</div>
-    ${types.map((t) => `<form class="ftype ${t.active ? '' : 'off'}" data-id="${t.id}">
-      <input name="name" value="${esc(t.name)}" maxlength="80" required aria-label="Navn">
-      <div class="frow"><input type="number" name="amount" value="${+t.amount}" min="0" step="0.5" required aria-label="Beløb"><span>kr.</span>
-        <label class="inl"><input type="checkbox" name="pm" ${t.per_minute ? 'checked' : ''}> pr. minut</label></div>
-      <div class="mact"><button class="btn sm">Gem</button><button type="button" class="btn sm ghost" data-tactive="${t.id}" data-on="${t.active ? '' : 1}">${t.active ? 'Skjul' : 'Vis igen'}</button></div>
-    </form>`).join('')}
-    <form class="ftype" data-id="">
+    <p class="muted small">Slå de takster til, I bruger. Kun dem, der er slået til, kan vælges, når man giver en bøde.</p>
+    ${types.map((t) => `<div class="ftype ${t.active ? '' : 'off'}">
+      <label class="switch"><input type="checkbox" data-tactive="${t.id}" ${t.active ? 'checked' : ''}><span><b>${esc(t.name)}</b> · ${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</span></label>
+      <details class="fedit"><summary class="muted small">Ret</summary><form class="ftform" data-id="${t.id}">
+        <input name="name" value="${esc(t.name)}" maxlength="80" required aria-label="Navn">
+        <div class="frow"><input type="number" name="amount" value="${+t.amount}" min="0" step="0.5" required aria-label="Beløb">${unitSel(t.per_minute)}</div>
+        <div class="mact"><button class="btn sm primary">Gem</button></div>
+      </form></details>
+    </div>`).join('')}
+    <form class="ftform ftype" data-id="">
       <input name="name" maxlength="80" required placeholder="Ny takst, fx Glemt bat">
-      <div class="frow"><input type="number" name="amount" min="0" step="0.5" required placeholder="Beløb"><span>kr.</span>
-        <label class="inl"><input type="checkbox" name="pm"> pr. minut</label></div>
+      <div class="frow"><input type="number" name="amount" min="0" step="0.5" required placeholder="Beløb">${unitSel(false)}</div>
       <div class="mact"><button class="btn sm primary">＋ Tilføj takst</button></div>
     </form>
   </div></details>`;
@@ -217,7 +235,7 @@ function bind(g, types, fines, myOpen) {
   const gb = document.querySelector('details.givebox');
   if (gb) gb.ontoggle = () => (S.fineGiveOpen = gb.open);
   bindGive(g, null, activeMembers(g).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)), reload);
-  bindCopy();
+  bindCopy(app, reload);
 
   // Admin: indstillinger og takster
   const fs = document.getElementById('fineSettings');
@@ -228,13 +246,20 @@ function bind(g, types, fines, myOpen) {
       await hooks.loadBase();
     }, 'Gemt');
   };
-  app.querySelectorAll('form.ftype').forEach((f) => (f.onsubmit = (e) => {
+  const fsd = app.querySelector('details.fset');
+  if (fsd) fsd.ontoggle = () => (S.fineSetOpen = fsd.open);
+  app.querySelectorAll('form.ftform').forEach((f) => (f.onsubmit = (e) => {
     e.preventDefault();
-    run(f.querySelector('button'), () => q(sb.rpc('padel_save_fine_type', { p_id: f.dataset.id || null, g, p_name: f.name.value, p_amount: +f.amount.value, p_per_minute: f.pm.checked })),
+    run(f.querySelector('button'), () => q(sb.rpc('padel_save_fine_type', { p_id: f.dataset.id || null, g, p_name: f.elements.name.value, p_amount: +f.amount.value, p_per_minute: f.unit.value === 'minut' })),
       f.dataset.id ? 'Taksten er gemt' : 'Taksten er tilføjet');
   }));
-  app.querySelectorAll('[data-tactive]').forEach((b) => (b.onclick = () =>
-    run(b, () => q(sb.rpc('padel_set_fine_type_active', { p_id: b.dataset.tactive, p_active: !!b.dataset.on })), b.dataset.on ? 'Taksten vises igen' : 'Taksten er skjult')));
+  app.querySelectorAll('input[data-tactive]').forEach((b) => (b.onchange = async () => {
+    try {
+      await q(sb.rpc('padel_set_fine_type_active', { p_id: b.dataset.tactive, p_active: b.checked }));
+      toast(b.checked ? 'Taksten er slået til' : 'Taksten er slået fra');
+      await reload();
+    } catch { b.checked = !b.checked; }
+  }));
 }
 
 // ---------- Ny bøde: vises én gang, næste gang spilleren åbner appen ----------
@@ -259,14 +284,14 @@ export function renderFineGate(fines, next) {
           <span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}${f.given_by ? ` · givet af ${esc(nameOf(f.given_by).split(' ')[0])}` : ''}</span>
           ${f.note ? `<br><span class="muted small">${esc(f.note)}</span>` : ''}</span><b>${kr(f.amount)}</b></div>`).join('')}
         ${fs.length > 1 ? `<div class="myfine total"><span class="grow">I alt</span><b>${kr(total)}</b></div>` : ''}
-        ${payText(gr) ? `<p class="small">${payText(gr)}, og tryk <b>Jeg har betalt</b> under Bøder.</p>${payButtons(gr, total)}` : ''}
+        ${payText(gr) ? `<p class="small">${payText(gr)}.</p>${payButtons(gr, total, fs.map((f) => f.id))}` : ''}
       </div>`;
     }).join('')}
     <div class="mact"><button class="btn ghost" id="fgSee">Se bødekassen</button><button class="btn primary" id="fgOk">OK</button></div>
   </div>`;
-  bindCopy();
   const seen = async (btn) => { busy(btn, true); try { await q(sb.rpc('padel_fines_seen', { p_ids: fines.map((f) => f.id) })); } catch {} };
   document.getElementById('fgOk').onclick = async (e) => { await seen(e.currentTarget); next(); };
+  bindCopy(app, async () => { await seen(document.getElementById('fgOk')); next(); });
   document.getElementById('fgSee').onclick = async (e) => {
     await seen(e.currentTarget);
     if (!many) setGroupSafe(gids[0]);

@@ -388,3 +388,11 @@ details.centerbox .mact { margin-top: 12px; }
 .finegate h1 { text-align: center; }
 .myfine.total { font-weight: 700; }
 .btn.mp { background: #5a78ff; border-color: #5a78ff; color: #fff; }
+.ftype .switch span { font-size: 15px; }
+.fedit { margin: 4px 0 0 32px; }
+.fedit summary { cursor: pointer; list-style: none; display: inline-block; padding: 2px 0; text-decoration: underline; }
+.fedit summary::-webkit-details-marker { display: none; }
+.frow select { width: auto; margin: 0; flex: 1; }
+a.mp.busy { opacity: .6; pointer-events: none; }
+.faq .fedit summary { padding: 2px 0; font-weight: 400; position: static; }
+.faq .fedit summary::after, .faq[open] .fedit summary::after { content: none; }
