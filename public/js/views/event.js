@@ -141,13 +141,13 @@ const signCls = (n) => (n > 0 ? 'up' : n < 0 ? 'dn' : '');
 
 function header(c) {
   const { ev, center, isRot, isAm, courts, admin } = c;
-  const status = ev.status === 'igang' ? '<span class="chip live">I gang</span>' : ev.status === 'afsluttet' ? '<span class="chip">Afsluttet</span>' : '';
+  const status = ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
   return `
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
       ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}</div>
-    <h1>${esc(ev.title || group()?.name || 'Padel')}</h1>
-    <p class="muted cap">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })} · ${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}</p>
-    ${quickSettings(c, status)}`;
+    <h1 class="cap evtitle">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
+    <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
+    ${quickSettings(c, '')}`;
 }
 
 // Spiltype, hold og baner som knapper. Tryk for at ændre direkte på dagen (baner tildeles ofte først på dagen).
@@ -220,6 +220,7 @@ function myNight(c, st) {
     return `<div class="card mine-card"><p>✅ ${allDone ? 'Du har spillet alle dine kampe.' : `Du er med. ${L.courts ? '' : esc(lineupText(L, c.courts.length))}`}</p>${signBtn}</div>`;
   }
   const when = now && !c.free ? `Runde ${r} · nu` : `Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} · ca. ${hm(roundStart(r))}`;
+  c.mineRound = r;
   if (!inRound(r).has(me)) return `<div class="card mine-card"><small>${when}</small><p>☕ Du holder pause i denne runde.</p>${signBtn}</div>`;
   const m = rounds[r].find((x) => [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const onA = [m.a_left, m.a_right].includes(me);
@@ -227,13 +228,16 @@ function myNight(c, st) {
   const opps = onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right];
   const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
   const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
-  const todo = (now || c.free) && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
+  const canEnter = (now || c.free) && m.status === 'planlagt';
+  if (canEnter) c.mineMatch = m.id;
+  c.mineRound = r;
+  const todo = canEnter ? `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`
     + (SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '')
     : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<small>Venter på at modstanderne godkender rettelsen.</small>' : '';
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
     <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
-    ${pause}${todo ? `<div class="mact">${todo}</div>` : ''}${signBtn ? `<div class="mact">${signBtn}</div>` : ''}</div>`;
+    ${pause}${todo ? `<div class="mact">${todo}</div>` : ''}${canEnter ? enterForm(c, m) : ''}${signBtn ? `<div class="mact">${signBtn}</div>` : ''}</div>`;
 }
 
 // Rettelser der venter på mig (modstanderholdet), eller på admin/superbruger. Vises øverst, så de ikke overses.
@@ -287,7 +291,7 @@ function runBar(c) {
   ].filter(Boolean).join('');
 
   return `<div class="card runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}</div>
-    ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>Lav dagsplanen om</b> for at få dem med.</div>' : ''}`;
+    ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>🔄 Ny plan</b> for at få dem med.</div>' : ''}`;
 }
 
 // Frie spiltyper: ingen "Start runde". Lav dagsplanen, og afslut dagen til sidst.
@@ -297,22 +301,23 @@ function freeBar(c) {
   const canRedoPlan = futureRounds.length > 0;
   const allDone = roundNos.length && roundNos.every(c.roundDone);
   const extra = roundNos.length && !futureRounds.length;
+  // Én stor knap kun når der er noget at gøre (lav plan / alt er spillet). Ellers en lille række.
   let primary = '';
   if (canPlan) primary = `<button class="btn primary" id="makePlan">📋 Lav dagsplan (${totalRounds} runder)</button>`;
-  else if (allDone || ev.status === 'igang') primary = `<button class="btn ${allDone ? 'primary' : 'ghost'}" id="finish">Afslut dagen</button>`;
+  else if (allDone) primary = '<button class="btn primary" id="finish">🏁 Afslut dagen</button>';
   const small = [
-    canRedoPlan ? `<button class="btn sm" id="redoPlan">🔄 Lav ${c.base ? 'resten af ' : ''}dagsplanen om</button>` : '',
+    canRedoPlan ? '<button class="btn sm" id="redoPlan">🔄 Ny plan</button>' : '',
+    !allDone && ev.status === 'igang' ? '<button class="btn sm ghost" id="finish">Afslut dagen</button>' : '',
     extra ? '<button class="btn sm" id="extraRound">➕ Spil en ekstra runde</button>' : '',
     admin && !matches.length ? '<button class="btn sm ghost danger" id="delEvent">Slet dagen</button>' : '',
   ].filter(Boolean).join('');
   if (!primary && !small) return '';
-  return `<div class="card runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}
-    ${!canPlan && !allDone ? '<small class="muted">Hver bane taster selv sit resultat, når kampen er færdig.</small>' : ''}</div>
-    ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>Lav dagsplanen om</b> for at få dem med.</div>' : ''}`;
+  return `<div class="${primary ? 'card ' : ''}runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}</div>
+    ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>🔄 Ny plan</b> for at få dem med.</div>' : ''}`;
 }
 
 function teamHtml(l, r, me) {
-  const n = (pid, s) => `<span class="${pid === me ? 'meName' : ''}">${esc(nameOf(pid))}<em>${s}</em></span>`;
+  const n = (pid, s) => `<span class="${pid === me ? 'meName' : ''}">${esc(first(pid))}<em>${s}</em></span>`;
   return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
 }
 
@@ -326,7 +331,8 @@ function matchCard(c, m) {
   if (m.status === 'planlagt' && future) {
     // Rotation: kommende runde, kun hold kan rettes (link i toppen af kortet)
   } else if (m.status === 'planlagt') {
-    if (myTeam || run) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${mic}`;
+    if (m.id === c.mineMatch) status = '<span class="badge">Tast resultat i kortet øverst ↑</span>';
+    else if (myTeam || run) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${mic}`;
   } else if (m.status === 'indtastet') {
     // Et (ændret) resultat skal godkendes af en fra modstanderholdet. Admin og superbruger kan altid.
     const opp = myTeam && myTeam !== m.reported_team;
@@ -345,21 +351,27 @@ function matchCard(c, m) {
   }
   const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
   const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
-  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
-  const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${status}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${actions ? `<div class="mact">${actions}</div>` : ''}
-    <form class="enter" hidden data-id="${m.id}">
-      <input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score hold 1">
-      <span>–</span>
-      <input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score hold 2">
-      <button class="btn sm primary">Gem</button>
-      <small class="muted">${hint}</small>${changeNote}
-    </form>
+    ${enterForm(c, m, changeNote)}
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}
   </div>`;
+}
+
+// Felter til resultat. Viser hvilket hold der er hvilket, så man ikke bytter om på tallene.
+function enterForm(c, m, note = '') {
+  const { ev, isAm, isSet, unit } = c;
+  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
+  const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
+  const tn = (l, r) => `${esc(first(l))} & ${esc(first(r))}`;
+  return `<form class="enter" hidden data-id="${m.id}">
+      <div class="erow"><span class="et">${tn(m.a_left, m.a_right)}</span><input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score ${tn(m.a_left, m.a_right)}"></div>
+      <div class="erow"><span class="et">${tn(m.b_left, m.b_right)}</span><input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score ${tn(m.b_left, m.b_right)}"></div>
+      <div class="mact"><button class="btn sm primary">Gem resultat</button></div>
+      <small class="muted">${hint}</small>${note}
+    </form>`;
 }
 
 // Ret hold. Vælger man en spiller fra en anden kamp i runden, bytter de automatisk plads.
@@ -386,25 +398,20 @@ function roundBlock(c, r) {
     ${rounds[r].map((m) => matchCard(c, m)).join('')}`;
 }
 
-// Igangværende runde vises åben. Spillede og kommende runder foldes sammen, så siden er kort.
+// Runderne som faner: man ser én runde ad gangen. Standard er den runde, hvor man selv skal spille.
 function roundsSection(c) {
-  const { ev, roundNos, futureRounds } = c;
-  const block = (rs) => rs.map((r) => roundBlock(c, r)).join('');
-  if (c.free) {
-    // Runder hvor alle kampe er spillet foldes sammen. Resten er åbne, så hver bane kan taste sit resultat.
-    const done = roundNos.filter(c.roundDone);
-    const open = roundNos.filter((r) => !c.roundDone(r));
-    const openHtml = ev.status === 'planlagt' && open.length
-      ? `<details class="rounds" open><summary>📋 Dagsplan (${open.length})</summary>${block(open)}</details>` : block(open);
-    return `${openHtml}
-      ${done.length ? `<details class="rounds" ${ev.status === 'afsluttet' ? 'open' : ''}><summary>✅ Spillede runder (${done.length})</summary>${block(done.slice().reverse())}</details>` : ''}`;
-  }
-  const past = roundNos.filter((r) => r < ev.current_round || (r === ev.current_round && ev.status === 'afsluttet'));
-  const now = roundNos.filter((r) => r === ev.current_round && ev.status === 'igang');
-  return `
-    ${block(now)}
-    ${futureRounds.length ? `<details class="rounds" ${ev.current_round ? '' : 'open'}><summary>📋 ${ev.current_round ? 'Kommende runder' : 'Dagsplan'} (${futureRounds.length})</summary>${block(futureRounds)}</details>` : ''}
-    ${past.length ? `<details class="rounds" ${ev.status === 'afsluttet' ? 'open' : ''}><summary>✅ Spillede runder (${past.length})</summary>${block(past.slice().reverse())}</details>` : ''}`;
+  const { ev, roundNos, rounds } = c;
+  if (!roundNos.length) return '';
+  const live = (r) => (c.free ? !c.roundDone(r) && rounds[r].some((m) => m.status !== 'planlagt') : r === ev.current_round && ev.status === 'igang');
+  const firstOpen = c.free ? roundNos.find((r) => !c.roundDone(r)) : ev.current_round || roundNos[0];
+  let sel = (S.evRound || {})[ev.id];
+  if (!roundNos.includes(sel)) sel = roundNos.includes(c.mineRound) ? c.mineRound : firstOpen ?? roundNos[roundNos.length - 1];
+  c.selRound = sel;
+  const tabs = roundNos.map((r) => {
+    const done = c.roundDone(r), mine = c.inRound(r).has(c.me);
+    return `<button class="rtab ${r === sel ? 'on' : ''} ${done ? 'done' : ''} ${live(r) ? 'live' : ''} ${mine ? 'mine' : ''}" data-rtab="${r}" aria-label="Runde ${r}${done ? ', spillet' : ''}">${done ? '✓' : r}</button>`;
+  }).join('');
+  return `<div class="rtabs"><span class="rlbl">Runde</span>${tabs}</div>${roundBlock(c, sel)}`;
 }
 
 function standingsSection(c, st) {
@@ -429,8 +436,8 @@ function signupsSection(c) {
     return `<div class="person ${wait ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
       ${run ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld ${esc(p.name)}">×</button>` : ''}</div>`;
   }).join('')}</div>`;
-  return `
-    <h3>Tilmeldte (${signed.length})</h3>
+  const head = `<h3>Tilmeldte (${signed.length})</h3>`;
+  return `${c.started ? `<details class="card signbox"><summary>${head}<span class="muted">›</span></summary>` : head}
     <div class="card lineup ${L.courts ? 'ok' : ''}">🎾 ${lineupText(L, courts.length)}</div>
     ${signed.length ? person(L.courts ? L.playing : signed, false) : '<p class="muted">Ingen endnu.</p>'}
     ${L.courts && L.waiting.length ? `<h3>Venteliste (${L.waiting.length})</h3>${person(L.waiting, true, L.playing.length)}` : ''}
@@ -441,7 +448,7 @@ function signupsSection(c) {
       return `<div class="logrow"><span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
         <span class="grow">${esc(nameOf(l.player_id))} ${l.action === 'til' ? 'meldte til' : 'meldte fra'}${by}</span>
         <small class="muted">${fmtDate(l.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>`;
-    }).join('')}</div></details>` : ''}`;
+    }).join('')}</div></details>` : ''}${c.started ? '</details>' : ''}`;
 }
 
 // ---------- Tegn siden ----------
@@ -450,6 +457,8 @@ function render(data) {
   const st = standingsOf(c);
   // Før dagen starter er tilmeldingen det vigtigste. Når den er i gang, er det runderne.
   const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0 || c.base > 0;
+  c.started = started;
+  c.raw = data;
   app.innerHTML = `
   <div class="page event">
     ${header(c)}
@@ -660,16 +669,20 @@ function bind(c) {
 
   // Kampkort
   const form = (cls, id) => app.querySelector(`form.${cls}[data-id="${id}"]`);
+  app.querySelectorAll('[data-rtab]').forEach((b) => (b.onclick = () => {
+    S.evRound = { ...(S.evRound || {}), [ev.id]: +b.dataset.rtab };
+    const y = scrollY; render(c.raw); scrollTo(0, y);
+  }));
   app.querySelectorAll('[data-act]').forEach((b) => (b.onclick = async () => {
     const id = b.dataset.id, a = b.dataset.act;
-    if (a === 'enter') { const f = form('enter', id); f.hidden = !f.hidden; if (!f.hidden) f.a.focus(); return; }
+    const near = () => b.closest('.match, .mine-card')?.querySelector(`form.enter[data-id="${id}"]`) || form('enter', id);
+    if (a === 'enter') { const f = near(); f.hidden = !f.hidden; if (!f.hidden) f.a.focus(); return; }
     if (a === 'teams') { const f = form('editteams', id); f.hidden = !f.hidden; return; }
     if (a === 'voice') {
       const m = matches.find((x) => x.id === id);
       const team = [m.a_left, m.a_right].includes(me) ? 'a' : [m.b_left, m.b_right].includes(me) ? 'b' : null;
-      const f = form('enter', id); f.hidden = false;
-      // Fra Din aften: fold runden ud og vis formularen, så man kan tjekke og trykke Gem
-      return listenScore(b, f, team, () => { f.closest('details')?.setAttribute('open', ''); f.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+      const f = near(); f.hidden = false;
+      return listenScore(b, f, team, () => f.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     }
     const ask = { reject: b.dataset.changed ? 'Afvis ændringen? Det tidligere resultat gælder igen.' : 'Afvis resultatet? Det skal så indtastes igen.', reset: 'Nulstil kampen? Pointene rulles tilbage.' }[a];
     if (ask && !confirm(ask)) return;

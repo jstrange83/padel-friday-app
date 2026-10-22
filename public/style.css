@@ -398,3 +398,28 @@ a.mp.busy { opacity: .6; pointer-events: none; }
 .faq .fedit summary::after, .faq[open] .fedit summary::after { content: none; }
 .badge.auto { background: rgba(212, 245, 60, .12); color: var(--accent); font-weight: 600; }
 .myfine .badge.auto { margin-left: 4px; }
+
+/* Spilledag: kompakt top, runde-faner og resultatfelter */
+.evtitle { margin: 2px 0 2px; font-size: 26px; }
+.evsub { margin: 0 0 10px; }
+.rtabs { display: flex; align-items: center; gap: 6px; margin: 20px 0 4px; overflow-x: auto; padding-bottom: 2px; }
+.rtabs .rlbl { font-size: 12px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
+.rtab { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-weight: 700; cursor: pointer; position: relative; }
+.rtab.done { color: var(--up); }
+.rtab.live { border-color: var(--dn); }
+.rtab.mine::after { content: ''; position: absolute; bottom: 4px; left: 50%; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--accent); }
+.rtab.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.rtab.on.mine::after { background: var(--accent-ink); }
+.rtabs + .rhead { margin-top: 12px; }
+.enter { display: block; }
+.enter .erow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.enter .et { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.enter input { width: 80px; flex: none; }
+.enter small { display: block; margin-top: 6px; }
+.mine-card .enter { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.signbox > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; }
+.signbox > summary::-webkit-details-marker { display: none; }
+.signbox > summary h3 { margin: 0; }
+.match { padding: 10px 12px; margin: 8px 0; }
+.live-txt { color: var(--dn); font-weight: 700; }
+.runbar:not(.card) { margin: 10px 0; }

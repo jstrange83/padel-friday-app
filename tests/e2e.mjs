@@ -94,7 +94,7 @@ try {
   // Dagsplan
   await page.click('#makePlan');
   await wait(500);
-  ok((await page.locator('details.rounds summary').first().innerText()).toLowerCase().includes('dagsplan (6)'), 'dagsplan med 6 runder');
+  ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
   ok((await page.locator('.mine-card').innerText()).match(/Runde 1|pause/i), 'Din aften viser første runde');
   if (await page.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition)) && (await page.locator('.mine-card').innerText()).includes('Indtast resultat'))
     ok(await page.locator('.mine-card [data-act=voice]').count() === 1, 'Sig resultat i Din aften');
@@ -102,12 +102,16 @@ try {
   await noOverflow('spilledag');
 
   ok(await page.locator('#nextRound').count() === 0, 'ingen "Start runde" ved Ét sæt');
-  ok(await page.locator('[data-act=enter]').count() >= 12, 'alle kampe i dagsplanen kan indtastes med det samme');
+  await page.locator('[data-rtab="6"]').click();
+  await wait(200);
+  ok(await page.locator('.match [data-act=enter]').count() >= 1, 'kampe i senere runder kan indtastes med det samme');
+  await page.locator('[data-rtab="1"]').click();
+  await wait(200);
 
   // Indtast resultat via Din aften (admin godkender direkte)
   const mine = await page.locator('.mine-card').innerText();
   if (mine.includes('Du spiller')) {
-    await page.click('.mine-card a:has-text("Indtast resultat")');
+    await page.click('.mine-card [data-act=enter]');
     await wait(500);
   } else {
     await page.locator('[data-act=enter]').first().click();
@@ -118,7 +122,7 @@ try {
   await f.locator('button').click();
   await wait(500);
   ok((await text()).includes('dagens stilling'), 'stilling vises efter resultat');
-  ok((await page.locator('.chips .chip.live').count()) === 1, 'dagen er i gang efter første resultat');
+  ok((await page.locator('.evsub .live-txt').count()) === 1, 'dagen er i gang efter første resultat');
   await shot('runde1');
   ok(await page.locator('.badge:has-text("Point")').count() >= 1, 'kampen har point');
 
@@ -134,32 +138,45 @@ try {
   await shot('efter-resultat');
 
   // Indtast et resultat i en senere runde uden at nogen har startet den (banerne følges ikke ad)
+  await page.locator('[data-rtab]').last().click();
+  await wait(200);
   const late = page.locator('.match:has([data-act=enter].primary)').last();
   const lateId = (await late.getAttribute('id')).slice(2);
   await late.locator('[data-act=enter]').click();
-  const lf = page.locator(`form.enter[data-id="${lateId}"]`);
+  const lf = page.locator(`form.enter[data-id="${lateId}"]:not([hidden])`);
   await lf.locator('input[name=a]').fill('3'); await lf.locator('input[name=b]').fill('6');
   await lf.locator('button').click();
   await wait(500);
   ok((await page.locator(`#m-${lateId} .score`).innerText()).includes('3'), 'resultat i senere runde gemt');
   // Spil resten af kampene færdige
   for (let i = 0; i < 40; i++) {
-    const btn = page.locator('[data-act=enter].primary').first();
-    if (!(await btn.count())) break;
+    let btn = page.locator('[data-act=enter].primary').first();
+    if (!(await btn.count())) {
+      const open = page.locator('.rtab:not(.done)').first();
+      if (!(await open.count())) break;
+      await open.click(); await wait(200);
+      btn = page.locator('[data-act=enter].primary').first();
+      if (!(await btn.count())) break;
+    }
     const id = await btn.getAttribute('data-id');
     await btn.click();
-    const ff = page.locator(`form.enter[data-id="${id}"]`);
+    const ff = page.locator(`form.enter[data-id="${id}"]:not([hidden])`);
     await ff.locator('input[name=a]').fill('6'); await ff.locator('input[name=b]').fill(String(i % 5));
     await ff.locator('button').click();
     await wait(250);
   }
-  const sums = await page.locator('details.rounds summary').allInnerTexts();
-  ok(sums.some((x) => x.toLowerCase().includes('spillede runder (6)')), 'spillede runder foldes sammen');
+  ok(await page.locator('.rtab.done').count() === 6, 'alle 6 runder er markeret spillet');
   ok((await page.locator('#finish').first().innerText()).includes('Afslut'), 'afslut-knap efter sidste runde');
 
   // Spiller retter et godkendt resultat: en fra modstanderholdet skal godkende ændringen
   const evUrl = page.url();
-  const openAll = () => page.evaluate(() => document.querySelectorAll('details.rounds').forEach((d) => (d.open = true)));
+  // Vis den runde, kampen vi tester, ligger i
+  let focusId = null;
+  const openAll = async () => {
+    if (!focusId || await page.locator(`#m-${focusId}`).count()) return;
+    const r = await page.evaluate((id) => JSON.parse(sessionStorage.getItem('mockdb')).padel_matches.find((m) => m.id === id).round_no, focusId);
+    await page.click(`[data-rtab="${r}"]`); await wait(200);
+  };
   const loginAs = async (email) => {
     await page.evaluate(() => sessionStorage.removeItem('mock-session'));
     await page.goto('http://localhost:8765/');
@@ -180,9 +197,10 @@ try {
     const mail = (id) => db.padel_profiles.find((p) => p.id === id).email;
     return { id: m.id, a: mail(m.a_left), mate: mail(m.a_right), b: mail(m.b_left), sa: m.score_a, sb: m.score_b };
   });
+  focusId = cm.id;
   await loginAs(cm.a);
   await page.locator(`#m-${cm.id} [data-act=enter]`).click();
-  const cf = page.locator(`form.enter[data-id="${cm.id}"]`);
+  const cf = page.locator(`form.enter[data-id="${cm.id}"]:not([hidden])`);
   ok((await cf.innerText()).includes('modstanderholdet godkende'), 'spiller får at vide, at en ændring skal godkendes');
   await cf.locator('input[name=a]').fill('7'); await cf.locator('input[name=b]').fill('5');
   await cf.locator('button').click();
@@ -216,7 +234,7 @@ try {
   await page.locator(`#m-${cm.id} [data-act=reset]`).click();
   await wait(500);
   await loginAs(cm.b);
-  await page.locator(`#m-${cm.id} [data-act=enter]`).first().click();
+  await page.locator(`[data-act=enter][data-id="${cm.id}"]`).first().click();
   await cf.locator('input[name=a]').fill('2'); await cf.locator('input[name=b]').fill('6');
   await cf.locator('button').click();
   await wait(500);
