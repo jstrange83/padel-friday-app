@@ -6,7 +6,7 @@ import {
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
-import { giveFormBody, bindGive } from './fines.js';
+import { giveFormBody, bindGive, signoffFine, fineWarn, kr } from './fines.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -496,12 +496,17 @@ function bind(c) {
   // Tilmelding
   act($('signon'), async () => { await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: me })); toast('Du er tilmeldt'); await reload(); });
   act($('signoff'), async () => {
-    if (!confirm('Afmeld dig denne dag?')) return;
-    await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', me)); await reload();
+    const t = await signoffFine(ev.id, me);
+    if (!confirm(`Afmeld dig denne dag?${fineWarn(t, 'Du får')}`)) return;
+    await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', me));
+    toast(t ? `Du er afmeldt. Bøde: ${t.name} ${kr(t.amount)}` : 'Du er afmeldt');
+    await reload();
   });
   app.querySelectorAll('[data-unsign]').forEach((b) => (b.onclick = async () => {
-    if (!confirm(`Afmeld ${nameOf(b.dataset.unsign)}?`)) return;
+    const t = await signoffFine(ev.id, b.dataset.unsign);
+    if (!confirm(`Afmeld ${nameOf(b.dataset.unsign)}?${fineWarn(t, `${first(b.dataset.unsign)} får`)}`)) return;
     await q(sb.from('padel_signups').delete().eq('event_id', ev.id).eq('player_id', b.dataset.unsign));
+    if (t) toast(`${first(b.dataset.unsign)} er afmeldt og har fået en bøde: ${t.name}`);
     await reload();
   }));
   // Søg og tilmeld en spiller fra gruppen

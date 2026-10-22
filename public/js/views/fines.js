@@ -80,7 +80,7 @@ export async function viewFines() {
     <div class="ftop"><b class="fname">${esc(nameOf(f.player_id))}</b><span class="famt">${kr(f.amount)}</span></div>
     <div class="ftitle">${esc(f.title)}${f.minutes ? ` <span class="muted">(${f.minutes} min)</span>` : ''}</div>
     ${f.note ? `<div class="muted small">${esc(f.note)}</div>` : ''}
-    <div class="fmeta"><span class="badge st-${f.status}">${STATUS[f.status]}</span><small class="muted">${fmtDate(f.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
+    <div class="fmeta"><span class="badge st-${f.status}">${STATUS[f.status]}</span>${f.auto ? '<span class="badge auto">⚡ Automatisk</span>' : ''}<small class="muted">${fmtDate(f.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
     ${run && f.status !== 'betalt' ? `<div class="mact">
       <button class="btn sm primary" data-paid="${f.id}">${f.status === 'afventer' ? 'Godkend betaling' : 'Markér betalt'}</button>
       ${f.status === 'afventer' ? `<button class="btn sm" data-fstatus="${f.id}" data-to="ubetalt">Ikke betalt</button>` : `<button class="btn sm ghost danger" data-fstatus="${f.id}" data-to="annulleret">Annuller</button>`}
@@ -120,7 +120,7 @@ export async function viewFines() {
     ${kings.length ? `<h3>🏆 Bødekonger</h3><div class="list">${kings.map(([pid, a], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i + 1}</div><div class="grow">${esc(nameOf(pid))}</div><b>${kr(a)}</b></div>`).join('')}</div>` : ''}
 
     <details class="card faq"><summary><b>📋 Takster</b></summary><div>
-      ${types.filter((t) => t.active).map((t) => `<div class="myfine"><span class="grow">${esc(t.name)}</span><b>${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
+      ${types.filter((t) => t.active).map((t) => `<div class="myfine"><span class="grow">${esc(t.name)}${autoTag(t)}</span><b>${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
     </div></details>
 
     ${admin ? settings(gr, types) : ''}
@@ -186,6 +186,9 @@ export function bindGive(g, eventId, people, onDone) {
   };
 }
 
+const AUTO = { afbud: 'automatisk ved afmelding', afbud_dagen: 'automatisk ved afmelding på dagen' };
+const autoTag = (t) => (t.auto ? ` <span class="badge auto">⚡ ${AUTO[t.auto]}</span>` : '');
+const autoSel = (a) => `<label>Automatisk<select name="auto"><option value="">Nej, gives af admin</option>${Object.entries(AUTO).map(([k, v]) => `<option value="${k}" ${a === k ? 'selected' : ''}>Ja, ${v}</option>`).join('')}</select></label>`;
 const unitSel = (pm) => `<select name="unit" aria-label="Enhed"><option value="fast" ${pm ? '' : 'selected'}>kr.</option><option value="minut" ${pm ? 'selected' : ''}>kr. pr. minut</option></select>`;
 
 function settings(gr, types) {
@@ -200,16 +203,18 @@ function settings(gr, types) {
     <div class="lbl">Takster</div>
     <p class="muted small">Slå de takster til, I bruger. Kun dem, der er slået til, kan vælges, når man giver en bøde.</p>
     ${types.map((t) => `<div class="ftype ${t.active ? '' : 'off'}">
-      <label class="switch"><input type="checkbox" data-tactive="${t.id}" ${t.active ? 'checked' : ''}><span><b>${esc(t.name)}</b> · ${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</span></label>
+      <label class="switch"><input type="checkbox" data-tactive="${t.id}" ${t.active ? 'checked' : ''}><span><b>${esc(t.name)}</b> · ${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}${autoTag(t)}</span></label>
       <details class="fedit"><summary class="muted small">Ret</summary><form class="ftform" data-id="${t.id}">
         <input name="name" value="${esc(t.name)}" maxlength="80" required aria-label="Navn">
         <div class="frow"><input type="number" name="amount" value="${+t.amount}" min="0" step="0.5" required aria-label="Beløb">${unitSel(t.per_minute)}</div>
+        ${autoSel(t.auto)}
         <div class="mact"><button class="btn sm primary">Gem</button></div>
       </form></details>
     </div>`).join('')}
     <form class="ftform ftype" data-id="">
       <input name="name" maxlength="80" required placeholder="Ny takst, fx Glemt bat">
       <div class="frow"><input type="number" name="amount" min="0" step="0.5" required placeholder="Beløb">${unitSel(false)}</div>
+      ${autoSel('')}
       <div class="mact"><button class="btn sm primary">＋ Tilføj takst</button></div>
     </form>
   </div></details>`;
@@ -250,7 +255,7 @@ function bind(g, types, fines, myOpen) {
   if (fsd) fsd.ontoggle = () => (S.fineSetOpen = fsd.open);
   app.querySelectorAll('form.ftform').forEach((f) => (f.onsubmit = (e) => {
     e.preventDefault();
-    run(f.querySelector('button'), () => q(sb.rpc('padel_save_fine_type', { p_id: f.dataset.id || null, g, p_name: f.elements.name.value, p_amount: +f.amount.value, p_per_minute: f.unit.value === 'minut' })),
+    run(f.querySelector('button'), () => q(sb.rpc('padel_save_fine_type_v2', { p_id: f.dataset.id || null, g, p_name: f.elements.name.value, p_amount: +f.amount.value, p_per_minute: f.unit.value === 'minut', p_auto: f.auto.value || null })),
       f.dataset.id ? 'Taksten er gemt' : 'Taksten er tilføjet');
   }));
   app.querySelectorAll('input[data-tactive]').forEach((b) => (b.onchange = async () => {
@@ -281,7 +286,7 @@ export function renderFineGate(fines, next) {
       return `<div class="card">
         ${many || gr.name ? `<div class="mtitle">${esc(gr.name || 'Bødekasse')}</div>` : ''}
         ${fs.map((f) => `<div class="myfine"><span class="grow">${esc(f.title)}${f.minutes ? ` (${f.minutes} min)` : ''}
-          <span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}${f.given_by ? ` · givet af ${esc(nameOf(f.given_by).split(' ')[0])}` : ''}</span>
+          <span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}${f.given_by ? ` · givet af ${esc(nameOf(f.given_by).split(' ')[0])}` : f.auto ? ' · automatisk' : ''}</span>
           ${f.note ? `<br><span class="muted small">${esc(f.note)}</span>` : ''}</span><b>${kr(f.amount)}</b></div>`).join('')}
         ${fs.length > 1 ? `<div class="myfine total"><span class="grow">I alt</span><b>${kr(total)}</b></div>` : ''}
         ${payText(gr) ? `<p class="small">${payText(gr)}.</p>${payButtons(gr, total, fs.map((f) => f.id))}` : ''}
@@ -300,3 +305,12 @@ export function renderFineGate(fines, next) {
   };
 }
 function setGroupSafe(g) { if (S.groups.some((x) => x.id === g)) { S.groupId = g; try { localStorage.setItem('fp-group', g); } catch {} } }
+
+// Automatisk bøde, hvis spilleren melder fra nu (til advarsel før afmelding)
+export async function signoffFine(evId, pid) {
+  try {
+    const id = await q(sb.rpc('padel_signoff_fine_type', { p_event: evId, p_player: pid }));
+    return id ? await q(sb.from('padel_fine_types').select('name,amount').eq('id', id).single()) : null;
+  } catch { return null; }
+}
+export const fineWarn = (t, who) => (t ? `\n\n⚠️ ${who} automatisk en bøde: ${t.name} (${kr(t.amount)}).` : '');

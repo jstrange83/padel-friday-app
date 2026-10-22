@@ -95,7 +95,7 @@ class Query {
       data = applyFilters(T, this.f); data.forEach((r) => Object.assign(r, this.v));
     } else if (this.op === 'delete') {
       data = applyFilters(T, this.f);
-      if (this.t === 'padel_signups') data.forEach((s) => logSignup(s, 'fra'));
+      if (this.t === 'padel_signups') data.forEach((s) => { autoFine(s); logSignup(s, 'fra'); });
       if (this.t === 'padel_events') for (const e of data) { db.padel_signups = db.padel_signups.filter((s) => s.event_id !== e.id); db.padel_signup_log = db.padel_signup_log.filter((s) => s.event_id !== e.id); }
       db[this.t] = T.filter((r) => !data.includes(r));
     } else {
@@ -148,7 +148,29 @@ const setPhone = (pid, ph) => {
   const c = db.padel_contacts.find((x) => x.player_id === pid);
   if (c) c.phone = cleanPhone(ph); else db.padel_contacts.push({ player_id: pid, phone: cleanPhone(ph) });
 };
+// Automatisk bøde ved afmelding (samme regler som databasen)
+const signoffType = (evId, pid) => {
+  const ev = db.padel_events.find((e) => e.id === evId);
+  if (!ev || ev.status === 'afsluttet') return null;
+  if (!db.padel_groups.find((x) => x.id === ev.group_id)?.fines_enabled) return null;
+  const ss = db.padel_signups.filter((x) => x.event_id === evId).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.player_id.localeCompare(b.player_id));
+  const me_ = ss.find((x) => x.player_id === pid);
+  if (!me_ || Date.parse(me_.created_at) > tick - 15 * 60e3) return null;
+  if (ss.indexOf(me_) >= 4 * Math.min(Math.floor(ss.length / 4), (ev.court_ids || []).length)) return null;
+  const ts = db.padel_fine_types.filter((t) => t.group_id === ev.group_id && t.active && !t.per_minute);
+  const sameDay = new Date(tick).toISOString().slice(0, 10) >= ev.starts_at.slice(0, 10);
+  return ((sameDay && ts.find((t) => t.auto === 'afbud_dagen')) || ts.find((t) => t.auto === 'afbud'))?.id || null;
+};
+const autoFine = (s) => {
+  const tid = signoffType(s.event_id, s.player_id);
+  if (!tid) return;
+  const t = db.padel_fine_types.find((x) => x.id === tid), ev = db.padel_events.find((e) => e.id === s.event_id);
+  db.padel_fines.push({ id: uuid(), group_id: ev.group_id, player_id: s.player_id, type_id: t.id, title: t.name, amount: t.amount, note: 'Meldte fra', event_id: ev.id, status: 'ubetalt', given_by: null, auto: true, created_at: now() });
+};
+
 const RPC = {
+  padel_signoff_fine_type: ({ p_event, p_player }) => signoffType(p_event, p_player),
+  padel_save_fine_type_v2: (a) => { const id = RPC.padel_save_fine_type(a); db.padel_fine_types.find((t) => t.id === id).auto = a.p_per_minute ? null : a.p_auto || null; return id; },
   padel_set_phone: ({ p_phone }) => setPhone(uid(), p_phone),
   padel_set_phone_v2: ({ p_phone }) => {
     setPhone(uid(), p_phone);
@@ -204,8 +226,8 @@ const RPC = {
     if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin kan ændre bødekassen');
     Object.assign(db.padel_groups.find((x) => x.id === g), { fines_enabled: p_enabled, fines_pay_to: p_pay_to || null, fines_note: p_note || null });
     if (p_enabled && !db.padel_fine_types.some((t) => t.group_id === g))
-      [['For sent fremmøde', 5, true], ['Afbud efter tilmelding', 30], ['Afbud på dagen', 100], ['Udeblivelse', 500], ['Dårlig opførsel', 30], ['Glemte sager', 30]]
-        .forEach(([name, amount, pm], i) => db.padel_fine_types.push({ id: uuid(), group_id: g, name, amount, per_minute: !!pm, sort: i + 1, active: true }));
+      [['For sent fremmøde', 5, true], ['Afbud efter tilmelding', 30, false, 'afbud'], ['Afbud på dagen', 100, false, 'afbud_dagen'], ['Udeblivelse', 500], ['Dårlig opførsel', 30], ['Glemte sager', 30]]
+        .forEach(([name, amount, pm, auto], i) => db.padel_fine_types.push({ id: uuid(), group_id: g, name, amount, per_minute: !!pm, sort: i + 1, active: true, auto: auto || null }));
   },
   padel_set_fines_v2: (a) => {
     if (a.p_box_url && !/^https:\/\//i.test(a.p_box_url)) throw new Error('Linket til MobilePay Box skal starte med https://');

@@ -568,6 +568,35 @@ try {
   await loginAs('jimmy@test');
   await shot('boeder-fortryd');
 
+  // Automatisk bøde ved afmelding: Jimmy tilmelder sig en kommende dag (med 3 andre), venter og melder fra
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('.page');
+  if (await page.locator('[data-group="g-fre"]').count()) { await page.click('[data-group="g-fre"]'); await wait(400); }
+  await page.waitForSelector('a.ev [data-on]');
+  const evId = await page.locator('a.ev [data-on]').first().getAttribute('data-on');
+  await page.locator('a.ev [data-on]').first().click();
+  await wait(500);
+  await page.evaluate((id) => {
+    const db = JSON.parse(sessionStorage.getItem('mockdb'));
+    for (const p of ['u-2', 'u-3', 'u-4']) if (!db.padel_signups.some((x) => x.event_id === id && x.player_id === p)) db.padel_signups.push({ event_id: id, player_id: p, created_at: '2026-10-01T10:00:00.000Z' });
+    db.padel_signups.filter((x) => x.event_id === id).forEach((x) => (x.created_at = x.player_id === 'u-admin' ? '2026-10-01T08:00:00.000Z' : '2026-10-01T09:00:00.000Z'));
+    sessionStorage.setItem('mockdb', JSON.stringify(db));
+  }, evId);
+  await page.reload();
+  await page.waitForSelector(`[data-off="${evId}"]`);
+  let warned = '';
+  page.once('dialog', (d) => { warned = d.message(); });
+  await page.click(`[data-off="${evId}"]`);
+  await wait(600);
+  ok(warned.includes('automatisk en bøde: Afbud efter tilmelding'), 'advarsel om automatisk bøde før afmelding');
+  ok((await page.locator('#toast').innerText()).includes('Bøde: Afbud efter tilmelding'), 'afmelding giver automatisk bøde');
+  const af = await page.evaluate((id) => JSON.parse(sessionStorage.getItem('mockdb')).padel_fines.find((f) => f.event_id === id && f.auto), evId);
+  ok(af && af.player_id === 'u-admin' && af.amount === 30, 'den automatiske bøde er gemt på spilleren');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  ok((await page.locator('.flist').innerText()).includes('Automatisk'), 'automatisk bøde er mærket i bødekassen');
+  await shot('auto-boede');
+
   // Opret spiller uden login, tilmeld ham, og lad ham overtage profilen, når han opretter sig
   await page.goto('http://localhost:8765/#/admin');
   await page.waitForSelector('.page.admin');

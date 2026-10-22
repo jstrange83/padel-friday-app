@@ -165,6 +165,12 @@ export const FAQ = [
   },
   {
     cat: 'Bødekasse',
+    q: 'Får jeg automatisk en bøde, hvis jeg melder fra?',
+    a: `<p>Ja, hvis gruppen har en takst, der er sat til <b>automatisk</b>. Som standard koster det <b>Afbud efter tilmelding</b>, når du melder fra, og <b>Afbud på dagen</b>, hvis du melder fra samme dag. Appen skriver beløbet, før du bekræfter afmeldingen.</p>
+<p>Der kommer ingen bøde, hvis du står på venteliste, eller hvis du melder fra inden for 15 minutter efter, du meldte dig til (fx hvis du trykkede forkert). Admin kan altid annullere en bøde.</p>`,
+  },
+  {
+    cat: 'Bødekasse',
     q: 'Hvordan betaler jeg en bøde?',
     a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, åbner knappen MobilePay med nummer og beløb udfyldt. Når du trykker på MobilePay-knappen, bliver dine bøder automatisk meldt betalt og står som <b>Afventer</b>, til en admin har set pengene. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b>, betal i MobilePay selv, og tryk derefter <b>Jeg har betalt</b>.</p>`,
   },

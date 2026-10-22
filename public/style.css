@@ -396,3 +396,5 @@ details.centerbox .mact { margin-top: 12px; }
 a.mp.busy { opacity: .6; pointer-events: none; }
 .faq .fedit summary { padding: 2px 0; font-weight: 400; position: static; }
 .faq .fedit summary::after, .faq[open] .fedit summary::after { content: none; }
+.badge.auto { background: rgba(212, 245, 60, .12); color: var(--accent); font-weight: 600; }
+.myfine .badge.auto { margin-left: 4px; }

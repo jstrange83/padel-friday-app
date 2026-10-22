@@ -1,6 +1,7 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
 import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
+import { signoffFine, fineWarn, kr } from './fines.js';
 
 export async function viewEvents() {
   const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id, created_at)').eq('group_id', S.groupId).order('starts_at', { ascending: false }).limit(60));
@@ -48,9 +49,10 @@ export async function viewEvents() {
     toast('Du er tilmeldt');
   })));
   app.querySelectorAll('[data-off]').forEach((b) => (b.onclick = (e) => quick(e, async () => {
-    if (!confirm('Afmeld dig denne dag?')) throw new Error('fortrudt');
+    const t = await signoffFine(b.dataset.off, S.me.id);
+    if (!confirm(`Afmeld dig denne dag?${fineWarn(t, 'Du får')}`)) throw new Error('fortrudt');
     await q(sb.from('padel_signups').delete().eq('event_id', b.dataset.off).eq('player_id', S.me.id));
-    toast('Du er afmeldt');
+    toast(t ? `Du er afmeldt. Bøde: ${t.name} ${kr(t.amount)}` : 'Du er afmeldt');
   })));
 }
 
