@@ -146,8 +146,25 @@ export const FAQ = [
     q: 'Hvad kan en superbruger og en admin?',
     a: `<p>Roller gælder pr. gruppe.</p>
 <p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
-<p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller og lægge Americano på ranglisten.</p>
+<p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller, lægge Americano på ranglisten og styre bødekassen. Superbrugere kan også give bøder og godkende betalinger.</p>
 <p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper.</p>`,
+  },
+  {
+    cat: 'Bødekasse',
+    q: 'Hvad er bødekassen?',
+    a: `<p>Hver gruppe kan have sin egen bødekasse. Gruppens admin bestemmer, om den er slået til (under <b>Admin</b>), og hvilke takster der gælder, fx for sent fremmøde eller afbud på dagen.</p>
+<p>Når den er slået til, kan alle i gruppen se bøderne under <b>💸 Bøder</b> i menuen. Admin og superbrugere giver bøderne.</p>`,
+  },
+  {
+    cat: 'Bødekasse',
+    q: 'Hvordan betaler jeg en bøde?',
+    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Betal til det nummer, der står (fx MobilePay), og tryk <b>Jeg har betalt</b>. Bøden står så som <b>Afventer</b>, indtil en admin eller superbruger har godkendt betalingen.</p>`,
+  },
+  {
+    cat: 'Bødekasse',
+    q: 'Kan en bøde fjernes igen?',
+    a: `<p>Ja. Admin og superbrugere kan annullere en bøde, der er givet ved en fejl. Har nogen trykket "Jeg har betalt" uden at betale, kan bøden sættes tilbage til ubetalt.</p>
+<p>Bøder har intet med dine point på ranglisten at gøre.</p>`,
   },
 
   // ---------- Padelregler (efter FIP's officielle regler, skrevet kort) ----------

@@ -20,7 +20,7 @@ function seed() {
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
-    padel_settings: [{ id: 1, global_ranking_public: false }], padel_contacts: [] };
+    padel_settings: [{ id: 1, global_ranking_public: false }], padel_contacts: [], padel_fine_types: [], padel_fines: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -44,6 +44,7 @@ function applyFilters(rows, filters) {
   return rows.filter((r) => filters.every(([op, col, val]) => {
     if (op === 'eq') return r[col] === val;
     if (op === 'gt') return r[col] > val;
+    if (op === 'neq') return r[col] !== val;
     if (op === 'in') return val.includes(r[col]);
     if (op === 'or') return val.split(',').some((c) => { const [k, , v] = c.split('.'); return r[k] === v; });
     return true;
@@ -72,6 +73,7 @@ class Query {
   delete() { this.op = 'delete'; return this; }
   eq(c, v) { this.f.push(['eq', c, v]); return this; }
   gt(c, v) { this.f.push(['gt', c, v]); return this; }
+  neq(c, v) { this.f.push(['neq', c, v]); return this; }
   in(c, v) { this.f.push(['in', c, v]); return this; }
   or(s) { this.f.push(['or', null, s]); return this; }
   order(c, o = {}) { this.o.push([c, o.ascending !== false]); return this; }
@@ -170,6 +172,33 @@ const RPC = {
   },
   padel_rename_group: ({ g, p_name }) => { db.padel_groups.find((x) => x.id === g).name = p_name; },
   padel_set_global_public: ({ p_public }) => { db.padel_settings[0].global_ranking_public = p_public; },
+  // Bødekasse
+  padel_set_fines: ({ g, p_enabled, p_pay_to, p_note }) => {
+    if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin kan ændre bødekassen');
+    Object.assign(db.padel_groups.find((x) => x.id === g), { fines_enabled: p_enabled, fines_pay_to: p_pay_to || null, fines_note: p_note || null });
+    if (p_enabled && !db.padel_fine_types.some((t) => t.group_id === g))
+      [['For sent fremmøde', 5, true], ['Afbud efter tilmelding', 30], ['Afbud på dagen', 100], ['Udeblivelse', 500], ['Dårlig opførsel', 30], ['Glemte sager', 30]]
+        .forEach(([name, amount, pm], i) => db.padel_fine_types.push({ id: uuid(), group_id: g, name, amount, per_minute: !!pm, sort: i + 1, active: true }));
+  },
+  padel_save_fine_type: ({ p_id, g, p_name, p_amount, p_per_minute }) => {
+    if (p_id) { Object.assign(db.padel_fine_types.find((t) => t.id === p_id), { name: p_name, amount: p_amount, per_minute: p_per_minute }); return p_id; }
+    const t = { id: uuid(), group_id: g, name: p_name, amount: p_amount, per_minute: p_per_minute, sort: 99, active: true }; db.padel_fine_types.push(t); return t.id;
+  },
+  padel_set_fine_type_active: ({ p_id, p_active }) => { db.padel_fine_types.find((t) => t.id === p_id).active = p_active; },
+  padel_give_fine: ({ g, p_player, p_type, p_minutes, p_title, p_amount, p_note }) => {
+    if (!canRun(g)) throw new Error('Kun admin og superbruger kan give bøder');
+    const t = p_type && db.padel_fine_types.find((x) => x.id === p_type);
+    if (t?.per_minute && !(p_minutes > 0)) throw new Error('Angiv antal minutter');
+    if (!t && (!p_title || !(p_amount > 0))) throw new Error('Skriv hvad bøden er for og et beløb');
+    const f = { id: uuid(), group_id: g, player_id: p_player, type_id: t?.id || null, title: t ? t.name : p_title, amount: t ? (t.per_minute ? t.amount * p_minutes : t.amount) : p_amount,
+      minutes: t?.per_minute ? p_minutes : null, note: p_note, status: 'ubetalt', given_by: uid(), created_at: now() };
+    db.padel_fines.push(f); return f.id;
+  },
+  padel_fine_paid: ({ p_fine }) => {
+    const f = db.padel_fines.find((x) => x.id === p_fine);
+    if (canRun(f.group_id)) f.status = 'betalt'; else if (f.player_id === uid()) f.status = 'afventer'; else throw new Error('Det kan du ikke');
+  },
+  padel_fine_set_status: ({ p_fine, p_status }) => { db.padel_fines.find((x) => x.id === p_fine).status = p_status; },
   padel_global_ranking: () => db.padel_profiles.map((p) => ({ id: p.id, name: p.name, gender: p.gender, elo: p.elo, matches: db.padel_elo_changes.filter((c) => c.player_id === p.id && c.active).length })),
   padel_set_event_courts: ({ p_event, p_courts }) => { db.padel_events.find((e) => e.id === p_event).court_ids = p_courts; },
   padel_save_profile: ({ p_name, p_gender, p_side }) => {

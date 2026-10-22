@@ -118,7 +118,7 @@ export function leavePage() {
 export function groupBar(onChange) {
   const gs = myGroups();
   if (gs.length < 2) return '';
-  setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); onChange(); })), 0);
+  setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); hooks.renderNav?.(); onChange(); })), 0);
   return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}</button>`).join('')}</div>`;
 }
 

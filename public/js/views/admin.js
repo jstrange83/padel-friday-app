@@ -71,6 +71,8 @@ function playersTab() {
     ${playersBar()}
     <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       <button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm primary" id="invite">📤 Inviter</button></div>
+    <div class="card"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
+      <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
 
     ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
@@ -276,6 +278,16 @@ function bind() {
       toast(`${f.name.value} er oprettet. Tilføj en admin herunder.`);
       refresh();
     } catch { busy(btn, false); }
+  };
+
+  const fo = document.getElementById('finesOn');
+  if (fo) fo.onchange = async (e) => {
+    try {
+      await q(sb.rpc('padel_set_fines', { g, p_enabled: e.target.checked, p_pay_to: group()?.fines_pay_to || null, p_note: group()?.fines_note || null }));
+      toast(e.target.checked ? 'Bødekassen er slået til' : 'Bødekassen er slået fra');
+      await refresh();
+      hooks.renderNav?.();
+    } catch { e.target.checked = !e.target.checked; }
   };
 
   const gp = document.getElementById('globalPublic');

@@ -352,3 +352,34 @@ details.centerbox .mact { margin-top: 12px; }
 .link.sm { font-size: 13px; font-weight: 600; padding: 2px 0; white-space: nowrap; }
 .hitrow > .btn { width: 88px; flex: none; }
 .seg.qs .segbtn { flex: 1 1 auto; }
+
+/* Bødekasse */
+.fbig { font-size: 34px; font-weight: 800; margin: 2px 0 8px; font-variant-numeric: tabular-nums; }
+.myfine { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.myfine:first-child { border-top: 0; }
+.ftiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.ftile { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; min-width: 0; }
+.ftile small { display: block; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; }
+.ftile b { display: block; font-size: 17px; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.ftile span { font-size: 12px; color: var(--muted); }
+.ftile.red small { color: var(--dn); } .ftile.amber small { color: var(--warn); } .ftile.green small { color: var(--up); }
+.fine { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; }
+.fine.betalt { opacity: .75; }
+.approvals .fine { background: var(--card2); }
+.ftop { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.fname { font-size: 15px; }
+.famt { font-size: 20px; font-weight: 800; color: var(--dn); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fine.betalt .famt { color: var(--up); } .fine.afventer .famt { color: var(--warn); }
+.ftitle { font-size: 15px; margin: 2px 0; }
+.fmeta { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.badge.st-ubetalt { background: rgba(248, 113, 113, .15); color: var(--dn); }
+.badge.st-afventer { background: rgba(251, 191, 36, .15); color: var(--warn); }
+.badge.st-betalt { background: rgba(74, 222, 128, .15); color: var(--up); }
+.givebox form, .fset form { margin-top: 10px; }
+.ftype { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.ftype.off { opacity: .55; }
+.ftype input[name=name] { margin-bottom: 6px; }
+.frow { display: flex; align-items: center; gap: 8px; }
+.frow input[type=number] { width: 100px; margin: 0; }
+.inl { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; font-size: 14px; }
+.inl input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }

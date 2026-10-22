@@ -1,5 +1,5 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, esc, toast, leavePage } from './core.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, esc, toast, leavePage } from './core.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
@@ -7,6 +7,7 @@ import { viewEvents, viewEventForm } from './views/events.js';
 import { viewEvent } from './views/event.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
+import { viewFines } from './views/fines.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 
@@ -84,10 +85,14 @@ async function boot() {
 
 hooks.boot = boot;
 hooks.loadBase = loadBase;
+hooks.renderNav = () => renderNav();
 
 function renderNav() {
   if (!S.groupId) { navEl.innerHTML = ''; return; }
-  const items = [['#/fredage', '🎾', 'Spilledage'], ['#/rangliste', '🏆', 'Rangliste'], ['#/profil', '👤', 'Profil']];
+  const items = [['#/fredage', '🎾', 'Spilledage'], ['#/rangliste', '🏆', 'Rangliste']];
+  // Bødekassen vises kun i grupper, hvor admin har slået den til
+  if (group()?.fines_enabled) items.push(['#/boeder', '💸', 'Bøder']);
+  items.push(['#/profil', '👤', 'Profil']);
   if (isAdmin()) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
@@ -122,6 +127,7 @@ const ROUTES = {
   spiller: (id) => viewPlayer(id),
   profil: () => renderProfile(false),
   faq: () => viewFaq(),
+  boeder: () => viewFines(),
   admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
 };
 

@@ -440,6 +440,58 @@ try {
   ok(await ip.locator('#installRow').count() === 1, 'iPhone: hjemmeskærm ligger under Profil');
   await iphone.close();
 
+  // Bødekasse: admin slår til, giver bøde, spilleren melder betalt, admin godkender
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-pgroup="g-fre"]');
+  await wait(300);
+  ok(!(await page.locator('#nav').innerText()).includes('Bøder'), 'bødekassen er slået fra som standard');
+  await page.check('#finesOn');
+  await wait(500);
+  ok((await page.locator('#nav').innerText()).includes('Bøder'), 'Bøder kommer i menuen, når den slås til');
+  await page.click('#nav a:has-text("Bøder")');
+  await page.waitForSelector('.page.fines');
+  await page.locator('details.givebox summary').click();
+  await page.fill('#fineWho', 'anders');
+  await page.locator('#fineHits [data-pick]').first().click();
+  await page.selectOption('#giveFine select[name=type]', { label: 'For sent fremmøde · 5 kr./min' });
+  await page.fill('#giveFine input[name=minutes]', '7');
+  await page.click('#giveFine button.primary');
+  await wait(500);
+  ok((await page.locator('.flist .fine').first().innerText()).includes('35 kr.'), 'bøde for 7 min for sent = 35 kr.');
+  // Egen bøde uden takst
+  await page.selectOption('#giveFine select[name=type]', { label: 'Andet…' });
+  await page.fill('#fineWho', 'anders');
+  await page.locator('#fineHits [data-pick]').first().click();
+  await page.fill('#giveFine input[name=title]', 'Glemt bolde');
+  await page.fill('#giveFine input[name=amount]', '20');
+  await page.click('#giveFine button.primary');
+  await wait(500);
+  ok((await page.locator('.ftile.red').innerText()).includes('55 kr.'), 'ubetalte i alt 55 kr.');
+  await page.locator('details.fset summary').click();
+  await page.fill('#fineSettings input[name=payto]', 'MobilePay 12 34 56 78');
+  await page.click('#fineSettings button');
+  await wait(400);
+  await shot('boeder-admin');
+  await noOverflow('bødekasse');
+  await loginAs('test1@fredagspadel.test');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  const mc = await page.locator('.mine-card').innerText();
+  ok(mc.includes('55 kr.') && mc.includes('MobilePay 12 34 56 78'), 'spilleren ser sit udestående og hvor der betales');
+  ok(!(await page.locator('#giveFine').count()), 'almindelig spiller kan ikke give bøder');
+  await page.click('#iPaid');
+  await wait(500);
+  ok((await page.locator('.ftile.amber').innerText()).includes('55 kr.'), 'Jeg har betalt sætter bøderne til afventer');
+  await shot('boeder-spiller');
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.approvals');
+  for (let i = 0; i < 2; i++) { await page.locator('.approvals [data-paid]').first().click(); await wait(400); }
+  ok((await page.locator('.ftile.green').innerText()).includes('55 kr.'), 'admin godkender betalingerne');
+  ok((await page.locator('.list .row').first().innerText()).includes('Test Anders'), 'bødekonge vises');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {
