@@ -5,6 +5,26 @@ import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBa
 export const kr = (n) => `${new Intl.NumberFormat('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(+n || 0)} kr.`;
 const STATUS = { ubetalt: 'Ubetalt', afventer: 'Afventer', betalt: 'Betalt' };
 const sum = (fs) => fs.reduce((s, f) => s + Number(f.amount), 0);
+// MobilePay: "Betal til" med et dansk mobilnummer giver en knap, der åbner MobilePay med nummer, beløb og tekst
+export function mpNumber(payTo) {
+  let d = String(payTo || '').replace(/\D/g, '');
+  if (d.length === 10 && d.startsWith('45')) d = d.slice(2);
+  return d.length === 8 ? d : '';
+}
+export function payButtons(gr, amount) {
+  const nr = mpNumber(gr?.fines_pay_to);
+  if (!nr) return '';
+  const amt = Math.round(+amount * 100) / 100;
+  const url = `mobilepay://send?phone=${nr}&amount=${amt}&comment=${encodeURIComponent(`Bøder ${gr.name}`)}&lock=1`;
+  return `<div class="mact"><a class="btn sm mp" href="${url}">📱 Betal ${kr(amt)} med MobilePay</a></div>
+    <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer (${nr.replace(/(\d{2})(?=\d)/g, '$1 ')})</button></div>`;
+}
+export function bindCopy(root = app) {
+  root.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); }
+  }));
+}
+
 const TABS = [['ubetalt', 'Ubetalte'], ['afventer', 'Afventer'], ['betalt', 'Betalte'], ['alle', 'Alle']];
 
 async function load(g) {
@@ -57,7 +77,8 @@ export async function viewFines() {
       <div class="mtitle">Dit udestående</div>
       <div class="fbig">${kr(sum(myOpen))}</div>
       ${myOpen.length ? `${myOpen.map((f) => `<div class="myfine"><span class="grow">${esc(f.title)}${f.minutes ? ` (${f.minutes} min)` : ''}<span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}</span></span><b>${kr(f.amount)}</b></div>`).join('')}
-        ${myOpen.some((f) => f.status === 'ubetalt') ? `<p class="small">${gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>, og tryk så` : 'Når du har betalt, så tryk'} <b>Jeg har betalt</b>.</p>` : ''}
+        ${myOpen.some((f) => f.status === 'ubetalt') ? `<p class="small">${gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>, og tryk så` : 'Når du har betalt, så tryk'} <b>Jeg har betalt</b>.</p>
+          ${payButtons(gr, sum(myOpen.filter((f) => f.status === 'ubetalt')))}` : ''}
         ${myOpen.some((f) => f.status === 'ubetalt') ? '<div class="mact"><button class="btn sm primary" id="iPaid">✅ Jeg har betalt</button></div>' : ''}
         ${myOpen.some((f) => f.status === 'afventer') ? '<p class="small muted">⏳ Venter på, at en admin godkender din betaling.</p>' : ''}`
         : '<p>😇 Du har opført dig pænt.</p>'}
@@ -85,10 +106,13 @@ export async function viewFines() {
   bind(g, types, fines, myOpen);
 }
 
-function giveForm(types) {
+// "Giv en bøde" bruges både her og på spilledagen
+export function giveForm(types, open = S.fineGiveOpen) {
+  return `<details class="card givebox" ${open ? 'open' : ''}><summary><b>➕ Giv en bøde</b></summary>${giveFormBody(types)}</details>`;
+}
+export function giveFormBody(types) {
   const act = types.filter((t) => t.active);
-  return `<details class="card givebox" ${S.fineGiveOpen ? 'open' : ''}><summary><b>➕ Giv en bøde</b></summary>
-    <form id="giveFine">
+  return `<form id="giveFine">
       <label>Spiller<input type="search" id="fineWho" placeholder="Søg på navn…" autocomplete="off" required></label>
       <div id="fineHits" class="hits"></div>
       <input type="hidden" name="player">
@@ -100,13 +124,50 @@ function giveForm(types) {
       </div>
       <label>Note <small class="muted">(valgfri)</small><input name="note" maxlength="300"></label>
       <button class="btn primary">Giv bøden</button>
-    </form></details>`;
+    </form>`;
+}
+
+// people: spillere der kan vælges (fx dagens tilmeldte først). onDone kaldes efter en bøde er givet.
+export function bindGive(g, eventId, people, onDone) {
+  const gf = document.getElementById('giveFine');
+  if (!gf) return;
+  const who = document.getElementById('fineWho'), hits = document.getElementById('fineHits');
+  const pick = (id) => { gf.player.value = id; who.value = nameOf(id); hits.innerHTML = ''; };
+  const draw = () => {
+    gf.player.value = '';
+    const t = who.value.trim().toLowerCase();
+    const hs = (t ? people.filter((p) => p.name.toLowerCase().includes(t)) : eventId ? people : []).slice(0, t ? 6 : 12);
+    hits.innerHTML = hs.map((p) => `<button type="button" class="hit" data-pick="${p.id}">${esc(p.name)}</button>`).join('') || (t ? '<p class="muted small">Ingen i gruppen matcher.</p>' : '');
+    hits.querySelectorAll('[data-pick]').forEach((b) => (b.onclick = () => pick(b.dataset.pick)));
+  };
+  who.oninput = draw;
+  who.onfocus = () => { if (!who.value) draw(); };
+  const sync = () => {
+    const o = gf.type.selectedOptions[0];
+    gf.querySelector('.fmin').hidden = !o?.dataset.pm;
+    gf.querySelector('.fother').hidden = !!o?.value;
+  };
+  gf.type.onchange = sync; sync();
+  gf.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!gf.player.value) return toast('Vælg en spiller fra listen', true);
+    const btn = gf.querySelector('button.primary');
+    busy(btn, true);
+    try {
+      await q(sb.rpc('padel_give_fine', {
+        g, p_player: gf.player.value, p_type: gf.type.value || null, p_minutes: gf.minutes.value ? +gf.minutes.value : null,
+        p_title: gf.elements.title.value || null, p_amount: gf.amount.value ? +gf.amount.value : null, p_note: gf.note.value || null, p_event: eventId || null,
+      }));
+      toast(`${nameOf(gf.player.value)} har fået en bøde`);
+      await onDone();
+    } catch { busy(btn, false); }
+  };
 }
 
 function settings(gr, types) {
   return `<details class="card faq fset"><summary><b>⚙️ Indstillinger (admin)</b></summary><div>
     <form id="fineSettings">
-      <label>Betal til <small class="muted">(fx MobilePay-nummer)</small><input name="payto" value="${esc(gr.fines_pay_to || '')}" maxlength="60"></label>
+      <label>Betal til <small class="muted">(et mobilnummer giver en MobilePay-knap)</small><input name="payto" value="${esc(gr.fines_pay_to || '')}" maxlength="60"></label>
       <label>Tekst øverst <small class="muted">(fx hvad pengene går til)</small><input name="note" value="${esc(gr.fines_note || '')}" maxlength="200"></label>
       <button class="btn">Gem</button>
     </form>
@@ -141,36 +202,11 @@ function bind(g, types, fines, myOpen) {
     for (const f of myOpen.filter((x) => x.status === 'ubetalt')) await q(sb.rpc('padel_fine_paid', { p_fine: f.id }));
   }, 'Tak! En admin godkender din betaling');
 
-  // Giv bøde: søg spiller, vælg takst
-  const gf = document.getElementById('giveFine');
-  if (gf) {
-    const box = gf.closest('details');
-    box.ontoggle = () => (S.fineGiveOpen = box.open);
-    const who = document.getElementById('fineWho'), hits = document.getElementById('fineHits');
-    const people = activeMembers(g).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-    who.oninput = () => {
-      gf.player.value = '';
-      const t = who.value.trim().toLowerCase();
-      const hs = t ? people.filter((p) => p.name.toLowerCase().includes(t)).slice(0, 6) : [];
-      hits.innerHTML = hs.map((p) => `<button type="button" class="hit" data-pick="${p.id}">${esc(p.name)}</button>`).join('') || (t ? '<p class="muted small">Ingen i gruppen matcher.</p>' : '');
-      hits.querySelectorAll('[data-pick]').forEach((b) => (b.onclick = () => { gf.player.value = b.dataset.pick; who.value = nameOf(b.dataset.pick); hits.innerHTML = ''; }));
-    };
-    const sync = () => {
-      const o = gf.type.selectedOptions[0];
-      gf.querySelector('.fmin').hidden = !o?.dataset.pm;
-      gf.querySelector('.fother').hidden = !!o?.value;
-    };
-    gf.type.onchange = sync; sync();
-    gf.onsubmit = (e) => {
-      e.preventDefault();
-      if (!gf.player.value) return toast('Vælg en spiller fra listen', true);
-      const btn = gf.querySelector('button.primary');
-      run(btn, () => q(sb.rpc('padel_give_fine', {
-        g, p_player: gf.player.value, p_type: gf.type.value || null, p_minutes: gf.minutes.value ? +gf.minutes.value : null,
-        p_title: gf.title.value || null, p_amount: gf.amount.value ? +gf.amount.value : null, p_note: gf.note.value || null, p_event: null,
-      })), `${nameOf(gf.player.value)} har fået en bøde`);
-    };
-  }
+  // Giv bøde
+  const gb = document.querySelector('details.givebox');
+  if (gb) gb.ontoggle = () => (S.fineGiveOpen = gb.open);
+  bindGive(g, null, activeMembers(g).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)), reload);
+  bindCopy();
 
   // Admin: indstillinger og takster
   const fs = document.getElementById('fineSettings');
@@ -189,3 +225,42 @@ function bind(g, types, fines, myOpen) {
   app.querySelectorAll('[data-tactive]').forEach((b) => (b.onclick = () =>
     run(b, () => q(sb.rpc('padel_set_fine_type_active', { p_id: b.dataset.tactive, p_active: !!b.dataset.on })), b.dataset.on ? 'Taksten vises igen' : 'Taksten er skjult')));
 }
+
+// ---------- Ny bøde: vises én gang, næste gang spilleren åbner appen ----------
+export async function newFines() {
+  try {
+    return await q(sb.from('padel_fines').select('*').eq('player_id', S.me.id).eq('status', 'ubetalt').is('seen_at', null).order('created_at'));
+  } catch { return []; }
+}
+
+export function renderFineGate(fines, next) {
+  const gids = [...new Set(fines.map((f) => f.group_id))];
+  const many = gids.length > 1;
+  app.innerHTML = `
+  <div class="page finegate">
+    <div class="fgicon">💸</div>
+    <h1>Du har fået ${fines.length === 1 ? 'en bøde' : `${fines.length} bøder`}</h1>
+    ${gids.map((g) => {
+      const gr = group(g) || {}, fs = fines.filter((f) => f.group_id === g), total = sum(fs);
+      return `<div class="card">
+        ${many || gr.name ? `<div class="mtitle">${esc(gr.name || 'Bødekasse')}</div>` : ''}
+        ${fs.map((f) => `<div class="myfine"><span class="grow">${esc(f.title)}${f.minutes ? ` (${f.minutes} min)` : ''}
+          <span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}${f.given_by ? ` · givet af ${esc(nameOf(f.given_by).split(' ')[0])}` : ''}</span>
+          ${f.note ? `<br><span class="muted small">${esc(f.note)}</span>` : ''}</span><b>${kr(f.amount)}</b></div>`).join('')}
+        ${fs.length > 1 ? `<div class="myfine total"><span class="grow">I alt</span><b>${kr(total)}</b></div>` : ''}
+        ${gr.fines_pay_to ? `<p class="small">Betal til <b>${esc(gr.fines_pay_to)}</b>, og tryk <b>Jeg har betalt</b> under Bøder.</p>${payButtons(gr, total)}` : ''}
+      </div>`;
+    }).join('')}
+    <div class="mact"><button class="btn ghost" id="fgSee">Se bødekassen</button><button class="btn primary" id="fgOk">OK</button></div>
+  </div>`;
+  bindCopy();
+  const seen = async (btn) => { busy(btn, true); try { await q(sb.rpc('padel_fines_seen', { p_ids: fines.map((f) => f.id) })); } catch {} };
+  document.getElementById('fgOk').onclick = async (e) => { await seen(e.currentTarget); next(); };
+  document.getElementById('fgSee').onclick = async (e) => {
+    await seen(e.currentTarget);
+    if (!many) setGroupSafe(gids[0]);
+    location.replace('#/boeder');
+    next();
+  };
+}
+function setGroupSafe(g) { if (S.groups.some((x) => x.id === g)) { S.groupId = g; try { localStorage.setItem('fp-group', g); } catch {} } }

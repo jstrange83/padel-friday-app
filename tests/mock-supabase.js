@@ -45,6 +45,7 @@ function applyFilters(rows, filters) {
     if (op === 'eq') return r[col] === val;
     if (op === 'gt') return r[col] > val;
     if (op === 'neq') return r[col] !== val;
+    if (op === 'is') return (r[col] ?? null) === val;
     if (op === 'in') return val.includes(r[col]);
     if (op === 'or') return val.split(',').some((c) => { const [k, , v] = c.split('.'); return r[k] === v; });
     return true;
@@ -74,6 +75,7 @@ class Query {
   eq(c, v) { this.f.push(['eq', c, v]); return this; }
   gt(c, v) { this.f.push(['gt', c, v]); return this; }
   neq(c, v) { this.f.push(['neq', c, v]); return this; }
+  is(c, v) { this.f.push(['is', c, v]); return this; }
   in(c, v) { this.f.push(['in', c, v]); return this; }
   or(s) { this.f.push(['or', null, s]); return this; }
   order(c, o = {}) { this.o.push([c, o.ascending !== false]); return this; }
@@ -198,6 +200,7 @@ const RPC = {
     const f = db.padel_fines.find((x) => x.id === p_fine);
     if (canRun(f.group_id)) f.status = 'betalt'; else if (f.player_id === uid()) f.status = 'afventer'; else throw new Error('Det kan du ikke');
   },
+  padel_fines_seen: ({ p_ids }) => { db.padel_fines.filter((f) => p_ids.includes(f.id) && f.player_id === uid()).forEach((f) => (f.seen_at = now())); },
   padel_fine_set_status: ({ p_fine, p_status }) => { db.padel_fines.find((x) => x.id === p_fine).status = p_status; },
   padel_global_ranking: () => db.padel_profiles.map((p) => ({ id: p.id, name: p.name, gender: p.gender, elo: p.elo, matches: db.padel_elo_changes.filter((c) => c.player_id === p.id && c.active).length })),
   padel_set_event_courts: ({ p_event, p_courts }) => { db.padel_events.find((e) => e.id === p_event).court_ids = p_courts; },

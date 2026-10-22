@@ -7,7 +7,7 @@ import { viewEvents, viewEventForm } from './views/events.js';
 import { viewEvent } from './views/event.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
-import { viewFines } from './views/fines.js';
+import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 
@@ -73,14 +73,23 @@ async function boot() {
     try { next = localStorage.getItem('fp-next'); localStorage.removeItem('fp-next'); } catch {}
     if (next && next !== location.hash) location.hash = next;
     else if (location.hash.startsWith('#/velkommen')) location.hash = '#/fredage';
-    // Første gang: tilbyd at lægge appen på hjemmeskærmen
-    if (!S.viewAs && !S.installShown && shouldShowInstall()) {
-      S.installShown = true;
-      navEl.innerHTML = '';
-      return renderInstall(() => route());
-    }
-    await route();
+    await gates();
   } finally { booting = false; }
+}
+
+// Sider der vises én gang, før appen: nye bøder, og første gang tilbuddet om hjemmeskærmen
+async function gates() {
+  if (!S.viewAs && !S.fineGateShown) {
+    S.fineGateShown = true;
+    const fresh = await newFines();
+    if (fresh.length) { navEl.innerHTML = ''; return renderFineGate(fresh, () => gates()); }
+  }
+  if (!S.viewAs && !S.installShown && shouldShowInstall()) {
+    S.installShown = true;
+    navEl.innerHTML = '';
+    return renderInstall(() => route());
+  }
+  await route();
 }
 
 hooks.boot = boot;

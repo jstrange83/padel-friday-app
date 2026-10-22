@@ -6,6 +6,7 @@ import {
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
+import { giveFormBody, bindGive } from './fines.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -30,7 +31,7 @@ export async function viewEvent(id) {
   let timer = null, pending = false;
   const typing = () => {
     const a = document.activeElement;
-    return (a && app.contains(a) && ['INPUT', 'SELECT'].includes(a.tagName)) || !!app.querySelector('form.enter:not([hidden]), form.editteams:not([hidden])');
+    return (a && app.contains(a) && ['INPUT', 'SELECT'].includes(a.tagName)) || !!app.querySelector('form.enter:not([hidden]), form.editteams:not([hidden]), details.givebox[open]');
   };
   const refresh = () => {
     clearTimeout(timer);
@@ -457,6 +458,7 @@ function render(data) {
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
+    ${c.run && group(c.ev.group_id)?.fines_enabled ? '<details class="card givebox" id="evFine"><summary><b>💸 Giv en bøde</b></summary><div id="evFineBody"><p class="muted">Henter takster…</p></div></details>' : ''}
   </div>`;
   bind(c);
 }
@@ -597,6 +599,19 @@ function bind(c) {
     if (!confirm('Fjern dagen fra ranglisten? Pointene rulles tilbage.')) return;
     await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: false })); await reload();
   });
+
+  // Bøde fra spilledagen (fx for sent fremmøde eller afbud). Dagens tilmeldte står først.
+  const fb = $('evFine');
+  if (fb) fb.ontoggle = async () => {
+    if (!fb.open || fb.dataset.loaded) return;
+    fb.dataset.loaded = '1';
+    const types = await q(sb.from('padel_fine_types').select('*').eq('group_id', ev.group_id).order('sort'));
+    $('evFineBody').innerHTML = giveFormBody(types);
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const signedP = c.signed.map((pid) => S.profiles[pid]).filter(Boolean).sort(byName);
+    const rest = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter((p) => p && !c.signed.includes(p.id)).sort(byName);
+    bindGive(ev.group_id, ev.id, [...signedP, ...rest], async () => { $('giveFine').reset(); $('giveFine').type.dispatchEvent(new Event('change')); fb.open = false; });
+  };
 
   // Hurtige indstillinger: spiltype, hold og baner
   app.querySelectorAll('[data-qs]').forEach((b) => (b.onclick = () => { const p = $('qspanel'); p.hidden = !p.hidden; }));

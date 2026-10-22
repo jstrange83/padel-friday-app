@@ -383,3 +383,8 @@ details.centerbox .mact { margin-top: 12px; }
 .frow input[type=number] { width: 100px; margin: 0; }
 .inl { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 0 auto; font-size: 14px; }
 .inl input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.finegate { padding-top: 30px; }
+.finegate .fgicon { font-size: 56px; text-align: center; }
+.finegate h1 { text-align: center; }
+.myfine.total { font-weight: 700; }
+.btn.mp { background: #5a78ff; border-color: #5a78ff; color: #fff; }
