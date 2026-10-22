@@ -54,6 +54,7 @@ function allPlayers() {
   const gname = (g) => S.groups.find((x) => x.id === g)?.name || 'Gruppe';
   return `
     ${playersBar()}
+    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${all.length})</b><span class="muted">›</span></summary>
     <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
     <div class="list compact">${all.map((p) => {
       const ms = S.members.filter((m) => m.player_id === p.id && m.status !== 'fjernet');
@@ -74,7 +75,7 @@ function allPlayers() {
           </div>
         </div>
       </details>`;
-    }).join('')}</div>`;
+    }).join('')}</div></details>`;
 }
 
 function playersTab() {
@@ -97,6 +98,7 @@ function playersTab() {
         <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
     }).join('')}</div>` : ''}
 
+    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${players.length})</b><span class="muted">›</span></summary>
     <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
     <div class="list compact" id="players">${players.map((p) => `
       <details class="prow" data-name="${esc(p.name.toLowerCase())}">
@@ -112,7 +114,7 @@ function playersTab() {
             ${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern</button>` : ''}
           </div>
         </div>
-      </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div>`;
+      </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div></details>`;
 }
 
 // ---------- Grupper (superadmin) ----------
@@ -192,6 +194,8 @@ function bind() {
   document.getElementById('invite')?.addEventListener('click', () =>
     share(`${location.origin}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}! Opret en profil (eller log ind) her, så godkender jeg dig:`));
 
+  const pl = app.querySelector('details.plist');
+  if (pl) pl.ontoggle = () => (S.playersOpen = pl.open);
   const ps = document.getElementById('playerSearch');
   if (ps) ps.oninput = () => {
     const t = ps.value.trim().toLowerCase();

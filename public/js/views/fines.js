@@ -11,14 +11,21 @@ export function mpNumber(payTo) {
   if (d.length === 10 && d.startsWith('45')) d = d.slice(2);
   return d.length === 8 ? d : '';
 }
+// MobilePay Box: admin indsætter linket fra "Del boks" i MobilePay. Det bruges før et mobilnummer.
+const boxUrl = (gr) => (/^https:\/\//i.test(gr?.fines_box_url || '') ? gr.fines_box_url : '');
+export const canPay = (gr) => !!(boxUrl(gr) || mpNumber(gr?.fines_pay_to));
 export function payButtons(gr, amount) {
-  const nr = mpNumber(gr?.fines_pay_to);
-  if (!nr) return '';
+  const box = boxUrl(gr), nr = mpNumber(gr?.fines_pay_to);
   const amt = Math.round(+amount * 100) / 100;
+  if (box) return `<div class="mact"><a class="btn sm mp" href="${esc(box)}" target="_blank" rel="noopener">📱 Betal ${kr(amt)} i MobilePay Box</a></div>
+    <p class="muted small">Skriv ${kr(amt)} i MobilePay, når boksen åbner.</p>`;
+  if (!nr) return '';
   const url = `mobilepay://send?phone=${nr}&amount=${amt}&comment=${encodeURIComponent(`Bøder ${gr.name}`)}&lock=1`;
   return `<div class="mact"><a class="btn sm mp" href="${url}">📱 Betal ${kr(amt)} med MobilePay</a></div>
     <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer (${nr.replace(/(\d{2})(?=\d)/g, '$1 ')})</button></div>`;
 }
+// Tekst om hvor man betaler
+const payText = (gr) => (boxUrl(gr) ? 'Betal i bødekassens MobilePay Box' : gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>` : '');
 export function bindCopy(root = app) {
   root.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); }
@@ -78,7 +85,7 @@ export async function viewFines() {
       <div class="mtitle">Dit udestående</div>
       <div class="fbig">${kr(sum(myOpen))}</div>
       ${myOpen.length ? `${myOpen.map((f) => `<div class="myfine"><span class="grow">${esc(f.title)}${f.minutes ? ` (${f.minutes} min)` : ''}<span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}</span></span><b>${kr(f.amount)}</b></div>`).join('')}
-        ${myOpen.some((f) => f.status === 'ubetalt') ? `<p class="small">${gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>, og tryk så` : 'Når du har betalt, så tryk'} <b>Jeg har betalt</b>.</p>
+        ${myOpen.some((f) => f.status === 'ubetalt') ? `<p class="small">${payText(gr) ? `${payText(gr)}, og tryk så` : 'Når du har betalt, så tryk'} <b>Jeg har betalt</b>.</p>
           ${payButtons(gr, sum(myOpen.filter((f) => f.status === 'ubetalt')))}` : ''}
         ${myOpen.some((f) => f.status === 'ubetalt') ? '<div class="mact"><button class="btn sm primary" id="iPaid">✅ Jeg har betalt</button></div>' : ''}
         ${myOpen.some((f) => f.status === 'afventer') ? '<p class="small muted">⏳ Venter på, at en admin godkender din betaling.</p>' : ''}`
@@ -168,7 +175,9 @@ export function bindGive(g, eventId, people, onDone) {
 function settings(gr, types) {
   return `<details class="card faq fset"><summary><b>⚙️ Indstillinger (admin)</b></summary><div>
     <form id="fineSettings">
-      <label>Betal til <small class="muted">(et mobilnummer giver en MobilePay-knap)</small><input name="payto" value="${esc(gr.fines_pay_to || '')}" maxlength="60"></label>
+      <label>Link til MobilePay Box <small class="muted">(i MobilePay: åbn boksen og tryk <b>Del boks</b>, kopiér linket og sæt det ind her)</small>
+        <input name="box" type="url" inputmode="url" value="${esc(gr.fines_box_url || '')}" maxlength="400" placeholder="https://…"></label>
+      <label>Eller betal til et mobilnummer <small class="muted">(bruges hvis der ikke er en Box)</small><input name="payto" value="${esc(gr.fines_pay_to || '')}" maxlength="60"></label>
       <label>Tekst øverst <small class="muted">(fx hvad pengene går til)</small><input name="note" value="${esc(gr.fines_note || '')}" maxlength="200"></label>
       <button class="btn">Gem</button>
     </form>
@@ -215,7 +224,7 @@ function bind(g, types, fines, myOpen) {
   if (fs) fs.onsubmit = (e) => {
     e.preventDefault();
     run(fs.querySelector('button'), async () => {
-      await q(sb.rpc('padel_set_fines', { g, p_enabled: !!group().fines_enabled, p_pay_to: fs.payto.value, p_note: fs.note.value }));
+      await q(sb.rpc('padel_set_fines_v2', { g, p_enabled: !!group().fines_enabled, p_pay_to: fs.payto.value, p_note: fs.note.value, p_box_url: fs.box.value }));
       await hooks.loadBase();
     }, 'Gemt');
   };
@@ -250,7 +259,7 @@ export function renderFineGate(fines, next) {
           <span class="muted small"> · ${fmtDate(f.created_at, { day: 'numeric', month: 'short' })}${f.given_by ? ` · givet af ${esc(nameOf(f.given_by).split(' ')[0])}` : ''}</span>
           ${f.note ? `<br><span class="muted small">${esc(f.note)}</span>` : ''}</span><b>${kr(f.amount)}</b></div>`).join('')}
         ${fs.length > 1 ? `<div class="myfine total"><span class="grow">I alt</span><b>${kr(total)}</b></div>` : ''}
-        ${gr.fines_pay_to ? `<p class="small">Betal til <b>${esc(gr.fines_pay_to)}</b>, og tryk <b>Jeg har betalt</b> under Bøder.</p>${payButtons(gr, total)}` : ''}
+        ${payText(gr) ? `<p class="small">${payText(gr)}, og tryk <b>Jeg har betalt</b> under Bøder.</p>${payButtons(gr, total)}` : ''}
       </div>`;
     }).join('')}
     <div class="mact"><button class="btn ghost" id="fgSee">Se bødekassen</button><button class="btn primary" id="fgOk">OK</button></div>

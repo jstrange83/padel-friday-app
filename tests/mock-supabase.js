@@ -207,6 +207,10 @@ const RPC = {
       [['For sent fremmøde', 5, true], ['Afbud efter tilmelding', 30], ['Afbud på dagen', 100], ['Udeblivelse', 500], ['Dårlig opførsel', 30], ['Glemte sager', 30]]
         .forEach(([name, amount, pm], i) => db.padel_fine_types.push({ id: uuid(), group_id: g, name, amount, per_minute: !!pm, sort: i + 1, active: true }));
   },
+  padel_set_fines_v2: (a) => {
+    if (a.p_box_url && !/^https:\/\//i.test(a.p_box_url)) throw new Error('Linket til MobilePay Box skal starte med https://');
+    RPC.padel_set_fines(a); db.padel_groups.find((x) => x.id === a.g).fines_box_url = a.p_box_url || null;
+  },
   padel_save_fine_type: ({ p_id, g, p_name, p_amount, p_per_minute }) => {
     if (p_id) { Object.assign(db.padel_fine_types.find((t) => t.id === p_id), { name: p_name, amount: p_amount, per_minute: p_per_minute }); return p_id; }
     const t = { id: uuid(), group_id: g, name: p_name, amount: p_amount, per_minute: p_per_minute, sort: 99, active: true }; db.padel_fine_types.push(t); return t.id;

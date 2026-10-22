@@ -264,6 +264,7 @@ try {
   await page.click('#pf button.primary');
   await wait(400);
   await page.click('#nav a:has-text("Admin")');
+  await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
   await page.locator('.prow summary').first().click();
   ok((await page.locator('.prow[open] .contact').innerText()).includes('12 34 56 78'), 'nummer vises for admin med ring/SMS');
   await page.click('#nav a:has-text("Spilledage")');
@@ -279,6 +280,7 @@ try {
   // Admin: se som
   await page.click('#nav a:has-text("Admin")');
   await page.waitForSelector('.prow');
+  await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
   await page.locator('.prow summary').nth(1).click();
   await shot('admin');
   await noOverflow('admin');
@@ -354,6 +356,7 @@ try {
   ok(await page.locator('.qrmodal').count() === 0, 'QR-kode lukkes');
   // Alle spillere: tilføj Test Carsten til Lørdagspadel og gør ham til superbruger der
   await page.click('[data-allp]');
+  await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
   await page.fill('#playerSearch', 'carsten');
   await page.locator('.prow:visible summary').first().click();
   await page.locator('.prow[open] [data-gadd]').filter({ hasText: 'Lørdagspadel' }).click();
@@ -447,6 +450,7 @@ try {
   await page.waitForSelector('.page.admin');
   await page.click('[data-pgroup="g-fre"]');
   await wait(300);
+  ok(await page.locator('details.plist:not([open])').count() === 1, 'spillerlisten under Admin er foldet sammen');
   ok(!(await page.locator('#nav').innerText()).includes('Bøder'), 'bødekassen er slået fra som standard');
   await page.check('#finesOn');
   await wait(500);
@@ -527,12 +531,32 @@ try {
   for (let i = 0; i < 2; i++) { await page.locator('.approvals [data-paid]').first().click(); await wait(400); }
   ok((await page.locator('.ftile.green').innerText()).includes('55 kr.'), 'admin godkender betalingerne');
   ok((await page.locator('.list .row').first().innerText()).includes('Test Anders'), 'bødekonge vises');
+  // MobilePay Box-link
+  await page.locator('details.fset summary').click();
+  await page.fill('#fineSettings input[name=box]', 'https://qr.mobilepay.dk/box/abc123/pay-in');
+  await page.click('#fineSettings button');
+  await wait(400);
+  ok((await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_groups.find((x) => x.id === 'g-fre').fines_box_url)) === 'https://qr.mobilepay.dk/box/abc123/pay-in', 'admin gemmer link til MobilePay Box');
+
   // Fortryd betalt
   await page.click('[data-ftab="betalt"]');
   await wait(300);
   await page.locator('.flist [data-fstatus]', { hasText: 'Fortryd betalt' }).first().click();
   await wait(500);
   ok((await page.locator('.ftile.red').innerText()).match(/(20|35) kr\./), 'en betalt bøde kan sættes tilbage til ubetalt');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'test1@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a, .finegate');
+  if (await page.locator('.finegate').count()) await page.click('#fgOk');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  ok((await page.locator('.mine-card a.mp').getAttribute('href')) === 'https://qr.mobilepay.dk/box/abc123/pay-in', 'spilleren får knap til MobilePay Box');
+  await shot('boeder-box');
+  await loginAs('jimmy@test');
   await shot('boeder-fortryd');
 
   // Opret spiller uden login, tilmeld ham, og lad ham overtage profilen, når han opretter sig
@@ -546,7 +570,8 @@ try {
   await page.click('#newPlayer label:has-text("Mand")');
   await page.click('#newPlayer button.primary');
   await wait(500);
-  ok((await page.locator('#players').innerText()).includes('Nikolaj Ny') && (await page.locator('.prow', { hasText: 'Nikolaj Ny' }).innerText()).includes('Uden login'), 'admin opretter spiller uden login');
+await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
+    ok((await page.locator('#players').innerText()).includes('Nikolaj Ny') && (await page.locator('.prow', { hasText: 'Nikolaj Ny' }).innerText()).includes('Uden login'), 'admin opretter spiller uden login');
   await shot('opret-spiller');
   await page.goto(evUrl);
   await page.waitForSelector('.page.event');

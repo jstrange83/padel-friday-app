@@ -159,13 +159,14 @@ export const FAQ = [
     cat: 'Bødekasse',
     q: 'Hvad er bødekassen?',
     a: `<p>Hver gruppe kan have sin egen bødekasse. Gruppens admin bestemmer, om den er slået til (under <b>Admin</b>), og hvilke takster der gælder, fx for sent fremmøde eller afbud på dagen.</p>
+<p>Har gruppen en MobilePay Box, finder admin linket i MobilePay ved at åbne boksen og trykke <b>Del boks</b>. Linket sættes ind under <b>Bøder → Indstillinger</b>.</p>
 <p>Når den er slået til, kan alle i gruppen se bøderne under <b>💸 Bøder</b> i menuen. Admin og superbrugere giver bøderne, enten i bødekassen eller med <b>💸 Giv en bøde</b> nederst på spilledagen.</p>
 <p>Får du en bøde, vises den næste gang du åbner appen.</p>`,
   },
   {
     cat: 'Bødekasse',
     q: 'Hvordan betaler jeg en bøde?',
-    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin skrevet et mobilnummer, kan du trykke <b>Betal med MobilePay</b>, så åbner MobilePay med nummer og beløb udfyldt. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b> og betal i MobilePay selv. Tryk derefter <b>Jeg har betalt</b>. Bøden står så som <b>Afventer</b>, indtil en admin eller superbruger har godkendt betalingen.</p>`,
+    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, åbner knappen MobilePay med nummer og beløb udfyldt. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b> og betal i MobilePay selv. Tryk derefter <b>Jeg har betalt</b>. Bøden står så som <b>Afventer</b>, indtil en admin eller superbruger har godkendt betalingen.</p>`,
   },
   {
     cat: 'Bødekasse',
