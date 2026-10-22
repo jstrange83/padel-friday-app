@@ -232,7 +232,7 @@ function myNight(c, st) {
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
     <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
-    ${pause}${todo}${signBtn}</div>`;
+    ${pause}${todo ? `<div class="mact">${todo}</div>` : ''}${signBtn ? `<div class="mact">${signBtn}</div>` : ''}</div>`;
 }
 
 // Rettelser der venter på mig (modstanderholdet), eller på admin/superbruger. Vises øverst, så de ikke overses.
@@ -323,10 +323,9 @@ function matchCard(c, m) {
   const mic = SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '';
   let status = '', actions = '';
   if (m.status === 'planlagt' && future) {
-    if (run) actions = `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
+    // Rotation: kommende runde, kun hold kan rettes (link i toppen af kortet)
   } else if (m.status === 'planlagt') {
     if (myTeam || run) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${mic}`;
-    if (run) actions += `<button class="btn sm" data-act="teams" data-id="${m.id}">Ret hold</button>`;
   } else if (m.status === 'indtastet') {
     // Et (ændret) resultat skal godkendes af en fra modstanderholdet. Admin og superbruger kan altid.
     const opp = myTeam && myTeam !== m.reported_team;
@@ -334,9 +333,9 @@ function matchCard(c, m) {
     status = m.changed
       ? `<span class="badge wait">Ændret${m.prev_score_a != null ? ` fra ${m.prev_score_a}–${m.prev_score_b}` : ''} · afventer modstanderen</span>`
       : '<span class="badge wait">Afventer godkendelse</span>';
-    if (canOk) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">${m.changed ? 'Godkend ændring' : 'Godkend'}</button>`;
-    if (opp || run) actions += `<button class="btn sm" data-act="reject" data-id="${m.id}" data-changed="${m.changed && m.prev_score_a != null ? 1 : ''}">${m.changed ? 'Afvis ændring' : 'Afvis'}</button>`;
-    if (myTeam || run) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>${mic}`;
+    if (canOk) actions = `<button class="btn sm primary" data-act="confirm" data-id="${m.id}">Godkend</button>`;
+    if (opp || run) actions += `<button class="btn sm" data-act="reject" data-id="${m.id}" data-changed="${m.changed && m.prev_score_a != null ? 1 : ''}">Afvis</button>`;
+    if (myTeam || run) actions += `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>`;
   } else {
     const d = delta[m.id + m.a_left];
     if (d !== undefined) status = `<span class="badge">Point ${sign(d)} / ${sign(-d)}</span>`;
@@ -348,7 +347,7 @@ function matchCard(c, m) {
   const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
   const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
-    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b>${status}</div>
+    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${status}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     <form class="enter" hidden data-id="${m.id}">

@@ -53,8 +53,8 @@ function allPlayers() {
             <button class="icon sm" data-gremove="${p.id}|${m.group_id}" aria-label="Fjern fra ${esc(gname(m.group_id))}">✕</button></div>`).join('')}
           ${notIn.length ? `<div class="mact">${notIn.map((g) => `<button class="btn sm" data-gadd="${p.id}|${g.id}">+ ${esc(g.name)}</button>`).join('')}</div>` : ''}
           <div class="mact">
-            <button class="btn sm" data-edit="${p.id}">✏️ Ret</button>
-            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
+            <button class="btn sm" data-edit="${p.id}">Ret</button>
+            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
           </div>
         </div>
       </details>`;
@@ -87,9 +87,9 @@ function playersTab() {
           <label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(ROLE).map(([k, v]) =>
             `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <div class="mact">
-            <button class="btn sm" data-edit="${p.id}">✏️ Ret</button>
-            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">👁 Se som</button>` : ''}
-            <a class="btn sm" href="#/spiller/${p.id}">📊 Statistik</a>
+            <button class="btn sm" data-edit="${p.id}">Ret</button>
+            ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
+            <a class="btn sm" href="#/spiller/${p.id}">Statistik</a>
             ${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern</button>` : ''}
           </div>
         </div>
@@ -149,7 +149,7 @@ function courtsTab() {
         <button class="icon sm" data-cmove="${x.id}" data-dir="1" ${i === cs.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} ned">↓</button>
         <button class="icon sm" data-rencourt="${x.id}" aria-label="Omdøb ${esc(x.name)}">✏️</button>
         <button class="icon sm" data-delcourt="${x.id}" aria-label="Slet ${esc(x.name)}">🗑</button></div>`).join('')}
-      <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button><button class="btn sm ghost" data-rencenter="${c.id}">✏️ Omdøb center</button></div>
+      <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button><button class="btn sm ghost" data-rencenter="${c.id}">Omdøb center</button></div>
     </details>`;
   }).join('')}
   <button class="btn" id="addCenter">+ Nyt center</button>`;

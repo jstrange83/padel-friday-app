@@ -191,8 +191,6 @@ body.viewing .page { padding-top: 14px; }
 .mine-card p { margin: 2px 0 10px; font-size: 16px; }
 .mine-card p:last-child { margin-bottom: 0; }
 .mine-card small { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
-.mine-card .btn { width: auto; margin: 0 8px 0 0; }
-.mine-card .btn.primary:only-of-type, .mine-card #signon { width: 100%; }
 .mine-card .delta { margin-left: 6px; }
 .runbar { display: flex; flex-direction: column; gap: 10px; }
 .runbar .btn.primary { margin: 0; }
@@ -342,3 +340,15 @@ details.centerbox .mact { margin-top: 12px; }
 .approvals .appr .sc { margin: 0 6px; font-size: 17px; }
 .approvals small { font-size: 13px; }
 .approvals .mact { margin-top: 8px; }
+
+/* Knaprækker: altid på én linje og lige store */
+.mact { flex-wrap: nowrap; gap: 6px; }
+.mact > .btn { flex: 1 1 0; min-width: 0; width: auto; margin: 0; padding: 9px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mine-card .mact { margin-top: 10px; }
+.mine-card .mact + .mact { margin-top: 8px; }
+.invitebar .btn { width: 96px; flex: none; }
+.segbtn { white-space: nowrap; }
+.mhr { display: inline-flex; align-items: center; gap: 8px; }
+.link.sm { font-size: 13px; font-weight: 600; padding: 2px 0; white-space: nowrap; }
+.hitrow > .btn { width: 88px; flex: none; }
+.seg.qs .segbtn { flex: 1 1 auto; }

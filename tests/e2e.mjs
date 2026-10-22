@@ -21,7 +21,30 @@ page.on('dialog', (d) => d.accept());
 await page.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'tests', 'mock-supabase.js'), 'utf8') }));
 
 let step = 0;
-const shot = async (name) => page.screenshot({ path: path.join(shots, `${String(++step).padStart(2, '0')}-${name}.png`), fullPage: true });
+// Knapper der står sammen skal være på én linje, lige store og uden ombrudt tekst
+const btnAudit = async (where) => {
+  const bad = await page.evaluate(() => {
+    const out = [];
+    const vis = (e) => e.offsetParent !== null && e.getBoundingClientRect().width > 0;
+    const groups = new Set([...document.querySelectorAll('#app .btn, #app .segbtn')].filter(vis).map((b) => b.parentElement));
+    for (const g of groups) {
+      const bs = [...g.children].filter((x) => (x.classList.contains('btn') || x.classList.contains('segbtn')) && vis(x));
+      for (const b of bs) {
+        const cs = getComputedStyle(b), lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.25;
+        const inner = b.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        if (inner > lh * 1.6 || b.scrollWidth > b.clientWidth + 1) out.push(`tekst brydes/klippes: "${b.textContent.trim()}"`);
+      }
+      if (bs.length < 2 || g.classList.contains('seg')) continue;
+      const tops = new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top)));
+      const ws = bs.map((b) => Math.round(b.getBoundingClientRect().width)), hs = bs.map((b) => Math.round(b.getBoundingClientRect().height));
+      if (tops.size > 1) out.push(`flere linjer: ${bs.map((b) => b.textContent.trim()).join(' | ')}`);
+      else if (Math.max(...ws) - Math.min(...ws) > 2 || Math.max(...hs) - Math.min(...hs) > 2) out.push(`forskellig størrelse: ${bs.map((b, i) => `${b.textContent.trim()}(${ws[i]}x${hs[i]})`).join(' | ')}`);
+    }
+    return [...new Set(out)];
+  });
+  if (bad.length) { if (process.env.AUDIT) console.log(`KNAPPER ${where}:\n  ` + bad.join('\n  ')); else ok(false, `knapper (${where}): ${bad.join('; ')}`); }
+};
+const shot = async (name) => { await btnAudit(name); return page.screenshot({ path: path.join(shots, `${String(++step).padStart(2, '0')}-${name}.png`), fullPage: true }); };
 const ok = (cond, msg) => { if (!cond) throw new Error('FEJL: ' + msg); console.log('✓', msg); };
 const text = async () => (await page.locator('#app').innerText()).toLowerCase();
 const wait = (ms = 300) => page.waitForTimeout(ms);
@@ -169,7 +192,7 @@ try {
   await loginAs(cm.mate);
   ok(!(await page.locator(`#m-${cm.id} [data-act=confirm]`).count()), 'makkeren kan ikke godkende ændringen');
   await loginAs(cm.b);
-  ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend ændring'), 'modstander kan godkende ændringen');
+  ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend'), 'modstander kan godkende ændringen');
   ok((await page.locator('.approvals').innerText()).toLowerCase().includes('venter på din godkendelse'), 'rettelsen vises øverst hos modstanderen');
   ok((await page.locator('.mine-card .mtitle').innerText()).toLowerCase().includes('din aften'), 'Din aften har overskrift');
   const parts = await page.evaluate(async () => { const { dayPart } = await import('/js/views/event.js');
