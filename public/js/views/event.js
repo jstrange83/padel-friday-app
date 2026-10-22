@@ -168,6 +168,12 @@ function quickSettings(c, status) {
     </div>` : ''}`;
 }
 
+// Overskrift efter hvornår på dagen man spiller: Din morgen, Din formiddag, Din eftermiddag, Din aften
+export function dayPart(iso) {
+  const h = new Date(iso).getHours();
+  return h >= 5 && h < 9 ? 'Din morgen' : h >= 9 && h < 12 ? 'Din formiddag' : h >= 12 && h < 17 ? 'Din eftermiddag' : h >= 17 ? 'Din aften' : 'Din nat';
+}
+
 // "Din aften": det vigtigste for spilleren selv, øverst
 function myNight(c, st) {
   const { ev, me, signed, L, rounds, inRound, roundStart, totalRounds } = c;
@@ -221,6 +227,7 @@ function myNight(c, st) {
   const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
   const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
   const todo = (now || c.free) && m.status === 'planlagt' ? '<a class="btn sm primary" href="#m-' + m.id + '">Indtast resultat</a>'
+    + (SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '')
     : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<small>Venter på at modstanderne godkender rettelsen.</small>' : '';
   return `<div class="card mine-card ${now ? 'now' : ''}">
     <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
@@ -447,7 +454,7 @@ function render(data) {
   <div class="page event">
     ${header(c)}
     ${approvals(c)}
-    ${myNight(c, st).replace(/(<div class="card mine-card[^"]*">)/, '$1<div class="mtitle">🎾 Din aften</div>')}
+    ${myNight(c, st).replace(/(<div class="card mine-card[^"]*">)/, `$1<div class="mtitle">🎾 ${dayPart(c.ev.starts_at)}</div>`)}
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
@@ -642,7 +649,8 @@ function bind(c) {
       const m = matches.find((x) => x.id === id);
       const team = [m.a_left, m.a_right].includes(me) ? 'a' : [m.b_left, m.b_right].includes(me) ? 'b' : null;
       const f = form('enter', id); f.hidden = false;
-      return listenScore(b, f, team);
+      // Fra Din aften: fold runden ud og vis formularen, så man kan tjekke og trykke Gem
+      return listenScore(b, f, team, () => { f.closest('details')?.setAttribute('open', ''); f.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
     }
     const ask = { reject: b.dataset.changed ? 'Afvis ændringen? Det tidligere resultat gælder igen.' : 'Afvis resultatet? Det skal så indtastes igen.', reset: 'Nulstil kampen? Pointene rulles tilbage.' }[a];
     if (ask && !confirm(ask)) return;

@@ -40,7 +40,7 @@ export function renderInstall(done) {
   let lead = '', body = '';
   if (how === 'prompt') {
     lead = 'Så åbner den som en rigtig app med ét tryk.';
-    body = `${why('⚡', 'Åbner med ét tryk, ligesom andre apps')}${why('🎾', 'Se din aften, bane og makker med det samme')}${why('📦', 'Ingen App Store, fylder næsten ingenting')}
+    body = `${why('⚡', 'Åbner med ét tryk, ligesom andre apps')}${why('🎾', 'Se din næste kamp, bane og makker med det samme')}${why('📦', 'Ingen App Store, fylder næsten ingenting')}
       <button class="btn primary gbig" id="doInstall">Læg på hjemmeskærmen</button>`;
   } else if (how === 'ios') {
     lead = 'Det tager 10 sekunder. Gør sådan her:';

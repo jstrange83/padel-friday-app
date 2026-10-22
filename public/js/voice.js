@@ -33,7 +33,7 @@ export function parseScore(text, myTeam) {
   return myTeam === 'a' ? { a: x, b: y } : { a: y, b: x };
 }
 
-export function listenScore(btn, form, myTeam) {
+export function listenScore(btn, form, myTeam, onHit) {
   if (!SR) return toast('Din browser kan ikke tale-genkendelse. Skriv resultatet i stedet.', true);
   const rec = new SR();
   rec.lang = 'da-DK';
@@ -51,6 +51,7 @@ export function listenScore(btn, form, myTeam) {
     form.b.value = hit.r.b;
     form.querySelector('button').focus();
     toast(`Hørte "${hit.a}" → ${hit.r.a}–${hit.r.b}. Tjek og tryk Gem.`);
+    onHit?.();
   };
   rec.onerror = (e) => {
     done();

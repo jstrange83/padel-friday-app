@@ -83,7 +83,7 @@ export const FAQ = [
     q: 'Hvad er dagsplanen?',
     a: `<p>Når spillerne er tilmeldt, kan admin eller en superbruger trykke <b>Lav dagsplan</b>. Så lægger appen alle dagens runder ud på forhånd med hold, baner, pauser og cirka‑tider.</p>
 <p>Et sæt tager ca. 20 minutter, så 2 timer giver 6 runder. En 30‑minutters rotation giver 4. Du kan altså se hele aftenen, inden I går på banen.</p>
-<p>Ingen skal starte runderne (undtagen ved Rotation på tid, hvor der er fælles nedtælling). Tryk på jeres kamp og tast resultatet, når I er færdige. <b>Din aften</b> viser altid din næste kamp, og runder hvor alle kampe er spillet, foldes sammen.</p>
+<p>Ingen skal starte runderne (undtagen ved Rotation på tid, hvor der er fælles nedtælling). Tryk på jeres kamp og tast resultatet, når I er færdige. <b>Din aften</b> (eller Din morgen, Din eftermiddag osv., alt efter hvornår I spiller) viser altid din næste kamp, og du kan taste eller sige resultatet direkte derfra, og runder hvor alle kampe er spillet, foldes sammen.</p>
 <p>Melder nogen til eller fra, kan dagsplanen laves om, og runder der allerede er påbegyndt, bliver ikke rørt.</p>`,
   },
   {
