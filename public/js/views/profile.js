@@ -68,7 +68,12 @@ function bind(isNew) {
         await q(sb.rpc('padel_admin_set_phone', { p_user: S.viewAs, p_phone: f.phone.value }));
       } else {
         await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
-        await q(sb.rpc('padel_set_phone', { p_phone: f.phone.value }));
+        const claimed = await q(sb.rpc('padel_set_phone_v2', { p_phone: f.phone.value }));
+        if (claimed) {
+          toast('Velkommen! Dine kampe og point fra før er flyttet over til dig');
+          if (isNew) { location.hash = '#/fredage'; return hooks.boot(); }
+          await hooks.loadBase(); return renderProfile(false);
+        }
       }
       toast('Profilen er gemt');
       if (isNew) { if (!location.hash.startsWith('#/fredag/')) location.hash = '#/fredage'; return hooks.boot(); }

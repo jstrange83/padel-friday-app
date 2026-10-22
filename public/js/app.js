@@ -24,7 +24,8 @@ async function loadBase() {
   ]);
   S.contacts = Object.fromEntries(contacts.map((c) => [c.player_id, c.phone]));
   Object.assign(S, { centers, courts, groups, groupCenters, members, settings: settings[0] || {} });
-  S.profiles = Object.fromEntries(profiles.map((p) => [p.id, p]));
+  // Spillere uden login, der er overtaget af en rigtig bruger, skjules
+  S.profiles = Object.fromEntries(profiles.filter((p) => !p.merged_into).map((p) => [p.id, p]));
   S.realMe = S.profiles[S.session.user.id] || null;
   S.viewAs = readViewAs();
   S.me = S.viewAs ? S.profiles[S.viewAs] : S.realMe;

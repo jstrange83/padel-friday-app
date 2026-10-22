@@ -150,6 +150,12 @@ export const FAQ = [
 <p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper.</p>`,
   },
   {
+    cat: 'Tilmelding og konto',
+    q: 'Kan admin oprette en spiller, der ikke selv har oprettet sig?',
+    a: `<p>Ja. Under <b>Admin → Spillere</b> kan gruppens admin trykke <b>Opret spiller</b> og skrive navn, telefonnummer, køn og side. Spilleren er med i gruppen med det samme, kan tilmeldes spilledage, sættes på hold og få point. Der står "Uden login" ved navnet.</p>
+<p>Når spilleren senere selv opretter sig med <b>samme telefonnummer</b>, overtager de profilen med alle kampe, point, grupper og bøder.</p>`,
+  },
+  {
     cat: 'Bødekasse',
     q: 'Hvad er bødekassen?',
     a: `<p>Hver gruppe kan have sin egen bødekasse. Gruppens admin bestemmer, om den er slået til (under <b>Admin</b>), og hvilke takster der gælder, fx for sent fremmøde eller afbud på dagen.</p>
@@ -164,7 +170,7 @@ export const FAQ = [
   {
     cat: 'Bødekasse',
     q: 'Kan en bøde fjernes igen?',
-    a: `<p>Ja. Admin og superbrugere kan annullere en bøde, der er givet ved en fejl. Har nogen trykket "Jeg har betalt" uden at betale, kan bøden sættes tilbage til ubetalt.</p>
+    a: `<p>Ja. Admin og superbrugere kan annullere en bøde, der er givet ved en fejl. Har nogen trykket "Jeg har betalt" uden at betale, eller er en bøde markeret som betalt ved en fejl, kan den sættes tilbage til ubetalt med <b>Fortryd betalt</b>.</p>
 <p>Bøder har intet med dine point på ranglisten at gøre.</p>`,
   },
 

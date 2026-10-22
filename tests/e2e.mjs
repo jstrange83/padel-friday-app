@@ -527,6 +527,52 @@ try {
   for (let i = 0; i < 2; i++) { await page.locator('.approvals [data-paid]').first().click(); await wait(400); }
   ok((await page.locator('.ftile.green').innerText()).includes('55 kr.'), 'admin godkender betalingerne');
   ok((await page.locator('.list .row').first().innerText()).includes('Test Anders'), 'bødekonge vises');
+  // Fortryd betalt
+  await page.click('[data-ftab="betalt"]');
+  await wait(300);
+  await page.locator('.flist [data-fstatus]', { hasText: 'Fortryd betalt' }).first().click();
+  await wait(500);
+  ok((await page.locator('.ftile.red').innerText()).match(/(20|35) kr\./), 'en betalt bøde kan sættes tilbage til ubetalt');
+  await shot('boeder-fortryd');
+
+  // Opret spiller uden login, tilmeld ham, og lad ham overtage profilen, når han opretter sig
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-pgroup="g-fre"]');
+  await wait(300);
+  await page.locator('details.newplayer summary').click();
+  await page.fill('#newPlayer input[name=name]', 'Nikolaj Ny');
+  await page.fill('#newPlayer input[name=phone]', '11 22 33 44');
+  await page.click('#newPlayer label:has-text("Mand")');
+  await page.click('#newPlayer button.primary');
+  await wait(500);
+  ok((await page.locator('#players').innerText()).includes('Nikolaj Ny') && (await page.locator('.prow', { hasText: 'Nikolaj Ny' }).innerText()).includes('Uden login'), 'admin opretter spiller uden login');
+  await shot('opret-spiller');
+  await page.goto(evUrl);
+  await page.waitForSelector('.page.event');
+  if (await page.locator('#addSearch').count()) {
+    await page.fill('#addSearch', 'nikolaj');
+    await page.locator('#addHits .hit').first().click();
+    await wait(400);
+    ok((await text()).includes('nikolaj ny'), 'spiller uden login kan tilmeldes');
+  }
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'nyspiller@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  await page.fill('#pf input[name=name]', 'Nikolaj Ny');
+  await page.fill('#pf input[name=phone]', '+45 11223344');
+  await page.click('#pf label:has-text("Mand")');
+  await page.click('#pf button.primary');
+  await page.waitForSelector('#nav a, .gate');
+  if (await page.locator('#skipInstall').count()) await page.click('#skipInstall');
+  await page.waitForSelector('#nav a');
+  ok((await page.locator('#nav').innerText()).includes('Spilledage'), 'ny bruger overtager spilleren og er med i gruppen med det samme');
+  const merged = await page.evaluate(() => { const db = JSON.parse(sessionStorage.getItem('mockdb')); return db.padel_profiles.find((p) => p.name === 'Nikolaj Ny' && p.placeholder).merged_into; });
+  ok(merged === 'u-nyspiller', 'profilen uden login er koblet til den nye bruger');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

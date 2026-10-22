@@ -33,6 +33,22 @@ function playersBar() {
 }
 
 // Superadmin: alle spillere på tværs af grupper, med deres grupper og roller
+const noLogin = (p) => (p.placeholder ? ' <span class="badge">Uden login</span>' : '');
+const noLoginNote = (p) => (p.placeholder ? '<p class="muted small">Har ikke oprettet sig endnu. Når spilleren opretter sig med samme telefonnummer, overtager de profilen med kampe og point.</p>' : '');
+
+// Opret en spiller, der ikke selv har oprettet sig
+function createPlayerBox() {
+  return `<details class="card newplayer" ${S.newPlayerOpen ? 'open' : ''}><summary><b>➕ Opret spiller</b></summary>
+    <form id="newPlayer">
+      <p class="muted small">Til en spiller, der ikke har oprettet sig selv. Spilleren kan med det samme tilmeldes og sættes på hold. Når de senere opretter sig med samme telefonnummer, overtager de profilen med kampe og point.</p>
+      <label>Navn<input name="name" required maxlength="60" autocomplete="off"></label>
+      <label>Telefonnummer<input name="phone" type="tel" inputmode="tel" required placeholder="Fx 12 34 56 78" autocomplete="off"></label>
+      <div class="lbl">Køn</div>${radios('npgender', GENDER, '')}
+      <div class="lbl">Foretrukken side</div>${radios('npside', SIDE, 'begge')}
+      <button class="btn primary">Opret spiller i ${esc(group()?.name || 'gruppen')}</button>
+    </form></details>`;
+}
+
 function allPlayers() {
   const all = Object.values(S.profiles).sort((a, b) => a.name.localeCompare(b.name));
   const gname = (g) => S.groups.find((x) => x.id === g)?.name || 'Gruppe';
@@ -44,9 +60,9 @@ function allPlayers() {
       const summary = ms.length ? ms.map((m) => `${esc(gname(m.group_id))}${m.status === 'afventer' ? ' (venter)' : m.role !== 'bruger' ? ` (${ROLE[m.role]})` : ''}`).join(' · ') : 'Ingen gruppe';
       const notIn = S.groups.filter((g) => !ms.some((m) => m.group_id === g.id && m.status === 'aktiv'));
       return `<details class="prow" data-name="${esc(p.name.toLowerCase())}">
-        <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}<small>${summary}</small></span><span class="muted">›</span></summary>
+        <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}${noLogin(p)}<small>${summary}</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
-          <div class="mact contact">${phoneLinks(p.id)}</div>
+          ${noLoginNote(p)}<div class="mact contact">${phoneLinks(p.id)}</div>
           ${ms.filter((m) => m.status === 'aktiv').map((m) => `<div class="mrow"><span class="grow">${esc(gname(m.group_id))}</span>
             <select class="rolesel sm" data-grole="${p.id}|${m.group_id}" aria-label="Rolle i ${esc(gname(m.group_id))}">${Object.entries(ROLE).map(([k, v]) =>
               `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
@@ -71,6 +87,7 @@ function playersTab() {
     ${playersBar()}
     <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       <button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm primary" id="invite">📤 Inviter</button></div>
+    ${createPlayerBox()}
     <div class="card"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
       <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
 
@@ -83,9 +100,9 @@ function playersTab() {
     <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
     <div class="list compact" id="players">${players.map((p) => `
       <details class="prow" data-name="${esc(p.name.toLowerCase())}">
-        <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}<small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point</small></span><span class="muted">›</span></summary>
+        <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}${noLogin(p)}<small>${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
-          <div class="mact contact">${phoneLinks(p.id)}</div>
+          ${noLoginNote(p)}<div class="mact contact">${phoneLinks(p.id)}</div>
           <label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(ROLE).map(([k, v]) =>
             `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <div class="mact">
@@ -279,6 +296,22 @@ function bind() {
       refresh();
     } catch { busy(btn, false); }
   };
+
+  const np = document.getElementById('newPlayer');
+  if (np) {
+    np.closest('details').ontoggle = (e) => (S.newPlayerOpen = e.target.open);
+    np.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = np.querySelector('button.primary');
+      busy(btn, true);
+      try {
+        await q(sb.rpc('padel_admin_create_player', { g, p_name: np.elements.name.value, p_phone: np.phone.value, p_gender: np.npgender.value, p_side: np.npside.value }));
+        toast(`${np.elements.name.value.trim()} er oprettet`);
+        S.newPlayerOpen = false;
+        await refresh();
+      } catch { busy(btn, false); }
+    };
+  }
 
   const fo = document.getElementById('finesOn');
   if (fo) fo.onchange = async (e) => {

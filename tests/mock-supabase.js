@@ -150,6 +150,31 @@ const setPhone = (pid, ph) => {
 };
 const RPC = {
   padel_set_phone: ({ p_phone }) => setPhone(uid(), p_phone),
+  padel_set_phone_v2: ({ p_phone }) => {
+    setPhone(uid(), p_phone);
+    const ph = cleanPhone(p_phone);
+    const old = db.padel_profiles.find((p) => p.placeholder && !p.merged_into && p.id !== uid() && db.padel_contacts.some((c) => c.player_id === p.id && c.phone === ph));
+    if (!old || db.padel_signups.some((x) => x.player_id === uid())) return null;
+    const meId = uid(), sw = (x) => (x === old.id ? meId : x);
+    me().elo = old.elo;
+    db.padel_signups.forEach((x) => (x.player_id = sw(x.player_id)));
+    db.padel_matches.forEach((m) => ['a_left', 'a_right', 'b_left', 'b_right'].forEach((k) => (m[k] = sw(m[k]))));
+    db.padel_elo_changes.forEach((x) => (x.player_id = sw(x.player_id)));
+    db.padel_fines.forEach((x) => (x.player_id = sw(x.player_id)));
+    db.padel_group_members.forEach((x) => (x.player_id = sw(x.player_id)));
+    old.merged_into = meId;
+    return old.id;
+  },
+  padel_admin_create_player: ({ g, p_name, p_phone, p_gender, p_side }) => {
+    if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin kan oprette spillere');
+    const ph = cleanPhone(p_phone);
+    if (db.padel_contacts.some((c) => c.phone === ph && !db.padel_profiles.find((p) => p.id === c.player_id)?.merged_into)) throw new Error('Der er allerede en spiller med det telefonnummer. Send dem en invitation i stedet.');
+    const id = 'u-ph-' + uuid().slice(0, 8);
+    db.padel_profiles.push({ id, name: p_name.trim(), gender: p_gender, side: p_side || 'begge', elo: 1000, is_admin: false, role: 'bruger', placeholder: true });
+    db.padel_contacts.push({ player_id: id, phone: ph });
+    db.padel_group_members.push({ group_id: g, player_id: id, role: 'bruger', status: 'aktiv', elo: 1000 });
+    return id;
+  },
   padel_admin_set_phone: ({ p_user, p_phone }) => setPhone(p_user, p_phone),
   padel_group_name: ({ g }) => db.padel_groups.find((x) => x.id === g)?.name,
   padel_request_join: ({ g }) => {
@@ -256,7 +281,9 @@ export function createClient() {
     auth: {
       onAuthStateChange(fn) { cb = fn; setTimeout(() => cb('INITIAL_SESSION', session()), 0); return { data: { subscription: { unsubscribe() {} } } }; },
       async signInWithPassword({ email }) {
-        const p = db.padel_profiles.find((x) => x.email === email);
+        let p = db.padel_profiles.find((x) => x.email === email);
+        // "ny…@test": ny bruger uden profil endnu
+        if (!p && /^ny.*@test$/.test(email)) p = { id: 'u-' + email.split('@')[0] };
         if (!p) return { data: null, error: { message: 'Invalid login credentials' } };
         sessionStorage.setItem(SKEY, JSON.stringify({ user: { id: p.id, email } }));
         setTimeout(() => cb('SIGNED_IN', session()), 0);

@@ -64,6 +64,7 @@ export async function viewFines() {
       <button class="btn sm primary" data-paid="${f.id}">${f.status === 'afventer' ? 'Godkend betaling' : 'Markér betalt'}</button>
       ${f.status === 'afventer' ? `<button class="btn sm" data-fstatus="${f.id}" data-to="ubetalt">Ikke betalt</button>` : `<button class="btn sm ghost danger" data-fstatus="${f.id}" data-to="annulleret">Annuller</button>`}
     </div>` : ''}
+    ${run && f.status === 'betalt' ? `<div class="mact"><button class="btn sm ghost" data-fstatus="${f.id}" data-to="ubetalt">↩️ Fortryd betalt</button></div>` : ''}
   </div>`;
 
   app.innerHTML = `
@@ -195,6 +196,7 @@ function bind(g, types, fines, myOpen) {
   app.querySelectorAll('[data-paid]').forEach((b) => (b.onclick = () => run(b, () => q(sb.rpc('padel_fine_paid', { p_fine: b.dataset.paid })), 'Bøden er betalt')));
   app.querySelectorAll('[data-fstatus]').forEach((b) => (b.onclick = () => {
     if (b.dataset.to === 'annulleret' && !confirm('Annuller bøden? Den forsvinder fra listen.')) return;
+    if (b.textContent.includes('Fortryd') && !confirm('Sæt bøden tilbage til ubetalt?')) return;
     run(b, () => q(sb.rpc('padel_fine_set_status', { p_fine: b.dataset.fstatus, p_status: b.dataset.to })), b.dataset.to === 'ubetalt' ? 'Bøden står som ubetalt igen' : 'Bøden er annulleret');
   }));
   const ip = document.getElementById('iPaid');
