@@ -95,7 +95,8 @@ try {
   await page.click('#makePlan');
   await wait(500);
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
-  ok((await page.locator('.mine-card').innerText()).match(/Runde 1|pause/i), 'Din aften viser første runde');
+  const mc1 = await page.locator('.mine-card').innerText();
+  ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
   if (await page.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition)) && (await page.locator('.mine-card').innerText()).includes('Indtast resultat'))
     ok(await page.locator('.mine-card [data-act=voice]').count() === 1, 'Sig resultat i Din aften');
   await shot('dagsplan');
@@ -213,10 +214,7 @@ try {
   await loginAs(cm.b);
   ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend'), 'modstander kan godkende ændringen');
   ok((await page.locator('.approvals').innerText()).toLowerCase().includes('venter på din godkendelse'), 'rettelsen vises øverst hos modstanderen');
-  ok((await page.locator('.mine-card .mtitle').innerText()).toLowerCase().includes('din aften'), 'Din aften har overskrift');
-  const parts = await page.evaluate(async () => { const { dayPart } = await import('/js/views/event.js');
-    return [7, 10, 14, 19].map((h) => dayPart(new Date(2026, 9, 24, h).toISOString())); });
-  ok(parts.join() === 'Din morgen,Din formiddag,Din eftermiddag,Din aften', 'overskriften følger tidspunktet: ' + parts.join(', '));
+  ok(/din (næste kamp|kamp nu)|dine kampe/.test((await page.locator('.mine-card .mtitle').innerText()).toLowerCase()), 'kortet øverst hedder Din næste kamp');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot('godkend-rettelse');
   await page.locator(`#m-${cm.id} [data-act=reject]`).click();

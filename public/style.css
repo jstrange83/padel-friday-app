@@ -423,3 +423,12 @@ a.mp.busy { opacity: .6; pointer-events: none; }
 .match { padding: 10px 12px; margin: 8px 0; }
 .live-txt { color: var(--dn); font-weight: 700; }
 .runbar:not(.card) { margin: 10px 0; }
+
+/* Din næste kamp */
+.pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.pill { background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 4px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.mine-card .mbody.nk { margin: 4px 0 2px; }
+.mine-card .mbody.nk .team span { font-size: 17px; }
+.mine-card .mbody.nk .score { min-width: 50px; }
+.mine-card .mbody.nk .team:last-child { text-align: right; }
+.mine-card p.big { font-size: 20px; font-weight: 700; margin: 4px 0; }

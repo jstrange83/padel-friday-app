@@ -1,4 +1,4 @@
-// En spilledag: din aften, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
+// En spilledag: din næste kamp, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
   sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave,
@@ -169,75 +169,71 @@ function quickSettings(c, status) {
     </div>` : ''}`;
 }
 
-// Overskrift efter hvornår på dagen man spiller: Din morgen, Din formiddag, Din eftermiddag, Din aften
-export function dayPart(iso) {
-  const h = new Date(iso).getHours();
-  return h >= 5 && h < 9 ? 'Din morgen' : h >= 9 && h < 12 ? 'Din formiddag' : h >= 12 && h < 17 ? 'Din eftermiddag' : h >= 17 ? 'Din aften' : 'Din nat';
-}
-
-// "Din aften": det vigtigste for spilleren selv, øverst
+// "Din næste kamp": det vigtigste for spilleren selv, øverst. Kort og visuelt: runde, bane, tid og holdene.
 function myNight(c, st) {
   const { ev, me, signed, L, rounds, inRound, roundStart, totalRounds } = c;
   const iAmIn = signed.includes(me);
+  const card = (title, body, cls = '') => `<div class="card mine-card ${cls}"><div class="mtitle">${title}</div>${body}</div>`;
   const signBtn = ev.status === 'planlagt'
     ? iAmIn ? '<button class="btn sm" id="signoff">Afmeld mig</button>'
       : canJoin(ev) ? `<button class="btn primary" id="signon">${L.full ? 'Skriv mig på ventelisten' : 'Tilmeld mig'}</button>` : ''
     : '';
+  const signRow = signBtn ? `<div class="mact">${signBtn}</div>` : '';
 
   if (!iAmIn) {
     if (ev.status !== 'planlagt') return '';
     const why = canJoin(ev) ? 'Du er ikke tilmeldt endnu.' : `Denne dag er kun for ${MODE[ev.team_mode].toLowerCase()}.`;
-    return `<div class="card mine-card"><p>${why}</p>${signBtn}</div>`;
+    return card('Din tilmelding', `<p>${why}</p>${signRow}`);
   }
   const waitNo = L.courts ? L.waiting.indexOf(me) : -1;
-  if (waitNo >= 0) return `<div class="card mine-card wait"><p>⏳ Du er nr. <b>${waitNo + 1}</b> på ventelisten.</p>${signBtn}</div>`;
+  if (waitNo >= 0) return card('Din tilmelding', `<p>⏳ Du er nr. <b>${waitNo + 1}</b> på ventelisten.</p>${signRow}`, 'wait');
 
   if (ev.status === 'afsluttet') {
     const pos = st.rows.findIndex(([pid]) => pid === me);
     if (pos < 0) return '';
     const t = st.rows[pos][1];
-    return `<div class="card mine-card"><p>${pos === 0 ? '👑 Du vandt dagen!' : `Du sluttede som nr. <b>${pos + 1}</b> af ${st.rows.length}.`}
-      ${t.pts ? `<span class="delta ${signCls(t.pts)}">${st.estimate ? '≈' : ''}${sign(t.pts)} point</span>` : ''}</p></div>`;
+    return card('Din dag', `<p>${pos === 0 ? '👑 Du vandt dagen!' : `Du sluttede som nr. <b>${pos + 1}</b> af ${st.rows.length}.`}
+      ${t.pts ? `<span class="delta ${signCls(t.pts)}">${st.estimate ? '≈' : ''}${sign(t.pts)} point</span>` : ''}</p>`);
   }
 
   const myDone = (n) => rounds[n]?.some((x) => x.status === 'bekraeftet' && [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const nos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
-  let r, pauseR = null, now;
+  if (!nos.length) return card('Din tilmelding', `<p>✅ Du er med. ${esc(lineupText(L, c.courts.length))}</p>${signRow}`);
+  let r, now;
   if (c.free) {
-    // Min næste kamp uden godkendt resultat. Holder jeg pause i en runde inden, nævnes det også.
-    r = nos.find((n) => inRound(n).has(me) && !myDone(n));
-    pauseR = nos.find((n) => (!r || n < r) && !inRound(n).has(me) && !c.roundDone(n) && n > Math.max(0, ...nos.filter((x) => x < (r || 1e9) && myDone(x))));
-    if (!r && pauseR) r = pauseR;
+    // Første runde, hvor jeg mangler at spille (eller holder pause i en runde der ikke er færdig)
+    r = nos.find((n) => (inRound(n).has(me) ? !myDone(n) : !c.roundDone(n)));
     now = !!r && (ev.status === 'igang' || r === nos[0]);
   } else {
-    // Rotation: næste (eller igangværende) runde. Er min kamp i runden færdig, vises den næste.
     const startR = ev.status === 'igang' ? ev.current_round : ev.current_round + 1;
     r = nos.filter((n) => n >= startR && !(n === ev.current_round && myDone(n)))[0];
     now = r === ev.current_round && ev.status === 'igang';
   }
-  if (!r) {
-    const allDone = c.free && nos.length && nos.every((n) => !inRound(n).has(me) || myDone(n));
-    return `<div class="card mine-card"><p>✅ ${allDone ? 'Du har spillet alle dine kampe.' : `Du er med. ${L.courts ? '' : esc(lineupText(L, c.courts.length))}`}</p>${signBtn}</div>`;
-  }
-  const when = now && !c.free ? `Runde ${r} · nu` : `Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} · ca. ${hm(roundStart(r))}`;
+  if (!r) return card('Dine kampe', '<p>✅ Du har spillet alle dine kampe i dag.</p>');
   c.mineRound = r;
-  if (!inRound(r).has(me)) return `<div class="card mine-card"><small>${when}</small><p>☕ Du holder pause i denne runde.</p>${signBtn}</div>`;
+  const pill = (t) => `<span class="pill">${t}</span>`;
+  const time = now && !c.free ? 'Nu' : `ca. ${hm(roundStart(r))}`;
+
+  if (!inRound(r).has(me)) {
+    const nxt = nos.find((n) => n > r && inRound(n).has(me) && !myDone(n));
+    return card('Din næste kamp', `<div class="pills">${pill(`Runde ${r}`)}${pill(time)}</div>
+      <p class="big">☕ Du holder pause</p>${nxt ? `<p class="muted">Derefter spiller du i runde ${nxt}, ca. ${hm(roundStart(nxt))}.</p>` : ''}${signRow}`);
+  }
   const m = rounds[r].find((x) => [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const onA = [m.a_left, m.a_right].includes(me);
-  const mate = onA ? (m.a_left === me ? m.a_right : m.a_left) : (m.b_left === me ? m.b_right : m.b_left);
-  const opps = onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right];
-  const side = (onA ? m.a_left : m.b_left) === me ? 'venstre' : 'højre';
-  const pause = pauseR && pauseR !== r ? `<small>☕ Du holder pause i runde ${pauseR} først.</small>` : '';
+  // Mit hold til venstre, modstanderne til højre
+  const [ml, mr, ol, or] = onA ? [m.a_left, m.a_right, m.b_left, m.b_right] : [m.b_left, m.b_right, m.a_left, m.a_right];
+  const nm = (pid, sd) => `<span class="${pid === me ? 'meName' : ''}">${pid === me ? 'Dig' : esc(first(pid))}<em>${sd}</em></span>`;
+  const teams = `<div class="mbody nk"><div class="team">${nm(ml, 'V')}${nm(mr, 'H')}</div><div class="score muted">mod</div><div class="team">${nm(ol, 'V')}${nm(or, 'H')}</div></div>`;
   const canEnter = (now || c.free) && m.status === 'planlagt';
   if (canEnter) c.mineMatch = m.id;
-  c.mineRound = r;
   const todo = canEnter ? `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`
     + (SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '')
-    : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<small>Venter på at modstanderne godkender rettelsen.</small>' : '';
-  return `<div class="card mine-card ${now ? 'now' : ''}">
-    <small>${when} · ${esc(courtById(m.court_id)?.name || '')}</small>
-    <p>${c.free ? 'Din næste kamp: d' : 'D'}u spiller i <b>${side}</b> side med <b>${esc(first(mate))}</b> mod ${esc(first(opps[0]))} & ${esc(first(opps[1]))}.</p>
-    ${pause}${todo ? `<div class="mact">${todo}</div>` : ''}${canEnter ? enterForm(c, m) : ''}${signBtn ? `<div class="mact">${signBtn}</div>` : ''}</div>`;
+    : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<p class="muted small">Venter på, at modstanderne godkender rettelsen.</p>' : '';
+  return card(now && !c.free ? 'Din kamp nu' : 'Din næste kamp',
+    `<div class="pills">${pill(`Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''}`)}${pill(esc(courtById(m.court_id)?.name || ''))}${pill(time)}</div>
+    ${teams}
+    ${todo.startsWith('<button') ? `<div class="mact">${todo}</div>` : todo}${canEnter ? enterForm(c, m) : ''}${signRow}`, now ? 'now' : '');
 }
 
 // Rettelser der venter på mig (modstanderholdet), eller på admin/superbruger. Vises øverst, så de ikke overses.
@@ -463,7 +459,7 @@ function render(data) {
   <div class="page event">
     ${header(c)}
     ${approvals(c)}
-    ${myNight(c, st).replace(/(<div class="card mine-card[^"]*">)/, `$1<div class="mtitle">🎾 ${dayPart(c.ev.starts_at)}</div>`)}
+    ${myNight(c, st)}
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
@@ -754,7 +750,7 @@ function bind(c) {
     };
   });
 
-  // "Indtast resultat" fra Din aften: hop til kampen og åbn formularen
+  // "Indtast resultat" fra Din næste kamp
   app.querySelectorAll('.mine-card a[href^="#m-"]').forEach((a) => (a.onclick = (e) => {
     e.preventDefault();
     const id = a.getAttribute('href').slice(3);
