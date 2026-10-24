@@ -1,6 +1,6 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
-  sb, S, app, hooks, hasSuggest, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
+  sb, S, app, hooks, hasSuggest, liveGroups, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
   esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
@@ -36,7 +36,7 @@ export async function viewAdmin() {
 // Gruppeknapper, og for superadmin også "Alle spillere"
 function playersBar() {
   if (!isSuper()) return groupBar(viewAdmin);
-  return `<div class="chips groups">${S.groups.map((x) => `<button class="chip ${!S.adminAll && x.id === S.groupId ? 'on' : ''}" data-pgroup="${x.id}">${esc(x.name)}</button>`).join('')}
+  return `<div class="chips groups">${liveGroups().map((x) => `<button class="chip ${!S.adminAll && x.id === S.groupId ? 'on' : ''}" data-pgroup="${x.id}">${esc(x.name)}</button>`).join('')}
     <button class="chip ${S.adminAll ? 'on' : ''}" data-allp>🌍 Alle spillere</button></div>`;
 }
 
@@ -67,7 +67,7 @@ function allPlayers() {
     <div class="list compact">${all.map((p) => {
       const ms = S.members.filter((m) => m.player_id === p.id && m.status !== 'fjernet');
       const summary = ms.length ? ms.map((m) => `${esc(gname(m.group_id))}${m.status === 'afventer' ? ' (venter)' : m.role !== 'bruger' ? ` (${ROLE[m.role]})` : ''}`).join(' · ') : 'Ingen gruppe';
-      const notIn = S.groups.filter((g) => !ms.some((m) => m.group_id === g.id && m.status === 'aktiv'));
+      const notIn = liveGroups().filter((g) => !ms.some((m) => m.group_id === g.id && m.status === 'aktiv'));
       return `<details class="prow" data-name="${esc(p.name.toLowerCase())}">
         <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}${noLogin(p)}<small>${summary}</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
@@ -134,7 +134,7 @@ function groupsTab() {
   const admins = mem.filter((m) => m.role === 'admin');
   const count = (id) => S.members.filter((m) => m.group_id === id && m.status === 'aktiv').length;
   return `
-    <div class="chips groups">${S.groups.map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>
+    <div class="chips groups">${liveGroups().map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>
     ${g ? `<div class="card">
       <div class="head"><b class="big">${esc(group()?.name || '')}</b><button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
       <div class="lbl">Centre gruppen må bruge</div>
@@ -149,7 +149,11 @@ function groupsTab() {
             `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <button class="icon sm" data-remove="${p.id}" aria-label="Fjern ${esc(p.name)} fra gruppen">✕</button></div>`;
       }).join('') || '<p class="muted small">Ingen endnu.</p>'}</div>
+      <div class="mact"><button class="btn sm ghost danger" id="archiveGroup">🗄 Slet gruppe (arkivér)</button></div>
     </div>` : ''}
+    ${S.groups.some((x) => x.archived) ? `<details class="card archived"><summary><b>🗄 Slettede grupper (${S.groups.filter((x) => x.archived).length})</b></summary>
+      ${S.groups.filter((x) => x.archived).map((x) => `<div class="mrow"><span class="grow">${esc(x.name)}<small class="muted"> · ${count(x.id)} spillere</small></span><button class="btn sm" data-unarchive="${x.id}">♻️ Hent tilbage</button></div>`).join('')}
+    </details>` : ''}
 
     <details class="card newgroup"><summary><b>＋ Ny gruppe</b></summary>
       <form id="newGroup">
@@ -271,6 +275,15 @@ function bind() {
   app.querySelectorAll('[name=gc]').forEach((cb) => (cb.onchange = async () => {
     const ids = [...app.querySelectorAll('[name=gc]:checked')].map((x) => x.value);
     try { await q(sb.rpc('padel_set_group_centers', { g, p_centers: ids })); toast('Centrene er gemt'); await hooks.loadBase(); } catch { cb.checked = !cb.checked; }
+  }));
+  document.getElementById('archiveGroup')?.addEventListener('click', async (e) => {
+    if (!confirm(`Slet gruppen "${group()?.name}"?\n\nIngen kan bruge den længere: den forsvinder for alle spillere, og invitationslinket holder op med at virke. Kampe, point og bøder bliver gemt, så du kan hente gruppen tilbage under "Slettede grupper".`)) return;
+    busy(e.currentTarget, true);
+    try { await q(sb.rpc('padel_archive_group', { g, p_archived: true })); toast('Gruppen er slettet'); S.groupId = null; await refresh(); } catch { busy(e.currentTarget, false); }
+  });
+  app.querySelectorAll('[data-unarchive]').forEach((b) => (b.onclick = async () => {
+    busy(b, true);
+    try { await q(sb.rpc('padel_archive_group', { g: b.dataset.unarchive, p_archived: false })); toast('Gruppen er hentet tilbage'); await refresh(); } catch { busy(b, false); }
   }));
   document.getElementById('renameGroup')?.addEventListener('click', async () => {
     const n = prompt('Nyt navn på gruppen', group()?.name);

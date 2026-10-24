@@ -754,6 +754,33 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(400);
   ok(!(await page.locator('[data-sedit]').count()) && !(await page.locator('#editBar').count()), 'slået fra: ingen ✏️ og ingen bjælke');
 
+  // Slet (arkivér) en gruppe: forsvinder for Brian; kan hentes tilbage
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('[data-tab="grupper"]');
+  await page.click('[data-tab="grupper"]');
+  await page.locator('.chips.groups [data-group]', { hasText: 'Lørdagspadel' }).click();
+  await page.waitForSelector('#archiveGroup');
+  await page.click('#archiveGroup');
+  await wait(600);
+  ok(!(await page.locator('.chips.groups [data-group]', { hasText: 'Lørdagspadel' }).count()), 'slettet gruppe forsvinder fra listen');
+  ok((await page.locator('details.archived').innerText()).includes('Slettede grupper (1)'), 'slettede grupper kan ses af superadmin');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'brian@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#reload, #nav a');
+  ok(!(await page.locator('#nav a:has-text("Spilledage")').count()), 'Brian kan ikke længere bruge den slettede gruppe');
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.click('[data-tab="grupper"]');
+  await page.locator('details.archived summary').click();
+  await page.click('[data-unarchive]');
+  await wait(600);
+  ok(await page.locator('.chips.groups [data-group]', { hasText: 'Lørdagspadel' }).count() === 1, 'gruppen kan hentes tilbage');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

@@ -169,6 +169,7 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  padel_archive_group: ({ g, p_archived }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { archived: p_archived }); },
   // Superadmin: ret og slet
   padel_super_update: ({ p_table, p_id, p_data }) => {
     if (!me()?.is_superadmin) throw new Error('Kun superadmin');

@@ -36,9 +36,11 @@ export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].i
 // Spillere der venter på at komme med i en gruppe, jeg er admin for
 // Forslagskassen vises først, når databasen har den (kolonnen findes i indstillingerne)
 export const hasSuggest = () => S.settings && 'feedback_after_matches' in S.settings;
-export const pendingForMe = () => S.members.filter((m) => m.status === 'afventer' && isAdmin(m.group_id) && S.profiles[m.player_id]);
+export const pendingForMe = () => S.members.filter((m) => m.status === 'afventer' && !S.groups.find((g) => g.id === m.group_id)?.archived && isAdmin(m.group_id) && S.profiles[m.player_id]);
 // Grupper jeg kan vælge imellem
-export const myGroups = () => S.groups.filter((g) => isSuper() || member(S.me?.id, g.id)?.status === 'aktiv');
+// Arkiverede grupper er væk for alle (superadmin kan hente dem tilbage under Admin → Grupper)
+export const liveGroups = () => S.groups.filter((g) => !g.archived);
+export const myGroups = () => liveGroups().filter((g) => isSuper() || member(S.me?.id, g.id)?.status === 'aktiv');
 export const group = (g = S.groupId) => S.groups.find((x) => x.id === g);
 export const activeMembers = (g = S.groupId) => S.members.filter((m) => m.group_id === g && m.status === 'aktiv');
 // Point i gruppens egen rangliste
