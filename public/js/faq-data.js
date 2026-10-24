@@ -152,6 +152,13 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
+    q: 'Kan jeg slette min profil?',
+    a: `<p>Ja, under <b>Profil → 🗑 Slet min profil</b>. Du forsvinder fra grupperne og ranglisten.</p>
+<p>Dine kampe og point gemmes. Kommer du igen med samme mail (du logger bare ind) eller samme telefonnummer, får du de samme point, som da du gik. En admin skal godkende dig i gruppen igen.</p>
+<p>Admin kan også slette en spiller. En gruppeadmin kan kun slette spillere, der ikke er med i andre grupper; ellers fjerner han dem fra sin egen gruppe.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
     q: 'Hvordan ser admin, at nogen vil være med i gruppen?',
     a: `<p>Når en spiller har brugt invitationslinket, står der et rødt tal ved <b>Admin</b> i menuen, og øverst på <b>Spilledage</b> kommer kortet <b>✋ Vil gerne være med</b>. Tryk <b>Godkend</b> eller <b>Afvis</b> direkte der. Der sendes ingen mails.</p>`,
   },

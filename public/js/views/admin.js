@@ -69,7 +69,7 @@ function allPlayers() {
       const summary = ms.length ? ms.map((m) => `${esc(gname(m.group_id))}${m.status === 'afventer' ? ' (venter)' : m.role !== 'bruger' ? ` (${ROLE[m.role]})` : ''}`).join(' · ') : 'Ingen gruppe';
       const notIn = liveGroups().filter((g) => !ms.some((m) => m.group_id === g.id && m.status === 'aktiv'));
       return `<details class="prow" data-name="${esc(p.name.toLowerCase())}">
-        <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}${noLogin(p)}<small>${summary}</small></span><span class="muted">›</span></summary>
+        <summary><span class="grow"><b>${esc(p.name)}</b>${p.is_superadmin ? ' <span class="badge role-admin">Superadmin</span>' : ''}${noLogin(p)}${p.deleted_at ? ' <span class="badge st-ubetalt">Slettet</span>' : ''}<small>${summary}</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
           ${noLoginNote(p)}<div class="mact contact">${phoneLinks(p.id)}</div>
           ${ms.filter((m) => m.status === 'aktiv').map((m) => `<div class="mrow"><span class="grow">${esc(gname(m.group_id))}</span>
@@ -78,8 +78,9 @@ function allPlayers() {
             <button class="icon sm" data-gremove="${p.id}|${m.group_id}" aria-label="Fjern fra ${esc(gname(m.group_id))}">✕</button></div>`).join('')}
           ${notIn.length ? `<div class="mact">${notIn.map((g) => `<button class="btn sm" data-gadd="${p.id}|${g.id}">+ ${esc(g.name)}</button>`).join('')}</div>` : ''}
           <div class="mact">
-            <button class="btn sm" data-edit="${p.id}">Ret</button>
+            ${p.deleted_at ? `<button class="btn sm primary" data-restore="${p.id}">♻️ Gendan spiller</button>` : `<button class="btn sm" data-edit="${p.id}">Ret</button>
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
+            ${p.is_superadmin ? '' : `<button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller</button>`}`}
           </div>
         </div>
       </details>`;
@@ -119,8 +120,8 @@ function playersTab() {
             <button class="btn sm" data-edit="${p.id}">Ret</button>
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
             <a class="btn sm" href="#/spiller/${p.id}">Statistik</a>
-            ${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern</button>` : ''}
           </div>
+          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button>${p.is_superadmin ? '' : `<button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller</button>`}</div>` : ''}
         </div>
       </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div></details>`;
 }
@@ -216,6 +217,16 @@ function bind() {
 
   on('[data-approve]', async (b) => { busy(b, true); try { await setMember(b.dataset.approve, 'bruger', 'aktiv'); toast(`${nameOf(b.dataset.approve)} er godkendt`); refresh(); } catch { busy(b, false); } });
   on('[data-decline]', async (b) => { if (!confirm(`Afvis ${nameOf(b.dataset.decline)}?`)) return; await setMember(b.dataset.decline, 'bruger', 'fjernet'); refresh(); });
+  on('[data-delplayer]', async (b) => {
+    const pid = b.dataset.delplayer;
+    if (!confirm(`Slet ${nameOf(pid)}?\n\nSpilleren forsvinder fra grupperne og ranglisten. Point og kampe gemmes: kommer de igen (samme mail eller telefonnummer), har de samme point.`)) return;
+    busy(b, true);
+    try { await q(sb.rpc('padel_delete_player', { p_user: pid })); toast(`${nameOf(pid)} er slettet`); refresh(); } catch { busy(b, false); }
+  });
+  on('[data-restore]', async (b) => {
+    busy(b, true);
+    try { await q(sb.rpc('padel_restore_player', { p_user: b.dataset.restore })); toast(`${nameOf(b.dataset.restore)} er gendannet. Tilføj dem til en gruppe igen.`); refresh(); } catch { busy(b, false); }
+  });
   on('[data-remove]', async (b) => {
     const p = b.dataset.remove;
     if (!confirm(`Fjern ${nameOf(p)} fra ${group()?.name}? Pointene gemmes, hvis de kommer med igen.`)) return;
@@ -294,7 +305,7 @@ function bind() {
   const sa = document.getElementById('superAdd');
   if (sa) sa.oninput = () => {
     const t = sa.value.trim().toLowerCase();
-    const hits = t ? Object.values(S.profiles).filter((p) => member(p.id)?.status !== 'aktiv' && p.name.toLowerCase().includes(t)).slice(0, 8) : [];
+    const hits = t ? Object.values(S.profiles).filter((p) => !p.deleted_at && member(p.id)?.status !== 'aktiv' && p.name.toLowerCase().includes(t)).slice(0, 8) : [];
     const box = document.getElementById('superHits');
     box.innerHTML = hits.map((p) => `<div class="hitrow"><span class="grow">${esc(p.name)}</span>
       <button class="btn sm" data-sadd="${p.id}" data-r="bruger">Bruger</button><button class="btn sm" data-sadd="${p.id}" data-r="superbruger">Superbruger</button><button class="btn sm primary" data-sadd="${p.id}" data-r="admin">Admin</button></div>`).join('')

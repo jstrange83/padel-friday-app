@@ -1,5 +1,5 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, leavePage } from './core.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
@@ -72,6 +72,7 @@ async function boot() {
     if (!S.session) { navEl.innerHTML = ''; return renderAuth(location.hash.startsWith('#/velkommen') ? 'signup' : 'login'); }
     await loadBase();
     if (!S.me) { navEl.innerHTML = ''; return renderProfile(true); }
+    if (S.realMe?.deleted_at && !S.viewAs) { navEl.innerHTML = ''; return viewDeleted(); }
     await handleJoin();
     let next = null;
     try { next = localStorage.getItem('fp-next'); localStorage.removeItem('fp-next'); } catch {}
@@ -116,6 +117,23 @@ function renderNav() {
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length;
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${t}</a>`).join('');
+}
+
+// Profilen er slettet: tilbyd at genaktivere (samme point som før; man skal godkendes i gruppen igen)
+function viewDeleted() {
+  app.innerHTML = `
+  <div class="auth">
+    <div class="logo">🎾</div>
+    <h1>Din profil er slettet</h1>
+    <p class="muted">Vil du være med igen? Så genaktiverer vi din profil med de point, du havde. Bagefter skal en admin godkende dig i gruppen igen.</p>
+    <button class="btn primary" id="reactivate">Genaktivér min profil</button>
+    <button class="btn ghost" id="outDel">Log ud</button>
+  </div>`;
+  document.getElementById('outDel').onclick = () => sb.auth.signOut();
+  document.getElementById('reactivate').onclick = async (e) => {
+    busy(e.currentTarget, true);
+    try { await q(sb.rpc('padel_reactivate_me')); toast('Velkommen tilbage! Bed en admin om et invitationslink til gruppen'); await boot(); } catch { busy(e.currentTarget, false); }
+  };
 }
 
 // Ikke med i nogen gruppe endnu: vis status på anmodninger

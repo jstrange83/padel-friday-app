@@ -53,6 +53,7 @@ export function renderProfile(isNew) {
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
       ${viewing ? '' : '<button class="row logout" id="logout"><span class="grow">↩️ Log ud</span></button>'}
+      ${p.is_superadmin ? '' : `<button class="row delme" id="deleteMe"><span class="grow">🗑 ${viewing ? 'Slet spilleren' : 'Slet min profil'}</span></button>`}
     </div>
   </div>`;
   bind(false);
@@ -87,6 +88,16 @@ function bind(isNew) {
     } catch { busy(btn, false); }
   };
   document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+  document.getElementById('deleteMe')?.addEventListener('click', async (e) => {
+    const who = S.viewAs ? S.me.name : 'din profil';
+    if (!confirm(`Slet ${who}?\n\n${S.viewAs ? 'Spilleren' : 'Du'} forsvinder fra grupperne og ranglisten. Point og kampe gemmes: ${S.viewAs ? 'kommer spilleren' : 'kommer du'} igen (samme mail eller telefonnummer), er pointene de samme.`)) return;
+    busy(e.currentTarget, true);
+    try {
+      await q(sb.rpc('padel_delete_player', { p_user: S.me.id }));
+      if (S.viewAs) { toast('Spilleren er slettet'); const { stopViewAs } = await import('../viewas.js'); return stopViewAs(); }
+      toast('Din profil er slettet'); await sb.auth.signOut();
+    } catch { busy(e.currentTarget, false); }
+  });
   document.getElementById('installRow')?.addEventListener('click', (e) => {
     e.preventDefault();
     document.getElementById('nav').innerHTML = '';

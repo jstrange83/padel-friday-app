@@ -66,7 +66,7 @@ export async function viewEvent(id) {
 // ---------- Beregninger til siden ----------
 function context({ ev, signups, matches, changes, log }) {
   const me = S.me.id;
-  const signed = signups.map((s) => s.player_id);
+  const signed = signups.map((s) => s.player_id).filter((pid) => !S.profiles[pid]?.deleted_at);
   const courts = ev.court_ids.map(courtById).filter(Boolean).sort((a, b) => a.sort - b.sort);
   const L = lineup(signed, courts.length);
 

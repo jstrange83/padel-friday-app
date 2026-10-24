@@ -169,6 +169,15 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  padel_delete_player: ({ p_user }) => {
+    const p = db.padel_profiles.find((x) => x.id === p_user);
+    if (p.is_superadmin) throw new Error('En superadmin kan ikke slettes');
+    if (p_user !== uid() && !me()?.is_superadmin && !db.padel_group_members.some((m) => m.player_id === p_user && GM(m.group_id, uid())?.role === 'admin')) throw new Error('Det har du ikke adgang til');
+    db.padel_group_members.filter((m) => m.player_id === p_user && m.status !== 'fjernet').forEach((m) => (m.status = 'fjernet'));
+    p.deleted_at = now();
+  },
+  padel_reactivate_me: () => { me().deleted_at = null; },
+  padel_restore_player: ({ p_user }) => { db.padel_profiles.find((x) => x.id === p_user).deleted_at = null; },
   padel_archive_group: ({ g, p_archived }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { archived: p_archived }); },
   // Superadmin: ret og slet
   padel_super_update: ({ p_table, p_id, p_data }) => {
@@ -212,7 +221,7 @@ const RPC = {
   padel_set_phone_v2: ({ p_phone }) => {
     setPhone(uid(), p_phone);
     const ph = cleanPhone(p_phone);
-    const old = db.padel_profiles.find((p) => p.placeholder && !p.merged_into && p.id !== uid() && db.padel_contacts.some((c) => c.player_id === p.id && c.phone === ph));
+    const old = db.padel_profiles.find((p) => (p.placeholder || p.deleted_at) && !p.merged_into && p.id !== uid() && db.padel_contacts.some((c) => c.player_id === p.id && c.phone === ph));
     if (!old || db.padel_signups.some((x) => x.player_id === uid())) return null;
     const meId = uid(), sw = (x) => (x === old.id ? meId : x);
     me().elo = old.elo;

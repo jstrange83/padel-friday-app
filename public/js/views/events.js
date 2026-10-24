@@ -27,6 +27,7 @@ export async function viewEvents() {
   const running = evs.filter((e) => e.status === 'igang' && !upcoming.includes(e));
   const past = evs.filter((e) => !upcoming.includes(e) && !running.includes(e));
   const card = (e) => {
+    e.padel_signups = e.padel_signups.filter((s) => !S.profiles[s.player_id]?.deleted_at);
     const n = e.padel_signups.length;
     const mine = e.padel_signups.some((s) => s.player_id === S.me.id);
     const ids = e.padel_signups.slice().sort((x, y) => x.created_at.localeCompare(y.created_at)).map((x) => x.player_id);

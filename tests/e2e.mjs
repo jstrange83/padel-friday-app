@@ -781,6 +781,43 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(600);
   ok(await page.locator('.chips.groups [data-group]', { hasText: 'Lørdagspadel' }).count() === 1, 'gruppen kan hentes tilbage');
 
+  // Slet bruger: spilleren sletter sig selv, kommer igen og genaktiverer med samme point
+  const elo3 = await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_group_members.find((m) => m.player_id === 'u-3' && m.group_id === 'g-fre').elo);
+  await loginAs('test3@fredagspadel.test');
+  await page.click('#nav a:has-text("Profil")');
+  await page.waitForSelector('#deleteMe');
+  await page.click('#deleteMe');
+  await page.waitForSelector('#authForm');
+  ok(true, 'spilleren kan slette sin egen profil');
+  await page.fill('input[name=email]', 'test3@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#reactivate');
+  ok((await text()).includes('din profil er slettet'), 'slettet spiller får tilbudt at genaktivere');
+  await page.click('#reactivate');
+  await page.waitForSelector('#reload, #nav a, .finegate, .gate, .me-card');
+  const back = await page.evaluate(() => { const db = JSON.parse(sessionStorage.getItem('mockdb')); return { del: db.padel_profiles.find((p) => p.id === 'u-3').deleted_at, m: db.padel_group_members.find((m) => m.player_id === 'u-3' && m.group_id === 'g-fre') }; });
+  ok(!back.del && back.m.status === 'fjernet' && back.m.elo === elo3, 'genaktiveret med samme point; skal godkendes i gruppen igen');
+  // Admin sletter en spiller og gendanner
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-tab="spillere"]');
+  await page.click('[data-pgroup="g-fre"]');
+  await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
+  await page.locator('.prow', { hasText: 'Test Dennis' }).locator('summary').click();
+  await page.locator('.prow[open] [data-delplayer]').click();
+  await wait(600);
+  ok(!(await page.locator('#players').innerText()).includes('Test Dennis'), 'admin sletter en spiller');
+  await page.click('[data-allp]');
+  await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
+  const dr = page.locator('.prow', { hasText: 'Test Dennis' });
+  ok((await dr.innerText()).includes('Slettet'), 'slettet spiller står som Slettet under Alle spillere');
+  await dr.locator('summary').click();
+  await page.locator('.prow[open] [data-restore]').click();
+  await wait(600);
+  ok(!(await page.locator('.prow', { hasText: 'Test Dennis' }).innerText()).includes('Slettet'), 'superadmin kan gendanne en slettet spiller');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

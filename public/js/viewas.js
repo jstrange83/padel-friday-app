@@ -21,7 +21,7 @@ export function startViewAs(id) {
   hooks.boot();
 }
 
-function stopViewAs() {
+export function stopViewAs() {
   try { sessionStorage.removeItem(KEY); } catch {}
   location.hash = '#/admin';
   hooks.boot();
