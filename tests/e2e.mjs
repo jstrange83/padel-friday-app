@@ -716,6 +716,44 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('.sug', { hasText: 'mørk og en lys' }).innerText()).includes('God idé, den kommer!'), 'spilleren ser svaret i appen');
   await shot('forslag-svar');
 
+  // Redigeringstilstand for superadmin: slå til, ret en kamp, slet en bøde, slå fra
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('#editMode');
+  ok(!(await page.locator('#editBar').count()), 'redigering er slået fra som standard');
+  await page.check('#editMode');
+  await wait(300);
+  ok(await page.locator('#editBar').count() === 1, 'bjælke viser, at redigering er slået til');
+  await page.goto(evUrl);
+  await page.waitForSelector('.page.event');
+  await openAll();
+  ok(await page.locator('.match [data-sedit^="padel_matches|"]').count() >= 1, '✏️ på kampene');
+  await page.locator(`#m-${cm.id} [data-sedit]`).click();
+  await page.waitForSelector('.sedit-card');
+  await page.fill('.sedit-card input[name=score_a]', '5');
+  await page.fill('.sedit-card input[name=score_b]', '5');
+  await shot('rediger-kamp');
+  await page.click('.sedit-card button.primary');
+  await wait(600);
+  await openAll();
+  ok((await page.locator(`#m-${cm.id} .score`).innerText()).replace(/\s/g, '') === '5–5', 'superadmin retter en kamps resultat');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  await page.click('[data-ftab="alle"]');
+  await wait(300);
+  const before = await page.locator('.flist .fine').count();
+  await page.locator('.flist .fine [data-sedit]').first().click();
+  await page.waitForSelector('#seDel');
+  await page.click('#seDel');
+  await wait(600);
+  ok((await page.locator('.flist .fine').count()) === before - 1, 'superadmin sletter en bøde');
+  await page.goto('http://localhost:8765/#/rangliste');
+  await page.waitForSelector('.list .row');
+  ok(await page.locator('.list .row [data-sedit]').count() >= 1, '✏️ på ranglisten');
+  await page.click('#editOff');
+  await wait(400);
+  ok(!(await page.locator('[data-sedit]').count()) && !(await page.locator('#editBar').count()), 'slået fra: ingen ✏️ og ingen bjælke');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

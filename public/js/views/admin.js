@@ -6,6 +6,7 @@ import {
 import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
+import { isRealSuper, setEditMode } from '../editmode.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin)
@@ -16,10 +17,14 @@ export async function viewAdmin() {
   app.innerHTML = `
   <div class="page admin">
     <h1>Admin</h1>
+    ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand</span></label>
+      <p class="muted small">Slået til får du en ✏️ på kasserne rundt i appen, så du kan rette og slette alt. Gælder kun på denne telefon.</p></div>` : ''}
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
+  const em = document.getElementById('editMode');
+  if (em) em.onchange = () => { setEditMode(em.checked); toast(em.checked ? 'Redigering er slået til' : 'Redigering er slået fra'); };
   if (S.adminTab === 'forslag') bindSuggestTab(viewAdmin);
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));

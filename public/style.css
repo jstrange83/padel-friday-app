@@ -453,3 +453,15 @@ a.mp.busy { opacity: .6; pointer-events: none; }
 .modal-card .mact { margin-top: 12px; }
 #nav a { position: relative; }
 .navbadge { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--dn); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; font-style: normal; }
+
+/* Redigeringstilstand (superadmin) */
+#editBar { position: sticky; top: 0; z-index: 31; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #5a78ff; color: #fff; padding: 8px 16px; font-weight: 600; font-size: 14px; }
+#editBar button { background: #fff; color: #23308a; border: 0; border-radius: 8px; padding: 6px 10px; font: inherit; font-weight: 700; cursor: pointer; }
+.sedit { position: absolute; top: 6px; right: 6px; z-index: 2; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #5a78ff; background: rgba(90, 120, 255, .18); color: var(--text); font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+a.ev, .match, .fine, .card.sug, .list .row, .myfine, .logrow, .stats-page .head, .me-card, .page.event > .head { position: relative; }
+.mhr .sedit, .head .sedit, .me-card .sedit { position: static; }
+.myfine .sedit, .logrow .sedit { position: static; margin-right: 8px; flex: none; }
+.list .row .sedit { position: static; margin-right: 6px; flex: none; }
+.sedit-card { max-height: 85vh; overflow-y: auto; }
+.sedit-card label { display: block; margin-top: 8px; }
+.sedit-card textarea { width: 100%; box-sizing: border-box; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-top: 4px; }

@@ -11,6 +11,7 @@ import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
+import { renderEditBar } from './editmode.js';
 
 async function loadBase() {
   const [profiles, centers, courts, groups, groupCenters, members, settings, contacts] = await Promise.all([
@@ -37,6 +38,7 @@ async function loadBase() {
   if (!gs.some((x) => x.id === g)) g = gs[0]?.id || null;
   S.groupId = g;
   renderViewAsBar();
+  renderEditBar();
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
@@ -99,6 +101,7 @@ async function gates() {
 hooks.boot = boot;
 hooks.loadBase = loadBase;
 hooks.renderNav = () => renderNav();
+hooks.route = () => route();
 
 function renderNav() {
   if (!S.groupId) { navEl.innerHTML = ''; return; }

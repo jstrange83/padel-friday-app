@@ -2,6 +2,7 @@
 import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
+import { editBtn } from '../editmode.js';
 
 // Kort øverst til admin: spillere der venter på at komme med i gruppen
 function pendingCard() {
@@ -36,7 +37,7 @@ export async function viewEvents() {
       ? mine ? `<button class="btn sm quick" data-off="${e.id}">Afmeld</button>`
         : canJoin(e) ? `<button class="btn sm primary quick" data-on="${e.id}">Tilmeld</button>` : ''
       : e.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
-    return `<a class="ev" href="#/fredag/${e.id}">
+    return `<a class="ev" href="#/fredag/${e.id}">${editBtn('padel_events', e.id)}
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
       <div class="grow"><b>${esc(e.title || group()?.name || 'Padel')}</b>
         <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>

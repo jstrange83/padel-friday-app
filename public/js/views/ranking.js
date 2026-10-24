@@ -1,6 +1,7 @@
 // Ranglisten (pr. gruppe, og fælles for superadmin) og den enkelte spillers statistik.
 import { sb, S, app, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, activeMembers, groupElo, group, groupBar, esc, nameOf, first, fmtDate, q } from '../core.js';
 import { startViewAs } from '../viewas.js';
+import { editBtn } from '../editmode.js';
 
 // Gruppens godkendte kampe med dato, format og pointændringer
 async function groupData(g) {
@@ -58,7 +59,7 @@ export async function viewRanking() {
     const sub = kind === 'streak' && !global ? `længste ${p.best}` : `${p.n} ${p.n === 1 ? 'kamp' : 'kampe'} <span class="form">${form}</span>`;
     const v = kind === 'maaned' && !global ? `${p.val > 0 ? '+' : ''}${p.val}` : p.val;
     return `<a class="row ${p.id === S.me.id ? 'me' : ''}" href="#/spiller/${p.id}">
-      <div class="pos">${medal}</div>
+      <div class="pos">${medal}</div>${global ? editBtn('padel_profiles', p.id) : editBtn('padel_group_members', `${S.groupId}|${p.id}`)}
       <div class="grow"><b>${esc(p.name)}</b><small>${sub}</small></div>
       <div class="elo">${v}${unit ? `<small class="unit">${unit}</small>` : ''}</div></a>`;
   };
@@ -147,7 +148,7 @@ export async function viewPlayer(id) {
     app.innerHTML = `
     <div class="page stats-page">
       <button class="back" onclick="history.back()">‹ Tilbage</button>
-      <div class="head"><h1>${esc(p.name)}</h1>${canViewAs ? '<button class="btn sm" id="viewAsBtn">👁 Se som</button>' : ''}</div>
+      <div class="head"><h1>${esc(p.name)}</h1>${editBtn('padel_profiles', p.id)}${canViewAs ? '<button class="btn sm" id="viewAsBtn">👁 Se som</button>' : ''}</div>
       <p class="muted">${esc(group()?.name || '')} · ${GENDER[p.gender]} · ${SIDE[p.side]}</p>
       <div class="stats">
         <div><b>${groupElo(id)}</b><span>Point</span></div>

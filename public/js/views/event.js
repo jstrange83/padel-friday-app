@@ -7,6 +7,7 @@ import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
 import { giveFormBody, bindGive, signoffFine, fineWarn, kr } from './fines.js';
+import { editBtn } from '../editmode.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -144,7 +145,7 @@ function header(c) {
   const status = ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
   return `
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
-      ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}</div>
+      ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
     <h1 class="cap evtitle">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
     <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
     ${quickSettings(c, '')}`;
@@ -348,7 +349,7 @@ function matchCard(c, m) {
   const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
   const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
-    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${status}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
+    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
@@ -444,7 +445,7 @@ function signupsSection(c) {
       <div id="addHits" class="hits"></div></div>` : ''}
     ${log.length ? `<details class="faq log"><summary>Til‑ og afmeldinger (${log.length})</summary><div>${log.map((l) => {
       const by = l.done_by && l.done_by !== l.player_id ? ` <small>af ${esc(first(l.done_by))}</small>` : '';
-      return `<div class="logrow"><span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
+      return `<div class="logrow">${editBtn('padel_signup_log', l.id)}<span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
         <span class="grow">${esc(nameOf(l.player_id))} ${l.action === 'til' ? 'meldte til' : 'meldte fra'}${by}</span>
         <small class="muted">${fmtDate(l.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>`;
     }).join('')}</div></details>` : ''}${c.started ? '</details>' : ''}`;

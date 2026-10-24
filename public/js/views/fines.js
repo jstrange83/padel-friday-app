@@ -1,6 +1,7 @@
 // Bødekasse pr. gruppe. Admin slår den til og fra og bestemmer taksterne.
 // Admin og superbruger giver bøder og godkender betalinger. Spilleren melder selv "Jeg har betalt".
 import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBar, isAdmin, canRun, activeMembers, plural } from '../core.js';
+import { editBtn } from '../editmode.js';
 
 export const kr = (n) => `${new Intl.NumberFormat('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(+n || 0)} kr.`;
 const STATUS = { ubetalt: 'Ubetalt', afventer: 'Afventer', betalt: 'Betalt' };
@@ -78,7 +79,7 @@ export async function viewFines() {
   const tile = (cls, label, fs) => `<div class="ftile ${cls}"><small>${label}</small><b>${kr(sum(fs))}</b><span>${plural(fs.length, 'bøde', 'bøder')}</span></div>`;
   const row = (f) => `<div class="fine ${f.status}">
     <div class="ftop"><b class="fname">${esc(nameOf(f.player_id))}</b><span class="famt">${kr(f.amount)}</span></div>
-    <div class="ftitle">${esc(f.title)}${f.minutes ? ` <span class="muted">(${f.minutes} min)</span>` : ''}</div>
+    ${editBtn('padel_fines', f.id)}<div class="ftitle">${esc(f.title)}${f.minutes ? ` <span class="muted">(${f.minutes} min)</span>` : ''}</div>
     ${f.note ? `<div class="muted small">${esc(f.note)}</div>` : ''}
     <div class="fmeta"><span class="badge st-${f.status}">${STATUS[f.status]}</span>${f.auto ? '<span class="badge auto">⚡ Automatisk</span>' : ''}<small class="muted">${fmtDate(f.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
     ${run && f.status !== 'betalt' ? `<div class="mact">
@@ -120,7 +121,7 @@ export async function viewFines() {
     ${kings.length ? `<h3>🏆 Bødekonger</h3><div class="list">${kings.map(([pid, a], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i + 1}</div><div class="grow">${esc(nameOf(pid))}</div><b>${kr(a)}</b></div>`).join('')}</div>` : ''}
 
     <details class="card faq"><summary><b>📋 Takster</b></summary><div>
-      ${types.filter((t) => t.active).map((t) => `<div class="myfine"><span class="grow">${esc(t.name)}${autoTag(t)}</span><b>${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
+      ${types.filter((t) => t.active).map((t) => `<div class="myfine">${editBtn('padel_fine_types', t.id)}<span class="grow">${esc(t.name)}${autoTag(t)}</span><b>${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
     </div></details>
 
     ${admin ? settings(gr, types) : ''}

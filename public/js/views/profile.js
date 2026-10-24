@@ -2,6 +2,7 @@
 import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
+import { editBtn } from '../editmode.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -32,7 +33,7 @@ export function renderProfile(isNew) {
     <div class="card me-card">
       <div class="avatar">${esc(initials(p.name))}</div>
       <div class="grow">
-        <h1>${esc(p.name)}</h1>
+        <h1>${esc(p.name)}</h1>${editBtn('padel_profiles', p.id)}
         <small>${isSuper() ? 'Superadmin · ' : ''}${GENDER[p.gender]} · ${SIDE[p.side]}${phone ? ` · ${fmtPhone(phone)}` : ''}</small>
       </div>
     </div>

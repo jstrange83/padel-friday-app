@@ -169,6 +169,21 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  // Superadmin: ret og slet
+  padel_super_update: ({ p_table, p_id, p_data }) => {
+    if (!me()?.is_superadmin) throw new Error('Kun superadmin');
+    let row;
+    if (p_table === 'padel_group_members') { const [g, p] = p_id.split('|'); row = GM(g, p); } else row = db[p_table].find((r) => String(r.id) === String(p_id));
+    if (!row) throw new Error('Fandt ikke det, der skulle rettes');
+    if (p_table === 'padel_matches') revertElo(row.id);
+    Object.assign(row, p_data);
+    if (p_table === 'padel_matches' && row.status === 'bekraeftet') applyElo(row);
+  },
+  padel_super_prepare_delete: ({ p_table, p_id }) => {
+    if (!me()?.is_superadmin) throw new Error('Kun superadmin');
+    if (p_table === 'padel_matches') revertElo(p_id);
+    if (p_table === 'padel_events') db.padel_matches.filter((m) => m.event_id === p_id).forEach((m) => revertElo(m.id));
+  },
   // Forslagskasse
   padel_send_suggestion: ({ p_text, p_source, p_group }) => {
     if (!p_text?.trim()) throw new Error('Skriv dit forslag');

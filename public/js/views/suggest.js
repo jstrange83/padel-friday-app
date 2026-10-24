@@ -1,5 +1,6 @@
 // Forslagskasse: spilleren skriver forslag i appen (ingen mails). Superadmin læser og svarer under Admin.
 import { sb, S, app, esc, toast, q, busy, fmtDate, nameOf, group } from '../core.js';
+import { editBtn } from '../editmode.js';
 
 export const SSTATUS = { ny: 'Ny', set: 'Set', planlagt: 'Planlagt', lavet: 'Lavet ✓', nej: 'Nej tak' };
 const date = (d) => fmtDate(d, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -17,7 +18,7 @@ export async function viewSuggest() {
       <button class="btn primary">Send forslag</button>
     </form>
     ${mine.length ? `<h3>Dine forslag</h3>${mine.map((x) => `
-      <div class="card sug ${x.reply_seen ? '' : 'new'}">
+      <div class="card sug ${x.reply_seen ? '' : 'new'}">${editBtn('padel_suggestions', x.id)}
         <div class="ftop"><small class="muted">${date(x.created_at)}</small><span class="badge sst-${x.status}">${SSTATUS[x.status]}</span></div>
         <p class="stext">${esc(x.text)}</p>
         ${x.reply ? `<div class="sreply"><small class="muted">Svar${x.replied_at ? ` · ${date(x.replied_at)}` : ''}</small><p>${esc(x.reply)}</p></div>` : ''}
@@ -87,7 +88,7 @@ export function suggestTab() {
       <button class="btn sm">Gem</button></form></div>
     <div class="tabbar inner"><button class="tab ${S.sugTab === 'nye' ? 'on' : ''}" data-stab="nye">Nye (${all.filter((x) => x.status === 'ny').length})</button><button class="tab ${S.sugTab === 'alle' ? 'on' : ''}" data-stab="alle">Alle (${all.length})</button></div>
     ${shown.map((x) => `
-      <form class="card sug sadm" data-sug="${x.id}">
+      <form class="card sug sadm" data-sug="${x.id}">${editBtn('padel_suggestions', x.id)}
         <div class="ftop"><b>${esc(nameOf(x.player_id))}</b><small class="muted">${date(x.created_at)}${x.group_id ? ` · ${esc(group(x.group_id)?.name || '')}` : ''}${x.source === 'popup' ? ' · popup' : ''}</small></div>
         <p class="stext">${esc(x.text)}</p>
         <label>Status<select name="status">${Object.entries(SSTATUS).map(([k, v]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
