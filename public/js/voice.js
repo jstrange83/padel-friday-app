@@ -12,7 +12,8 @@ const NUMW = (() => {
   return m;
 })();
 
-// Fortolker fx "seks fire", "6-4", "vi vandt 6 4", "vi tabte 3 til 9", "otte otte", "uafgjort 12"
+// Fortolker fx "seks fire", "6-4", "vi vandt 6 4", "vi tabte 3 til 9", "otte otte", "uafgjort 12".
+// Spiller man selv, er første tal ens eget hold; ellers venstre hold.
 export function parseScore(text, myTeam) {
   const t = text.toLowerCase();
   const nums = [];
@@ -26,8 +27,8 @@ export function parseScore(text, myTeam) {
   if (nums.length === 1 && /^\d\d$/.test(String(nums[0]))) { const d = String(nums[0]); nums.splice(0, 1, +d[0], +d[1]); }
   if (nums.length < 2) return null;
   let [x, y] = nums;
-  const we = /\b(vi|os)\b/.test(t) && myTeam;
-  if (!we) return { a: x, b: y };
+  // Spiller man selv kampen, er det første tal altid ens eget holds (fx "seks to" = vi fik 6, de fik 2)
+  if (!myTeam) return { a: x, b: y };
   if (/vandt|vinder/.test(t)) [x, y] = [Math.max(x, y), Math.min(x, y)];
   else if (/tabte|taber/.test(t)) [x, y] = [Math.min(x, y), Math.max(x, y)];
   return myTeam === 'a' ? { a: x, b: y } : { a: y, b: x };

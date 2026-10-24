@@ -215,6 +215,11 @@ try {
   ok((await page.locator(`#m-${cm.id} [data-act=confirm]`).innerText()).includes('Godkend'), 'modstander kan godkende ændringen');
   ok((await page.locator('.approvals').innerText()).toLowerCase().includes('venter på din godkendelse'), 'rettelsen vises øverst hos modstanderen');
   ok(/din (næste kamp|kamp nu)|dine kampe/.test((await page.locator('.mine-card .mtitle').innerText()).toLowerCase()), 'kortet øverst hedder Din næste kamp');
+  const ps = await page.evaluate(async () => {
+    const { parseScore } = await import('/js/voice.js');
+    return [parseScore('seks to', 'b'), parseScore('seks to', 'a'), parseScore('vi tabte seks to', 'b'), parseScore('seks to', null)].map((r) => `${r.a}-${r.b}`).join(',');
+  });
+  ok(ps === '2-6,6-2,6-2,6-2', 'sagt resultat: første tal er ens eget hold (' + ps + ')');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot('godkend-rettelse');
   await page.locator(`#m-${cm.id} [data-act=reject]`).click();

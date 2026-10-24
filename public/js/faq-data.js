@@ -100,7 +100,8 @@ export const FAQ = [
     cat: 'Resultater',
     q: 'Kan jeg sige resultatet i stedet for at skrive det?',
     a: `<p>Ja. Tryk <b>🎤 Sig resultat</b> på kampkortet og sig fx:</p>
-<ul><li>"seks fire" eller "otte otte": første tal er holdet til venstre på kortet</li><li>"vi vandt ni tre" eller "vi tabte fire seks": så ved appen selv, hvilket hold der er jeres</li><li>"uafgjort tolv"</li></ul>
+<ul><li>"seks to": første tal er <b>dit eget hold</b>, uanset om I står til venstre eller højre på kortet</li><li>"vi vandt seks to" eller "vi tabte to seks" virker også</li><li>"uafgjort fire"</li></ul>
+<p>Når du skriver resultatet, står dit eget hold øverst. Tjek tallene, og tryk <b>Gem resultat</b>.</p>
 <p>Resultatet bliver udfyldt, og du trykker <b>Gem</b>, når det ser rigtigt ud. Første gang skal du give appen lov til at bruge mikrofonen. Virker knappen ikke på din telefon, kan du bruge mikrofonen på tastaturet.</p>`,
   },
   {

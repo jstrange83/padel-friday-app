@@ -361,10 +361,13 @@ function enterForm(c, m, note = '') {
   const { ev, isAm, isSet, unit } = c;
   const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
   const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
-  const tn = (l, r) => `${esc(first(l))} & ${esc(first(r))}`;
+  const tn = (l, r) => [l, r].includes(c.me) ? `Dig & ${esc(first(l === c.me ? r : l))}` : `${esc(first(l))} & ${esc(first(r))}`;
+  const rowA = `<div class="erow"><span class="et">${tn(m.a_left, m.a_right)}</span><input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score ${tn(m.a_left, m.a_right)}"></div>`;
+  const rowB = `<div class="erow"><span class="et">${tn(m.b_left, m.b_right)}</span><input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score ${tn(m.b_left, m.b_right)}"></div>`;
+  // Eget hold står øverst, så man skriver sit eget resultat først
+  const meOnB = [m.b_left, m.b_right].includes(c.me);
   return `<form class="enter" hidden data-id="${m.id}">
-      <div class="erow"><span class="et">${tn(m.a_left, m.a_right)}</span><input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score ${tn(m.a_left, m.a_right)}"></div>
-      <div class="erow"><span class="et">${tn(m.b_left, m.b_right)}</span><input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score ${tn(m.b_left, m.b_right)}"></div>
+      ${meOnB ? rowB + rowA : rowA + rowB}
       <div class="mact"><button class="btn sm primary">Gem resultat</button></div>
       <small class="muted">${hint}</small>${note}
     </form>`;
