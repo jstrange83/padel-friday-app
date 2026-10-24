@@ -1,16 +1,18 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
-  sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
+  sb, S, app, hooks, hasSuggest, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, member, group, groupBar, groupCenterIds, setGroup,
   esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
+import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin)
-  const tabs = [(isAdmin() && S.groupId) || isSuper() ? ['spillere', '👥 Spillere'] : null, isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null].filter(Boolean);
+  const tabs = [(isAdmin() && S.groupId) || isSuper() ? ['spillere', '👥 Spillere'] : null, isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null, isSuper() && hasSuggest() ? ['forslag', '💡 Forslag'] : null].filter(Boolean);
   if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
-  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab }[S.adminTab];
+  if (S.adminTab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab }[S.adminTab];
   app.innerHTML = `
   <div class="page admin">
     <h1>Admin</h1>
@@ -18,6 +20,7 @@ export async function viewAdmin() {
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
+  if (S.adminTab === 'forslag') bindSuggestTab(viewAdmin);
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
   app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });
@@ -178,7 +181,7 @@ function courtsTab() {
 
 function bind() {
   const g = S.groupId;
-  const refresh = async () => { await hooks.loadBase(); viewAdmin(); };
+  const refresh = async () => { await hooks.loadBase(); await viewAdmin(); hooks.renderNav?.(); };
   const refreshOpen = async (pid) => {
     const term = document.getElementById('playerSearch')?.value || '';
     await refresh();

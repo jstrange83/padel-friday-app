@@ -178,7 +178,7 @@ try {
     const r = await page.evaluate((id) => JSON.parse(sessionStorage.getItem('mockdb')).padel_matches.find((m) => m.id === id).round_no, focusId);
     await page.click(`[data-rtab="${r}"]`); await wait(200);
   };
-  const loginAs = async (email) => {
+  const loginAs = async (email, keepModal = false) => {
     await page.evaluate(() => sessionStorage.removeItem('mock-session'));
     await page.goto('http://localhost:8765/');
     await page.waitForSelector('#authForm');
@@ -190,6 +190,8 @@ try {
     await page.goto(evUrl);
     await page.waitForSelector('.page.event');
     await wait(400);
+    if (keepModal) return;
+    if (await page.locator('#fbModal').count()) await page.click('#fbLater');
     await openAll();
   };
   const cm = await page.evaluate(() => {
@@ -436,12 +438,18 @@ try {
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
   await page.waitForSelector('#nav a:has-text("Admin")');
+  await page.click('#nav a:has-text("Spilledage")');
+  await page.waitForSelector('.approvals [data-pok]');
+  ok((await page.locator('#nav .navbadge').innerText()) === '1', 'Admin i menuen viser 1, der venter');
+  ok((await page.locator('.approvals').innerText()).includes('Test Anne'), 'Spilledage viser, at Anne vil være med');
+  await shot('godkend-spilledage');
   await page.click('#nav a:has-text("Admin")');
   await page.waitForSelector('[data-approve]');
   await shot('godkend');
   await page.click('[data-approve]');
   await wait(500);
   ok((await text()).includes('2 spillere'), 'Anne godkendt i Lørdagspadel');
+  ok(!(await page.locator('#nav .navbadge').count()), 'tallet forsvinder, når Anne er godkendt');
 
   // Hjemmeskærm: på en iPhone vises vejledningen efter login, og den kan springes over
   const iphone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
@@ -657,6 +665,56 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('#nav').innerText()).includes('Spilledage'), 'ny bruger overtager spilleren og er med i gruppen med det samme');
   const merged = await page.evaluate(() => { const db = JSON.parse(sessionStorage.getItem('mockdb')); return db.padel_profiles.find((p) => p.name === 'Nikolaj Ny' && p.placeholder).merged_into; });
   ok(merged === 'u-nyspiller', 'profilen uden login er koblet til den nye bruger');
+
+  // Forslagskasse: superadmin sætter "spørg efter 3 kampe", spilleren får popup, sender forslag og får svar
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-tab="forslag"]');
+  await page.waitForSelector('#fbAfter');
+  await page.fill('#fbAfter input[name=n]', '3');
+  await page.click('#fbAfter button');
+  await wait(400);
+  await loginAs('test2@fredagspadel.test', true);
+  await page.waitForSelector('#fbModal');
+  ok((await page.locator('#fbModal').innerText()).includes('Hvad synes du om appen?'), 'popup med forslag efter 3 spillede kampe');
+  await shot('forslag-popup');
+  await page.fill('#fbModal textarea', 'Kan vi få en mørk og en lys tilstand?');
+  await page.click('#fbModal button.primary');
+  await wait(400);
+  ok(!(await page.locator('#fbModal').count()), 'popup lukker efter forslag');
+  await page.reload();
+  await page.waitForSelector('#nav a');
+  await wait(400);
+  ok(!(await page.locator('#fbModal').count()), 'popup vises kun én gang');
+  await page.click('#nav a:has-text("Profil")');
+  await page.click('#sugRow');
+  await page.waitForSelector('#sugForm');
+  await page.fill('#sugForm textarea', 'Bøder skulle kunne betales med kort');
+  await page.click('#sugForm button');
+  await wait(400);
+  ok((await page.locator('.sug').count()) === 2, 'forslagskassen under Profil viser mine forslag');
+  await noOverflow('forslagskasse');
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-tab="forslag"]');
+  await page.waitForSelector('form[data-sug]');
+  ok((await page.locator('[data-stab="nye"]').innerText()).includes('2'), 'superadmin ser 2 nye forslag');
+  const sf = page.locator('form[data-sug]', { hasText: 'mørk og en lys' });
+  await sf.locator('select[name=status]').selectOption('planlagt');
+  await sf.locator('textarea[name=reply]').fill('God idé, den kommer!');
+  await sf.locator('button').click();
+  await wait(400);
+  await shot('forslag-admin');
+  await loginAs('test2@fredagspadel.test');
+  await page.click('#nav a:has-text("Profil")');
+  await page.waitForSelector('#sugRow .badge.new');
+  ok((await page.locator('#sugRow').innerText()).includes('Nyt svar'), 'spilleren ser "Nyt svar" ved Forslagskasse');
+  await page.click('#sugRow');
+  await page.waitForSelector('.sreply');
+  ok((await page.locator('.sug', { hasText: 'mørk og en lys' }).innerText()).includes('God idé, den kommer!'), 'spilleren ser svaret i appen');
+  await shot('forslag-svar');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

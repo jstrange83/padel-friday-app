@@ -33,6 +33,10 @@ export const roleOf = (p, g = S.groupId) => roleIn(p?.id, g) || 'bruger';
 export const isAdmin = (g = S.groupId) => isSuper() || roleIn(S.me?.id, g) === 'admin';
 // Må køre en fredag: starte runder, rette hold, til-/afmelde andre, godkende resultater
 export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g));
+// Spillere der venter på at komme med i en gruppe, jeg er admin for
+// Forslagskassen vises først, når databasen har den (kolonnen findes i indstillingerne)
+export const hasSuggest = () => S.settings && 'feedback_after_matches' in S.settings;
+export const pendingForMe = () => S.members.filter((m) => m.status === 'afventer' && isAdmin(m.group_id) && S.profiles[m.player_id]);
 // Grupper jeg kan vælge imellem
 export const myGroups = () => S.groups.filter((g) => isSuper() || member(S.me?.id, g.id)?.status === 'aktiv');
 export const group = (g = S.groupId) => S.groups.find((x) => x.id === g);

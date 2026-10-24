@@ -152,6 +152,17 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
+    q: 'Hvordan ser admin, at nogen vil være med i gruppen?',
+    a: `<p>Når en spiller har brugt invitationslinket, står der et rødt tal ved <b>Admin</b> i menuen, og øverst på <b>Spilledage</b> kommer kortet <b>✋ Vil gerne være med</b>. Tryk <b>Godkend</b> eller <b>Afvis</b> direkte der. Der sendes ingen mails.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Hvor sender jeg et forslag til appen?',
+    a: `<p>Under <b>Profil → 💡 Forslagskasse</b>. Skriv dit forslag og tryk <b>Send</b>. Kun den, der står for appen, kan læse det, og svaret kommer i appen (ikke på mail). Når der er et nyt svar, står der <b>Nyt svar</b> ved Forslagskasse.</p>
+<p>Når du har spillet et vist antal kampe, spørger appen også én gang, om du har et forslag.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
     q: 'Kan admin oprette en spiller, der ikke selv har oprettet sig?',
     a: `<p>Ja. Under <b>Admin → Spillere</b> kan gruppens admin trykke <b>Opret spiller</b> og skrive navn, telefonnummer, køn og side. Spilleren er med i gruppen med det samme, kan tilmeldes spilledage, sættes på hold og få point. Der står "Uden login" ved navnet.</p>
 <p>Når spilleren senere selv opretter sig med <b>samme telefonnummer</b>, overtager de profilen med alle kampe, point, grupper og bøder.</p>`,

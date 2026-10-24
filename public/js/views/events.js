@@ -1,9 +1,25 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
 
+// Kort øverst til admin: spillere der venter på at komme med i gruppen
+function pendingCard() {
+  if (S.viewAs) return '';
+  const ps = pendingForMe();
+  if (!ps.length) return '';
+  const many = new Set(ps.map((m) => m.group_id)).size > 1 || ps.some((m) => m.group_id !== S.groupId);
+  return `<div class="card approvals"><div class="mtitle">✋ Vil gerne være med (${ps.length})</div>
+    ${ps.map((m) => { const p = S.profiles[m.player_id]; return `<div class="appr">
+      <p><b>${esc(p.name)}</b>${many ? ` <span class="muted small">· ${esc(group(m.group_id)?.name || '')}</span>` : ''}</p>
+      <small class="muted">${p.gender === 'kvinde' ? 'Kvinde' : 'Mand'}${phoneOf(p.id) ? ` · 📱 ${esc(phoneOf(p.id))}` : ''}</small>
+      <div class="mact"><button class="btn sm primary" data-pok="${m.group_id}|${p.id}">Godkend</button><button class="btn sm" data-pno="${m.group_id}|${p.id}">Afvis</button></div>
+    </div>`; }).join('')}</div>`;
+}
+
 export async function viewEvents() {
+  // Hent medlemmer på ny, så admin ser nye anmodninger om at komme med
+  try { S.members = await q(sb.from('padel_group_members').select('*')); hooks.renderNav?.(); } catch {}
   const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id, created_at)').eq('group_id', S.groupId).order('starts_at', { ascending: false }).limit(60));
   const now = Date.now() - 6 * 3600e3;
   const upcoming = evs.filter((e) => e.status !== 'afsluttet' && new Date(e.starts_at).getTime() >= now).reverse();
@@ -32,6 +48,7 @@ export async function viewEvents() {
   <div class="page">
     <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
     ${groupBar(viewEvents)}
+    ${pendingCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer på din profil, så admin kan få fat i dig. ›</a>' : ''}
     ${coming.map(card).join('') || (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
@@ -44,6 +61,18 @@ export async function viewEvents() {
     busy(btn, true);
     try { await fn(); await viewEvents(); } catch { busy(btn, false); }
   };
+  // Godkend/afvis nye spillere direkte herfra
+  app.querySelectorAll('[data-pok]').forEach((b) => (b.onclick = async () => {
+    const [g, p] = b.dataset.pok.split('|');
+    busy(b, true);
+    try { await q(sb.rpc('padel_set_member', { g, p, p_role: 'bruger', p_status: 'aktiv' })); toast(`${nameOf(p)} er godkendt`); await hooks.loadBase(); viewEvents(); } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-pno]').forEach((b) => (b.onclick = async () => {
+    const [g, p] = b.dataset.pno.split('|');
+    if (!confirm(`Afvis ${nameOf(p)}?`)) return;
+    busy(b, true);
+    try { await q(sb.rpc('padel_set_member', { g, p, p_role: 'bruger', p_status: 'fjernet' })); toast(`${nameOf(p)} er afvist`); await hooks.loadBase(); viewEvents(); } catch { busy(b, false); }
+  }));
   app.querySelectorAll('[data-on]').forEach((b) => (b.onclick = (e) => quick(e, async () => {
     await q(sb.from('padel_signups').insert({ event_id: b.dataset.on, player_id: S.me.id }));
     toast('Du er tilmeldt');

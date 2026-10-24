@@ -1,6 +1,7 @@
 // Egen profil: overblik øverst, ret oplysninger i en fold-ud. Første gang: velkomstformular.
 import { installHow, renderInstall } from '../install.js';
-import { sb, S, app, hooks, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
+import { unseenReplies } from './suggest.js';
+import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -47,12 +48,15 @@ export function renderProfile(isNew) {
     <div class="list links">
       <a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>
       ${group()?.fines_enabled ? '<a class="row" href="#/boeder"><span class="grow">💸 Bødekasse</span><span class="muted">›</span></a>' : ''}
+      ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
       ${viewing ? '' : '<button class="row logout" id="logout"><span class="grow">↩️ Log ud</span></button>'}
     </div>
   </div>`;
   bind(false);
+  // Mærke ved nye svar på forslag
+  if (hasSuggest()) unseenReplies().then((n) => { const r = document.getElementById('sugRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n === 1 ? 'Nyt svar' : `${n} nye svar`}</span>`; });
 }
 
 function bind(isNew) {

@@ -20,7 +20,7 @@ function seed() {
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
-    padel_settings: [{ id: 1, global_ranking_public: false }], padel_contacts: [], padel_fine_types: [], padel_fines: [] };
+    padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -169,6 +169,27 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  // Forslagskasse
+  padel_send_suggestion: ({ p_text, p_source, p_group }) => {
+    if (!p_text?.trim()) throw new Error('Skriv dit forslag');
+    const x = { id: uuid(), player_id: uid(), group_id: p_group || null, text: p_text.trim(), source: p_source === 'popup' ? 'popup' : 'profil', status: 'ny', reply: null, replied_at: null, reply_seen: true, created_at: now() };
+    db.padel_suggestions.push(x); me().feedback_asked_at ||= now(); return x.id;
+  },
+  padel_answer_suggestion: ({ p_id, p_status, p_reply }) => {
+    if (!me()?.is_superadmin) throw new Error('Kun superadmin');
+    const x = db.padel_suggestions.find((y) => y.id === p_id), r = p_reply?.trim() || null;
+    if (r !== x.reply || p_status !== x.status) x.reply_seen = false;
+    if (r !== x.reply) x.replied_at = now();
+    Object.assign(x, { status: p_status, reply: r });
+  },
+  padel_suggestion_replies_seen: () => { db.padel_suggestions.filter((x) => x.player_id === uid()).forEach((x) => (x.reply_seen = true)); },
+  padel_should_ask_feedback: () => {
+    const n = db.padel_settings[0].feedback_after_matches ?? 5, p = me();
+    if (!p || n <= 0 || p.feedback_asked_at || p.placeholder) return false;
+    return db.padel_matches.filter((m) => m.status === 'bekraeftet' && [m.a_left, m.a_right, m.b_left, m.b_right].includes(uid())).length >= n;
+  },
+  padel_feedback_asked: () => { me().feedback_asked_at ||= now(); },
+  padel_set_feedback_after: ({ p_n }) => { db.padel_settings[0].feedback_after_matches = p_n; },
   padel_signoff_fine_type: ({ p_event, p_player }) => signoffType(p_event, p_player),
   padel_save_fine_type_v2: (a) => { const id = RPC.padel_save_fine_type(a); db.padel_fine_types.find((t) => t.id === id).auto = a.p_per_minute ? null : a.p_auto || null; return id; },
   padel_set_phone: ({ p_phone }) => setPhone(uid(), p_phone),

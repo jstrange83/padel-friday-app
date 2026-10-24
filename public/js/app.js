@@ -1,5 +1,5 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, esc, toast, leavePage } from './core.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, leavePage } from './core.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
@@ -8,6 +8,7 @@ import { viewEvent } from './views/event.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
+import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 
@@ -91,6 +92,8 @@ async function gates() {
     return renderInstall(() => route());
   }
   await route();
+  // Én gang pr. åbning: spørg om forslag, når spilleren har spillet nok kampe
+  if (!S.viewAs && !S.feedbackChecked && S.groupId && hasSuggest()) { S.feedbackChecked = true; maybeAskFeedback(); }
 }
 
 hooks.boot = boot;
@@ -103,11 +106,13 @@ function renderNav() {
   // Bødekassen vises kun i grupper, hvor admin har slået den til
   if (group()?.fines_enabled) items.push(['#/boeder', '💸', 'Bøder']);
   items.push(['#/profil', '👤', 'Profil']);
-  if (isAdmin()) items.push(['#/admin', '⚙️', 'Admin']);
+  if (isAdmin() || pendingForMe().length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && cur.startsWith('#/faq')) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
-  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${t}</a>`).join('');
+    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+  // Tal på Admin, når nogen venter på godkendelse
+  const pend = S.viewAs ? 0 : pendingForMe().length;
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${t}</a>`).join('');
 }
 
 // Ikke med i nogen gruppe endnu: vis status på anmodninger
@@ -138,6 +143,7 @@ const ROUTES = {
   profil: () => renderProfile(false),
   faq: () => viewFaq(),
   boeder: () => viewFines(),
+  forslag: () => viewSuggest(),
   admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
 };
 
