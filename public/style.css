@@ -690,3 +690,9 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .discover { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-left: 4px solid #60a5fa; }
 .discover a { text-decoration: none; color: inherit; font-weight: 600; min-width: 0; }
 .discover a small { display: block; font-weight: 400; margin-top: 2px; }
+#viewAsBar.modebar { background: #334155; }
+.modecard .seg { margin: 8px 0 4px; }
+.checks.rights { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 6px 0 10px; }
+.checks.rights span { font-size: 13px; padding: 9px 6px; }
+.people > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.people > summary::-webkit-details-marker { display: none; }

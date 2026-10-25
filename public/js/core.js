@@ -30,9 +30,23 @@ export const isClub = (g = S.groupId) => S.groups.find((x) => x.id === g)?.kind 
 
 // ---------- Grupper og roller ----------
 // Superadmin ser og styrer alt. Ellers gælder rollen i den valgte gruppe.
-export const isSuper = () => !!S.me?.is_superadmin;
+// Visning: superadmin kan se alt ("super"), kun med sine egne roller i hver gruppe ("mine") eller som almindelig bruger ("bruger").
+// Admins kan vælge "mine" (med admin) eller "bruger". Det ændrer kun, hvad appen viser, ikke hvad man har lov til.
+try { S.viewMode = localStorage.getItem('fp-mode') || ''; } catch { S.viewMode = ''; }
+export const viewMode = () => {
+  if (S.viewAs) return 'mine';
+  if (S.realMe?.is_superadmin) return ['super', 'mine', 'bruger'].includes(S.viewMode) ? S.viewMode : 'super';
+  return S.viewMode === 'bruger' ? 'bruger' : 'mine';
+};
+export function setViewMode(m) { S.viewMode = m; try { localStorage.setItem('fp-mode', m); } catch {} }
+export const isSuper = () => !!S.me?.is_superadmin && viewMode() === 'super';
 export const member = (pid, g = S.groupId) => S.members.find((m) => m.group_id === g && m.player_id === pid);
-export const roleIn = (pid, g = S.groupId) => (member(pid, g)?.status === 'aktiv' ? member(pid, g).role : null);
+export const roleIn = (pid, g = S.groupId) => {
+  const r = member(pid, g)?.status === 'aktiv' ? member(pid, g).role : null;
+  return r && !S.viewAs && pid === S.realMe?.id && viewMode() === 'bruger' ? 'bruger' : r;
+};
+// Har jeg (rigtigt) nogen admin-, træner- eller superadmin-rolle et sted? Så kan jeg skifte visning
+export const hasElevated = () => !!S.realMe?.is_superadmin || S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && m.role !== 'bruger') || !!S.clubRights?.length;
 export const roleOf = (p, g = S.groupId) => roleIn(p?.id, g) || 'bruger';
 export const isAdmin = (g = S.groupId) => isSuper() || roleIn(S.me?.id, g) === 'admin';
 // Må køre en fredag: starte runder, rette hold, til-/afmelde andre, godkende resultater

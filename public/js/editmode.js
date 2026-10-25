@@ -4,7 +4,7 @@ import { sb, S, hooks, esc, toast, q, busy, FORMAT, MODE, GENDER, SIDE, ROLE } f
 
 try { S.editMode = localStorage.getItem('fp-edit') === '1'; } catch { S.editMode = false; }
 export const isRealSuper = () => !!S.realMe?.is_superadmin;
-export const editOn = () => isRealSuper() && !S.viewAs && !!S.editMode;
+export const editOn = () => isRealSuper() && !S.viewAs && !!S.editMode && (S.viewMode || 'super') === 'super';
 export function setEditMode(on) {
   S.editMode = !!on;
   try { localStorage.setItem('fp-edit', on ? '1' : '0'); } catch {}

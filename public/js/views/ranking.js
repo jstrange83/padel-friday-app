@@ -82,7 +82,7 @@ export async function viewPlayer(id) {
     };
   });
   const rank = activeMembers().map((x) => groupElo(x.player_id)).sort((a, b) => b - a).indexOf(groupElo(id)) + 1;
-  const canViewAs = !S.viewAs && p.id !== S.realMe.id && (S.realMe.is_superadmin || isAdmin());
+  const canViewAs = !S.viewAs && p.id !== S.realMe.id && (isSuper() || isAdmin());
   const PER = [['30', '30 dage'], ['90', '90 dage'], ['365', 'År'], ['all', 'Alt']];
   S.statPer ||= '90';
   let cmp = null;

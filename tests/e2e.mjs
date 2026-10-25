@@ -1254,9 +1254,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('[data-tab="spillere"]');
   await page.click('[data-tab="spillere"]');
   await page.click('details.staff summary');
-  await page.locator('#addTreas select').selectOption({ label: 'Pia Forælder' });
-  await page.click('#addTreas button');
+  await page.locator('#addStaff select').selectOption({ label: 'Pia Forælder' });
+  await page.click('#addStaff button');
+  await page.waitForSelector('form[data-staff="u-nyforaelder"]');
+  const pf = page.locator('form[data-staff="u-nyforaelder"]');
+  await pf.locator('select[name=title]').selectOption('Kasserer');
+  await pf.locator('label:has(input[name=treasurer])').click();
+  await pf.locator('button').click();
   await wait(500);
+  ok((await page.evaluate(() => window.__mock.db().padel_club_staff.find((x) => x.user_id === 'u-nyforaelder')?.board_title)) === 'Kasserer', 'Pia sat som kasserer i bestyrelsen med ret til kontingent');
+  await shot('klub-bestyrelse');
+  await noOverflow('klub bestyrelse');
   await freshLogin('nyforaelder@test');
   await page.waitForSelector('#nav a');
   await pastGates();
@@ -1286,6 +1294,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/opslag');
   await page.waitForSelector('.post');
   ok((await text()).includes('husk vand') && (await text()).includes('velkommen'), 'forælder ser info og opslag');
+  await page.click('details.people summary');
+  ok((await page.locator('details.people').innerText()).includes('Kasserer') && (await page.locator('details.people').innerText()).includes('Brian'), 'bestyrelse og trænere med kontaktinfo under Opslag');
   ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.user_id === 'u-nyforaelder' && n.kind === 'klub_opslag').length)) === 1, 'forælder får notifikation om opslag');
   await page.goto('http://localhost:8765/#/traening');
   await page.waitForSelector('details.tr.event');
@@ -1363,6 +1373,28 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('.krow').first().innerText()).includes('(dig)'), 'barnet ser sine egne træninger');
   await shot('klub-barn');
   await noOverflow('klub barn');
+
+  // Visning: superadmin kan se appen som almindelig bruger og skifte tilbage
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate(() => localStorage.setItem('fp-group', 'g-fre'));
+  await page.goto('http://localhost:8765/#/profil');
+  await page.reload();
+  await page.waitForSelector('.modecard');
+  ok((await page.locator('.modecard label').count()) === 3, 'superadmin kan vælge Superadmin, Mine roller eller Bruger');
+  await page.locator('.modecard label:has-text("Bruger")').click();
+  await page.waitForSelector('#viewAsBar.modebar');
+  await wait(400);
+  ok(!(await page.locator('#nav').innerText()).includes('Admin'), 'som almindelig bruger: ingen Admin i menuen');
+  await shot('visning-bruger');
+  await noOverflow('visning bruger');
+  await page.locator('.modecard label:has-text("Mine roller")').click();
+  await wait(600);
+  ok((await page.locator('#nav').innerText()).includes('Admin') && (await page.locator('#viewAsBar.modebar').count()), 'mine roller: admin i Fredagspadel, hvor jeg er admin');
+  await page.click('#viewAsBar #stopViewAs');
+  await wait(600);
+  ok(!(await page.locator('#viewAsBar').count()), 'tilbage til superadmin');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

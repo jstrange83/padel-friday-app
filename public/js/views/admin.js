@@ -7,13 +7,13 @@ import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
-import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance } from './club.js';
+import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight } from './club.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin). I en klub: Børn og Hold og tider (trænere)
   const club = isClub() && S.groupId;
   const tabs = [
-    club && canRun() ? ['boern', `👧 Børn${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
+    club && (canRun() || myRight('godkende')) ? ['boern', `👧 Børn${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
     club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
     club && canRun() ? ['fremmode', '📊 Fremmøde'] : null,
     club && isTreasurer() ? ['kontingent', '💳 Kontingent'] : null,

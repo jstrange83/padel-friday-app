@@ -416,4 +416,18 @@ export const FAQ = [
     a: `<p>Admin kan sætte <b>maks. antal børn</b> på et hold. Er holdet fuldt, kan træneren sætte et nyt barn på <b>venteliste</b>. Forældrene får besked, og trænerne får besked, når der bliver plads.</p>
 <p>Ved indmeldelse kan man krydse af, at barnet gerne vil <b>prøve 1-2 træninger</b> først. Træneren kan så give barnet prøvetræning. Barnet er med til træning og betaler ikke kontingent, indtil træneren melder det ind som medlem.</p>`,
   },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
+    a: `<p>Klubbens admin (typisk formanden) går til <b>Admin → Medlemmer → Bestyrelse og rettigheder</b>. For hver person vælger man:</p>
+<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem eller suppleant.</li>
+<li><b>Rettigheder</b>: 💳 kontingent, 📣 opslag til alle, 📅 arrangementer og ✅ godkende børn.</li></ul>
+<p>Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Kan jeg se appen som almindelig bruger, selvom jeg er admin?',
+    a: `<p>Ja. Under <b>Profil → Visning</b> kan du vælge <b>Bruger</b>, så ser du appen som en almindelig spiller. Superadmin kan også vælge <b>Mine roller</b>, så ser man kun de grupper og klubber, man selv er med i, med den rolle man har dér.</p>
+<p>Så længe du ikke ser appen med alle dine rettigheder, står der en bjælke øverst med en knap, som skifter tilbage.</p>`,
+  },
 ];

@@ -2,7 +2,7 @@
 import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
-import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated } from '../core.js';
 import { myKidsSection, bindMyKids, showCalendar, discoverRow, bindDiscover } from './club.js';
 import { editBtn } from '../editmode.js';
 
@@ -55,6 +55,9 @@ export function renderProfile(isNew) {
     ${!phone ? `<div class="card warnbox">📱 ${viewing ? 'Spilleren mangler et telefonnummer.' : 'Tilføj dit telefonnummer, så admin kan få fat i dig.'}</div>` : ''}
     <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ ${viewing ? 'Ret oplysninger' : 'Ret mine oplysninger'}</b><span class="muted">›</span></summary>${form(p, false)}</details>
 
+    ${!viewing && hasElevated() ? `<div class="card modecard"><b>👁 Visning</b>
+      ${radios('vmode', S.realMe?.is_superadmin ? { super: 'Superadmin', mine: 'Mine roller', bruger: 'Bruger' } : { mine: 'Admin', bruger: 'Bruger' }, viewMode())}
+      <p class="muted small">${S.realMe?.is_superadmin ? '<b>Superadmin</b>: alt i alle grupper. <b>Mine roller</b>: kun de grupper, du er med i, med den rolle du har dér. <b>Bruger</b>: som en almindelig spiller.' : '<b>Admin</b>: med dine admin- og trænerrettigheder. <b>Bruger</b>: som en almindelig spiller.'}</p></div>` : ''}
     <div id="kidsBox"></div><div id="discBox"></div>
     <h3>${club ? 'Mit' : 'Min padel'}</h3>
     <div class="list links">
@@ -114,6 +117,7 @@ function bind(isNew) {
     } catch { busy(btn, false); }
   };
   document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+  app.querySelectorAll('input[name=vmode]').forEach((r) => (r.onchange = () => { setViewMode(r.value); toast({ super: 'Du ser appen som superadmin', mine: 'Du ser appen med dine egne roller', bruger: 'Du ser appen som almindelig bruger' }[r.value]); hooks.boot(); }));
   document.getElementById('calRow')?.addEventListener('click', (e) => { e.preventDefault(); showCalendar(); });
   document.getElementById('deleteMe')?.addEventListener('click', async (e) => {
     const who = S.viewAs ? S.me.name : 'din profil';

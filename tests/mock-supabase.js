@@ -634,6 +634,18 @@ Object.assign(RPC, {
     && !db.padel_club_kids.some((k) => k.group_id === x.id && kidMine(k.id)) && !(me()?.dismissed_clubs || []).includes(x.id)).map((x) => ({ id: x.id, name: x.name })),
 });
 
+
+// Bestyrelse og rettigheder
+Object.assign(RPC, {
+  padel_club_my_rights: () => db.padel_club_staff.filter((x) => x.user_id === uid()),
+  padel_club_set_rights: ({ g, p_user, p_title, p_treasurer, p_post, p_events, p_approve, p_cert_date }) => {
+    if (!isAdm(g)) throw new Error('Kun klubbens admin (formanden)');
+    upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer, can_post: !!p_post, can_events: !!p_events, can_approve: !!p_approve, board_title: p_title || null });
+    upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
+  },
+  padel_club_board_contacts: ({ g }) => db.padel_club_staff.filter((x) => x.group_id === g && x.board_title).map((x) => ({ user_id: x.user_id, name: db.padel_profiles.find((p) => p.id === x.user_id)?.name, title: x.board_title, phone: db.padel_contacts.find((c) => c.player_id === x.user_id)?.phone || null })),
+});
+
 export function createClient() {
   let cb = () => {};
   const session = () => JSON.parse(sessionStorage.getItem(SKEY) || 'null');

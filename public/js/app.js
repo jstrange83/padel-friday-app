@@ -1,6 +1,6 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
-import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids } from './views/club.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, viewMode, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
+import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids, hasAnyRight } from './views/club.js';
 import { viewPrivacy } from './views/privacy.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
@@ -47,7 +47,7 @@ async function loadBase() {
   renderEditBar();
   // Beskeder til superadmin (fx når en slettet spiller kommer igen)
   S.notices = [];
-  if (S.realMe?.is_superadmin) { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
+  if (S.realMe?.is_superadmin && viewMode() === 'super') { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
   if (S.realMe) await Promise.all([loadUnread(), loadClubPending()]);
 }
 
@@ -163,7 +163,7 @@ function renderClubNav() {
   const cur = location.hash || '#/traening';
   const pend = S.viewAs ? 0 : (S.clubPending || 0) + pendingForMe().length + (S.notices?.length || 0);
   const items = [['#/traening', '🎾', 'Træning'], ['#/opslag', '📣', 'Opslag'], ['#/profil', '👤', 'Profil']];
-  if (canRun() || isTreasurer() || pend) items.push(['#/admin', '⚙️', 'Admin']);
+  if (canRun() || hasAnyRight() || pend) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
     (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
@@ -223,7 +223,7 @@ const ROUTES = {
   beskeder: () => viewNotices(),
   udseende: () => viewTheme(),
   nyt: () => viewNews(app),
-  admin: () => (isAdmin() || isSuper() || (isClub() && (canRun() || isTreasurer())) ? viewAdmin() : ROUTES.fredage()),
+  admin: () => (isAdmin() || isSuper() || (isClub() && (canRun() || hasAnyRight())) ? viewAdmin() : ROUTES.fredage()),
   privatliv: () => viewPrivacy(),
   boern: () => viewMyKids(),
   traening: () => (isClub() ? viewTraining() : viewEvents()),

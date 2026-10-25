@@ -1,6 +1,6 @@
 // Klub (juniorklub): træningstider med afbud og fremmøde, opslag fra trænerne, indmeldelse af børn og kontingent.
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
-import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios } from '../core.js';
+import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode } from '../core.js';
 import { showQR } from '../qr.js';
 
 // ---------- Datoer (altid dansk tid) ----------
@@ -74,7 +74,7 @@ const feeOf = (kid) => C().fees.find((f) => f.kid_id === kid)?.status || 'ubetal
 const guardianNames = (kid) => C().guardians.filter((x) => x.kid_id === kid).map((x) => nameOf(x.user_id)).join(', ');
 const evCount = (e) => C().counts.find((x) => x.event_id === e)?.n ?? C().signups.filter((x) => x.event_id === e && x.status === 'tilmeldt').length;
 const signOf = (e, kid) => C().signups.find((x) => x.event_id === e && x.kid_id === kid && x.status === 'tilmeldt');
-const isEvManager = (e) => (e.team_id ? isTeamTrainer(e.team_id) : canRun());
+const isEvManager = (e) => myRight('arrangementer') || (e.team_id ? isTeamTrainer(e.team_id) : canRun());
 const evTime = (iso) => new Intl.DateTimeFormat('da-DK', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Copenhagen' }).format(new Date(iso));
 const evDay = (iso) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date(iso));
 const infoOf = (kid) => C().kidInfo.find((x) => x.kid_id === kid)?.info || '';
@@ -82,14 +82,18 @@ const infoOf = (kid) => C().kidInfo.find((x) => x.kid_id === kid)?.info || '';
 const myAssigned = () => C().teamTrainers.filter((x) => x.user_id === S.me?.id && C().teams.some((t) => t.id === x.team_id && !t.archived));
 export const isTeamTrainer = (t) => isAdmin() || (roleIn(S.me?.id) === 'superbruger' && (!myAssigned().length || myAssigned().some((x) => x.team_id === t)));
 const myTeams = () => C().teams.filter((t) => !t.archived && isTeamTrainer(t.id));
-export const isTreasurer = (g = S.groupId) => isAdmin(g) || !!S.clubTreasurer?.includes(g);
+// Rettigheder formanden har givet (bestyrelse m.fl.). Admin har alle. Visning "Bruger" slår dem fra.
+const RIGHT_COL = { kontingent: 'treasurer', opslag: 'can_post', arrangementer: 'can_events', godkende: 'can_approve' };
+export const myRight = (r, g = S.groupId) => isAdmin(g) || (!S.viewAs && viewMode() !== 'bruger' && !!S.clubRights?.find((x) => x.group_id === g)?.[RIGHT_COL[r]]);
+export const isTreasurer = (g = S.groupId) => myRight('kontingent', g);
+export const hasAnyRight = (g = S.groupId) => Object.keys(RIGHT_COL).some((r) => myRight(r, g));
 const trainersOf = (t) => C().trainers.filter((x) => x.team_ids.includes(t));
 const GENDER_KID = { pige: 'Pige', dreng: 'Dreng' };
 const age = (k) => { if (!k.birth_date) return k.birth_year ? `født ${k.birth_year}` : ''; const b = new Date(k.birth_date), n = new Date(); let a = n.getFullYear() - b.getFullYear(); if (n < new Date(n.getFullYear(), b.getMonth(), b.getDate())) a--; return `${a} år`; };
 const fmtDay = (d) => (d ? new Intl.DateTimeFormat('da-DK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z')) : '');
 // Små mærker til trænerne: må ikke fotograferes, og noget vigtigt at vide
 const kidFlags = (k) => `${k.photo_ok === false ? ' <span class="badge nophoto" title="Må ikke være på billeder">🚫📷</span>' : ''}${infoOf(k.id) ? ' <span class="badge warn" title="Vigtigt for træneren">⚠️</span>' : ''}`;
-const trainerLinks = (x) => `<div class="coachrow"><span class="grow"><b>${esc(x.name)}</b>${x.phone ? `<small class="muted">${fmtPhone(x.phone)}</small>` : ''}</span>${x.phone ? `<a class="btn sm" href="tel:${esc(x.phone)}">📞</a><a class="btn sm" href="sms:${esc(x.phone)}">💬</a>` : ''}</div>`;
+const trainerLinks = (x) => `<div class="coachrow"><span class="grow"><b>${esc(x.name)}</b>${x.role ? `<small class="muted">${esc(x.role)}</small>` : ''}${x.phone ? `<small class="muted">${fmtPhone(x.phone)}</small>` : ''}</span>${x.phone ? `<a class="btn sm" href="tel:${esc(x.phone)}">📞</a><a class="btn sm" href="sms:${esc(x.phone)}">💬</a>` : ''}</div>`;
 
 // Alle træninger i perioden for de valgte hold
 function occurrences(teamIds, from, to) {
@@ -127,10 +131,11 @@ export async function viewTraining() {
     ${unpaid.length ? feeCard(gr, unpaid) : ''}
     ${trainer && liveTeams.length > 1 ? `<div class="chips"><button class="chip ${S.trTeam ? '' : 'on'}" data-trteam="">Alle hold</button>${liveTeams.map((t) => `<button class="chip ${S.trTeam === t.id ? 'on' : ''}" data-trteam="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : ''}
     ${trainer ? `<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button><button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Sidste 2 uger'}</button></div>` : ''}
-    ${trainer && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
+    ${!trainer && myRight('arrangementer') ? '<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button></div>' : ''}
+    ${(trainer || myRight('arrangementer')) && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
     ${active.filter((k) => k.trial).map((k) => `<div class="card infobox">👋 <b>${esc(k.name)}</b> er til prøvetræning${team(k.team_id) ? ` på ${esc(team(k.team_id).name)}` : ''}. Træneren melder ${k.player_id === S.me?.id ? 'dig' : 'barnet'} ind, når I er klar.</div>`).join('')}
-    ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer, active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
+    ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer || myRight('arrangementer'), active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
     ${items.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
@@ -297,7 +302,7 @@ function eventForm(id) {
   const dIn = (iso) => (iso ? evDay(iso) : ''), tIn = (iso) => (iso ? evTime(iso) : '');
   return `<form class="card evform" id="evForm" data-id="${e?.id || ''}"><b>${e ? '✏️ Ret arrangement' : '➕ Nyt arrangement'}</b>
     <label>Titel<input name="title" required maxlength="100" value="${esc(e?.title || '')}" placeholder="Fx Klubmesterskab eller sommerafslutning"></label>
-    <label>For<select name="team"><option value="">Hele klubben</option>${myTeams().map((t) => `<option value="${t.id}" ${e?.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
+    <label>For<select name="team"><option value="">Hele klubben</option>${(myRight('arrangementer') ? C().teams.filter((t) => !t.archived) : myTeams()).map((t) => `<option value="${t.id}" ${e?.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
     <div class="frow"><label class="grow">Dato<input name="day" type="date" required value="${dIn(e?.starts_at)}"></label><label>Fra<input name="st" type="time" required value="${tIn(e?.starts_at) || '10:00'}"></label><label>Til<input name="en" type="time" value="${tIn(e?.ends_at)}"></label></div>
     <label>Sted<input name="place" maxlength="100" value="${esc(e?.place || '')}" placeholder="Fx Padelhuset Gilleleje"></label>
     <label>Beskrivelse <small class="muted">(valgfri)</small><textarea name="desc" rows="3" maxlength="2000">${esc(e?.description || '')}</textarea></label>
@@ -363,10 +368,11 @@ function bindEvents(rerender) {
 
 // ---------- Opslag ----------
 export async function viewPosts() {
-  const g = S.groupId, gr = group(), trainer = canRun();
-  const [, posts] = await Promise.all([
+  const g = S.groupId, gr = group(), trainer = canRun() || myRight('opslag');
+  const [, posts, board] = await Promise.all([
     loadClub(g),
     q(sb.from('padel_club_posts').select('*').eq('group_id', g).eq('hidden', false).order('created_at', { ascending: false }).limit(60)),
+    q(sb.rpc('padel_club_board_contacts', { g })).catch(() => []),
   ]);
   const teams = C().teams;
   const tname = (id) => teams.find((t) => t.id === id)?.name;
@@ -376,9 +382,13 @@ export async function viewPosts() {
     <h1>Opslag</h1>
     ${groupBar(viewPosts)}
     ${gr.club_info ? `<div class="card clubinfo"><b>ℹ️ Om ${esc(gr.name)}</b><p>${rich(gr.club_info)}</p></div>` : ''}
+    ${(board || []).length || C().trainers.length ? `<details class="card people" ${S.peopleOpen ? 'open' : ''}><summary><b>👥 Bestyrelse og trænere</b><span class="muted">›</span></summary>
+      ${(board || []).length ? `<div class="lbl">Bestyrelse</div>${board.map((x) => trainerLinks({ ...x, name: `${x.name}`, role: x.title })).join('')}` : ''}
+      ${C().trainers.length ? `<div class="lbl">Trænere</div>${C().trainers.map((x) => trainerLinks({ ...x, role: x.team_ids.map((t) => team(t)?.name).filter(Boolean).join(', ') })).join('')}` : ''}
+    </details>` : ''}
     ${trainer ? `<details class="card postnew" ${S.postOpen ? 'open' : ''}><summary><b>✏️ Skriv et opslag</b><span class="muted">›</span></summary>
       <form id="postForm">
-        <label>Til<select name="team"><option value="">Hele klubben</option>${myTeams().map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
+        <label>Til<select name="team"><option value="">Hele klubben</option>${(myRight('opslag') ? teams.filter((t) => !t.archived) : myTeams()).map((t) => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></label>
         <label>Overskrift <small class="muted">(valgfri)</small><input name="title" maxlength="100" placeholder="Fx Ingen træning i efterårsferien"></label>
         <label>Besked<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
         <label class="switch"><input type="checkbox" name="pinned"><span>📌 Fastgør øverst</span></label>
@@ -394,6 +404,8 @@ export async function viewPosts() {
       </div>`).join('') || `<div class="card empty"><p class="muted">Ingen opslag endnu.${trainer ? ' Skriv det første ovenfor.' : ' Her kommer beskeder fra trænerne.'}</p></div>`}
   </div>`;
   const f = document.getElementById('postForm');
+  const ppl = app.querySelector('details.people');
+  if (ppl) ppl.ontoggle = () => (S.peopleOpen = ppl.open);
   const det = app.querySelector('details.postnew');
   if (det) det.ontoggle = () => (S.postOpen = det.open);
   if (f) f.onsubmit = async (e) => {
@@ -554,7 +566,7 @@ const feeBadge = (k) => (group().club_fee_label ? { betalt: '<span class="badge 
 const kidMeta = (k) => [age(k), GENDER_KID[k.gender], guardianNames(k.id), k.player_id ? 'eget login' : ''].filter(Boolean).map(esc).join(' · ');
 
 export function clubKidsTab() {
-  if (!canRun()) return '';
+  if (!canRun() && !myRight('godkende')) return '';
   const kids = C().kids, teams = myTeams(), allTeams = C().teams.filter((t) => !t.archived);
   const pend = kids.filter((k) => k.status === 'ansoegt' && !k.waitlist);
   const wait = kids.filter((k) => k.status === 'ansoegt' && k.waitlist).sort((a, b) => a.created_at.localeCompare(b.created_at));
@@ -663,27 +675,33 @@ export function bindClubFees(refresh) {
   });
 }
 
-// ---------- Admin: trænere, kasserer og børneattest ----------
+// ---------- Admin: bestyrelse, rettigheder og børneattest (formanden / admin) ----------
+export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant'];
+const RIGHTS = [['treasurer', '💳 Kontingent'], ['can_post', '📣 Opslag til alle'], ['can_events', '📅 Arrangementer'], ['can_approve', '✅ Godkende børn']];
 export function clubStaffCard() {
   if (!isAdmin()) return '';
   const g = S.groupId;
   const mem = S.members.filter((m) => m.group_id === g && m.status === 'aktiv' && S.profiles[m.player_id]);
-  const staffIds = new Set([...mem.filter((m) => ['admin', 'superbruger'].includes(m.role)).map((m) => m.player_id), ...C().staff.filter((x) => x.treasurer).map((x) => x.user_id)]);
-  const people = [...staffIds].filter((id) => S.profiles[id]).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
-  const others = mem.filter((m) => !staffIds.has(m.player_id)).map((m) => m.player_id).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+  const st = (id) => C().staff.find((x) => x.user_id === id) || {};
+  const ids = new Set([...mem.filter((m) => ['admin', 'superbruger'].includes(m.role)).map((m) => m.player_id),
+    ...C().staff.filter((x) => x.board_title || RIGHTS.some(([k]) => x[k])).map((x) => x.user_id), ...(S.staffAdd ? [S.staffAdd] : [])]);
+  const people = [...ids].filter((id) => S.profiles[id] && mem.some((m) => m.player_id === id))
+    .sort((a, b) => (BOARD_TITLES.indexOf(st(a).board_title) + 1 || 99) - (BOARD_TITLES.indexOf(st(b).board_title) + 1 || 99) || nameOf(a).localeCompare(nameOf(b)));
+  const others = mem.map((m) => m.player_id).filter((id) => !ids.has(id)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   const cert = (id) => C().certs.find((x) => x.user_id === id)?.cert_date || '';
-  const treas = (id) => !!C().staff.find((x) => x.user_id === id && x.treasurer);
   const role = (id) => mem.find((m) => m.player_id === id)?.role;
   const teamsOf = (id) => C().teamTrainers.filter((x) => x.user_id === id).map((x) => team(x.team_id)).filter((t) => t && !t.archived).map((t) => t.name);
-  return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍🏫 Trænere og kasserer</b><small class="muted">${people.filter((id) => role(id) === 'superbruger').length} trænere${people.some(treas) ? ` · kasserer: ${people.filter(treas).map((id) => esc(nameOf(id).split(' ')[0])).join(', ')}` : ''}</small></summary>
-    <p class="muted small">Trænere sættes på deres hold under Hold og tider. Klubben skal have børneattest på alle, der træner børn under 15 år.</p>
+  const board = people.filter((id) => st(id).board_title);
+  return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍💼 Bestyrelse og rettigheder</b><small class="muted">${board.length ? board.map((id) => `${esc(st(id).board_title)}: ${esc(nameOf(id).split(' ')[0])}`).join(' · ') : 'Ingen bestyrelse endnu'}</small></summary>
+    <p class="muted small">Vælg post i bestyrelsen, og hvad hver person må i appen. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Bestyrelsen vises med kontaktinfo under Opslag.</p>
     ${people.map((id) => `<form class="staffrow" data-staff="${id}">
-      <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
-      <div class="frow"><label class="grow">Børneattest indhentet<input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
-        <label class="switch"><input type="checkbox" name="treas" ${treas(id) ? 'checked' : ''}><span>💳 Kasserer</span></label></div>
+      <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin · alle rettigheder' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
+      <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option ${st(id).board_title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
+      ${role(id) === 'admin' ? '' : `<div class="checks rights">${RIGHTS.map(([k, l]) => `<label><input type="checkbox" name="${k}" ${st(id)[k] ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`}
+      <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
       <div class="mact"><button class="btn sm primary">Gem</button></div></form>`).join('')}
-    ${others.length ? `<form class="frow" id="addTreas"><label class="grow">Gør et medlem til kasserer<select name="u"><option value="">Vælg…</option>${others.map((id) => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label><button class="btn sm">Tilføj</button></form>` : ''}
+    ${others.length ? `<form class="frow" id="addStaff"><label class="grow">Tilføj en person<select name="u"><option value="">Vælg…</option>${others.map((id) => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label><button class="btn sm">Tilføj</button></form>` : ''}
   </details>`;
 }
 
@@ -694,14 +712,14 @@ export function bindClubStaff(refresh) {
   app.querySelectorAll('form[data-staff]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
-    try { await q(sb.rpc('padel_club_set_staff', { g: S.groupId, p_user: f.dataset.staff, p_treasurer: f.treas.checked, p_cert_date: f.cert.value || null })); toast('Gemt'); await loadClub(S.groupId); await refresh(); } catch { busy(btn, false); }
+    const v = (k) => !!f.elements[k]?.checked;
+    try {
+      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('treasurer'), p_post: v('can_post'), p_events: v('can_events'), p_approve: v('can_approve'), p_cert_date: f.cert.value || null }));
+      S.staffAdd = null; toast('Gemt'); await loadClub(S.groupId); await refresh();
+    } catch { busy(btn, false); }
   }));
-  const at = document.getElementById('addTreas');
-  if (at) at.onsubmit = async (e) => {
-    e.preventDefault();
-    if (!at.u.value) return;
-    try { await q(sb.rpc('padel_club_set_staff', { g: S.groupId, p_user: at.u.value, p_treasurer: true, p_cert_date: null })); toast(`${nameOf(at.u.value)} er kasserer`); await loadClub(S.groupId); await refresh(); } catch {}
-  };
+  const ad = document.getElementById('addStaff');
+  if (ad) ad.onsubmit = (e) => { e.preventDefault(); if (ad.u.value) { S.staffAdd = ad.u.value; refresh(); } };
 }
 
 // ---------- Admin: hold og træningstider ----------
@@ -873,8 +891,8 @@ export function bindClubAttendance(refresh) {
 // Antal børn der venter på godkendelse i klubber, hvor jeg er træner (til tallet på Admin)
 export async function loadClubPending() {
   S.clubPending = 0; S.clubPendingBy = {};
-  try { S.clubTreasurer = S.groups.some((x) => x.kind === 'klub') ? await q(sb.rpc('padel_club_my_treasurer')) : []; } catch { S.clubTreasurer = []; }
-  const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && canRun(x.id));
+  try { S.clubRights = S.groups.some((x) => x.kind === 'klub') ? await q(sb.rpc('padel_club_my_rights')) : []; } catch { S.clubRights = []; }
+  const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (canRun(x.id) || myRight('godkende', x.id)));
   if (!clubs.length) return;
   try {
     const rows = (await q(sb.from('padel_club_kids').select('id,group_id,waitlist').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'))).filter((r) => !r.waitlist);

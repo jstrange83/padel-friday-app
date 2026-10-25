@@ -3,7 +3,7 @@ import { app, esc } from '../core.js';
 import { FAQ as ALL } from '../faq-data.js';
 import { S } from '../core.js';
 // Spørgsmål om juniorklubben vises kun for dem, der er med i en klub (den er ikke lanceret endnu)
-const inClub = () => S.groups?.some((g) => g.kind === 'klub' && !g.archived && (S.me?.is_superadmin || S.members?.some((m) => m.group_id === g.id && m.player_id === S.me?.id && m.status === 'aktiv')));
+const inClub = () => S.groups?.some((g) => g.kind === 'klub' && !g.archived && ((S.me?.is_superadmin && (S.viewMode || 'super') === 'super') || S.members?.some((m) => m.group_id === g.id && m.player_id === S.me?.id && m.status === 'aktiv')));
 
 const norm = (t) => t.toLowerCase().replace(/<[^>]+>/g, ' ');
 
