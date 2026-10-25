@@ -2,6 +2,7 @@
 import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
+import { pushPromptCard, bindPushPrompt } from './notify.js';
 import { editBtn } from '../editmode.js';
 
 // Kort til superadmin: slettede spillere der er kommet igen
@@ -59,9 +60,10 @@ export async function viewEvents() {
   const coming = [...running, ...upcoming];
   app.innerHTML = `
   <div class="page">
-    <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
+    <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1><div class="tools"><a class="icon bell" href="#/beskeder" aria-label="Beskeder">🔔${S.unread && !S.viewAs ? `<b class="navbadge">${S.unread}</b>` : ''}</a>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div></div>
     ${groupBar(viewEvents)}
     ${pendingCard()}
+    ${pushPromptCard()}
     ${noticeCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer på din profil, så admin kan få fat i dig. ›</a>' : ''}
     ${coming.map(card).join('') || (isAdmin()
@@ -75,6 +77,7 @@ export async function viewEvents() {
     busy(btn, true);
     try { await fn(); await viewEvents(); } catch { busy(btn, false); }
   };
+  bindPushPrompt();
   const nok = document.getElementById('noticesOk');
   if (nok) nok.onclick = async () => {
     busy(nok, true);

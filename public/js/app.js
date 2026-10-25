@@ -9,6 +9,7 @@ import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
+import { viewNotices, loadUnread } from './views/notify.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
@@ -42,6 +43,7 @@ async function loadBase() {
   // Beskeder til superadmin (fx når en slettet spiller kommer igen)
   S.notices = [];
   if (S.realMe?.is_superadmin) { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
+  if (S.realMe) await loadUnread();
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
@@ -118,10 +120,10 @@ function renderNav() {
   if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
-  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${t}</a>`).join('');
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
 }
 
 // Profilen er slettet: tilbyd at genaktivere (samme point som før; man skal godkendes i gruppen igen)
@@ -170,6 +172,7 @@ const ROUTES = {
   faq: () => viewFaq(),
   boeder: () => viewFines(),
   forslag: () => viewSuggest(),
+  beskeder: () => viewNotices(),
   admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
 };
 

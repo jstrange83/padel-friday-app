@@ -440,7 +440,7 @@ try {
   await page.waitForSelector('#nav a:has-text("Admin")');
   await page.click('#nav a:has-text("Spilledage")');
   await page.waitForSelector('.approvals [data-pok]');
-  ok((await page.locator('#nav .navbadge').innerText()) === '1', 'Admin i menuen viser 1, der venter');
+  ok((await page.locator('#nav a:has-text("Admin") .navbadge').innerText()) === '1', 'Admin i menuen viser 1, der venter');
   ok((await page.locator('.approvals').innerText()).includes('Test Anne'), 'Spilledage viser, at Anne vil være med');
   await shot('godkend-spilledage');
   await page.click('#nav a:has-text("Admin")');
@@ -449,7 +449,7 @@ try {
   await page.click('[data-approve]');
   await wait(500);
   ok((await text()).includes('2 spillere'), 'Anne godkendt i Lørdagspadel');
-  ok(!(await page.locator('#nav .navbadge').count()), 'tallet forsvinder, når Anne er godkendt');
+  ok(!(await page.locator('#nav a:has-text("Admin") .navbadge').count()), 'tallet forsvinder, når Anne er godkendt');
 
   // Hjemmeskærm: på en iPhone vises vejledningen efter login, og den kan springes over
   const iphone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
@@ -803,7 +803,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/fredage');
   await page.waitForSelector('.notices');
   ok((await page.locator('.notices').innerText()).includes('Test Carsten genaktiverede sin profil'), 'superadmin får besked, når en slettet spiller kommer igen');
-  ok(Number(await page.locator('#nav .navbadge').innerText()) >= 1, 'tal på Admin for beskeden');
+  ok(Number(await page.locator('#nav a:has-text("Admin") .navbadge').innerText()) >= 1, 'tal på Admin for beskeden');
   await shot('kommet-igen');
   await page.click('#noticesOk');
   await wait(400);
@@ -865,6 +865,46 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('[data-group]', { hasText: 'Lørdagspadel' }).click();
   await wait(400);
   ok(!(await page.locator('#nav').innerText()).includes('Rangliste'), '"Ingen rangliste" skjuler ranglisten for spillerne');
+
+  // Notifikation: en spiller melder fra, og den første på ventelisten får besked
+  await loginAs('jimmy@test');
+  const wl = await page.evaluate(() => {
+    const db = window.__mock.db();
+    const ev = db.padel_events.find((e) => e.status === 'planlagt' && e.group_id === 'g-fre');
+    ev.court_ids = ev.court_ids.slice(0, 1);
+    db.padel_signups = db.padel_signups.filter((x) => x.event_id !== ev.id);
+    ['u-1', 'u-2', 'u-4', 'u-5', 'u-6'].forEach((p, i) => db.padel_signups.push({ event_id: ev.id, player_id: p, created_at: `2026-10-01T10:0${i}:00.000Z` }));
+    db.padel_notifications = [];
+    window.__mock.save();
+    return ev.id;
+  }, null);
+  await page.goto('http://localhost:8765/#/fredag/' + wl);
+  await page.waitForSelector('.page.event');
+  await wait(400);
+  await page.evaluate(() => document.querySelectorAll('details.signbox').forEach((d) => (d.open = true)));
+  await page.locator('[data-unsign="u-1"]').click();
+  await wait(600);
+  const nf = await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_notifications.filter((n) => n.kind === 'venteliste'));
+  ok(nf.length === 1 && nf[0].user_id === 'u-6' && nf[0].kind === 'venteliste', 'den første på ventelisten får besked om plads');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'test6@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a, .finegate');
+  if (await page.locator('.finegate').count()) await page.click('#fgOk');
+  await page.waitForSelector('#nav a');
+  await wait(400);
+  if (await page.locator('#fbModal').count()) await page.click('#fbLater');
+  ok((await page.locator('#nav a:has-text("Profil") .navbadge').innerText()) === '1', 'tal på Profil ved ny besked');
+  await page.goto('http://localhost:8765/#/beskeder');
+  await page.waitForSelector('.notices-page');
+  ok((await page.locator('.nrow').first().innerText()).includes('Du har fået en plads'), 'beskeden står under Beskeder');
+  ok(await page.locator('#pushToggle').count() === 1, 'knap til notifikationer på telefonen');
+  await shot('beskeder');
+  await wait(300);
+  ok(!(await page.locator('#nav .navbadge').count()), 'tallet forsvinder, når beskeden er læst');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

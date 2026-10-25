@@ -465,3 +465,11 @@ a.ev, .match, .fine, .card.sug, .list .row, .myfine, .logrow, .stats-page .head,
 .sedit-card { max-height: 85vh; overflow-y: auto; }
 .sedit-card label { display: block; margin-top: 8px; }
 .sedit-card textarea { width: 100%; box-sizing: border-box; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-top: 4px; }
+
+/* Beskeder og notifikationer */
+.icon.bell { position: relative; text-decoration: none; }
+.icon.bell .navbadge { top: -6px; left: auto; right: -6px; }
+.head .tools { display: flex; align-items: center; gap: 8px; }
+.nrow.unread { border-left: 4px solid var(--accent); }
+.nrow small { display: block; margin-top: 2px; }
+.pushask p { margin: 0 0 4px; }

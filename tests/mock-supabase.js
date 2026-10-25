@@ -20,11 +20,13 @@ function seed() {
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
-    padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [] };
+    padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [], padel_notifications: [], padel_push_subs: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
 const save = () => sessionStorage.setItem(KEY, JSON.stringify(db));
+// Kun til test: direkte adgang til databasen i hukommelsen
+window.__mock = { db: () => db, save };
 const uid = () => JSON.parse(sessionStorage.getItem(SKEY) || 'null')?.user.id;
 const me = () => db.padel_profiles.find((p) => p.id === uid());
 const GM = (g, p) => db.padel_group_members.find((m) => m.group_id === g && m.player_id === p);
@@ -62,6 +64,19 @@ function embed(table, rows, cols) {
   });
 }
 
+// Beskeder (samme regler som databasen)
+const notify = (users, kind, title, body, url) => [...new Set(users.filter(Boolean))].forEach((u) => db.padel_notifications.push({ id: uuid(), user_id: u, kind, title, body, url, created_at: now(), read_at: null }));
+const playing = (evId, list) => {
+  const ev = db.padel_events.find((e) => e.id === evId);
+  const ids = list.slice().sort((a, b) => a.created_at.localeCompare(b.created_at) || a.player_id.localeCompare(b.player_id)).map((x) => x.player_id);
+  return ids.slice(0, 4 * Math.min(Math.floor(ids.length / 4), (ev?.court_ids || []).length));
+};
+const notifyPromoted = (evId, before, after, exclude) => {
+  if (!before.length) return;
+  const up = after.filter((x) => !before.includes(x) && x !== exclude);
+  if (up.length) notify(up, 'venteliste', 'Du har fået en plads 🎾', 'Du er rykket op fra ventelisten.', '/#/fredag/' + evId);
+};
+
 function logSignup(s, action) {
   db.padel_signup_log.push({ id: db.padel_signup_log.length + 1, event_id: s.event_id, player_id: s.player_id, action, done_by: uid(), created_at: now() });
 }
@@ -90,12 +105,20 @@ class Query {
         if (T.some((x) => x.event_id === s.event_id && x.player_id === s.player_id)) return { error: { message: 'duplicate key' } };
         logSignup(s, 'til');
       }
-      T.push(...data);
+      if (this.t === 'padel_signups') for (const s of data) {
+        const before = playing(s.event_id, T.filter((x) => x.event_id === s.event_id));
+        T.push(s);
+        notifyPromoted(s.event_id, before, playing(s.event_id, T.filter((x) => x.event_id === s.event_id)), s.player_id);
+      } else T.push(...data);
     } else if (this.op === 'update') {
       data = applyFilters(T, this.f); data.forEach((r) => Object.assign(r, this.v));
     } else if (this.op === 'delete') {
       data = applyFilters(T, this.f);
-      if (this.t === 'padel_signups') data.forEach((s) => { autoFine(s); logSignup(s, 'fra'); });
+      if (this.t === 'padel_signups') data.forEach((s) => {
+        autoFine(s); logSignup(s, 'fra');
+        const all = db.padel_signups.filter((x) => x.event_id === s.event_id);
+        notifyPromoted(s.event_id, playing(s.event_id, all), playing(s.event_id, all.filter((x) => x !== s)), s.player_id);
+      });
       if (this.t === 'padel_events') for (const e of data) { db.padel_signups = db.padel_signups.filter((s) => s.event_id !== e.id); db.padel_signup_log = db.padel_signup_log.filter((s) => s.event_id !== e.id); }
       db[this.t] = T.filter((r) => !data.includes(r));
     } else {
@@ -169,6 +192,11 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  padel_vapid_public: () => 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+  padel_save_push: ({ p_endpoint, p_p256dh, p_auth }) => { db.padel_push_subs.push({ endpoint: p_endpoint, user_id: uid(), p256dh: p_p256dh, auth: p_auth, enabled: true }); },
+  padel_disable_push: ({ p_endpoint }) => { db.padel_push_subs.filter((x) => x.endpoint === p_endpoint).forEach((x) => (x.enabled = false)); },
+  padel_has_push: () => db.padel_push_subs.some((x) => x.user_id === uid() && x.enabled),
+  padel_notifications_read: () => { db.padel_notifications.filter((n) => n.user_id === uid() && !n.read_at).forEach((n) => (n.read_at = now())); },
   padel_set_ranking_mode: ({ g, p_mode }) => { db.padel_groups.find((x) => x.id === g).ranking_mode = p_mode; },
   padel_ranking: ({ g }) => {
     const mode = db.padel_groups.find((x) => x.id === g)?.ranking_mode || 'alle';
@@ -272,6 +300,8 @@ const RPC = {
     const m = GM(g, uid());
     if (m?.status === 'aktiv') return 'aktiv';
     if (m) m.status = 'afventer'; else db.padel_group_members.push({ group_id: g, player_id: uid(), role: 'bruger', status: 'afventer', elo: 1000 });
+    const admins = db.padel_group_members.filter((x) => x.group_id === g && x.status === 'aktiv' && x.role === 'admin').map((x) => x.player_id).concat(db.padel_profiles.filter((p) => p.is_superadmin).map((p) => p.id));
+    notify(admins, 'anmodning', `${me().name} vil gerne være med`, 'Godkend eller afvis.', '/#/fredage');
     return 'afventer';
   },
   padel_set_member: ({ g, p, p_role, p_status }) => {
