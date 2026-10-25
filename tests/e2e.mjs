@@ -906,6 +906,35 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(300);
   ok(!(await page.locator('#nav .navbadge').count()), 'tallet forsvinder, når beskeden er læst');
 
+  // Udseende: vælg pink, det gemmes og huskes efter genindlæsning
+  await page.click('#nav a:has-text("Profil")');
+  await page.click('a[href="#/udseende"]');
+  await page.waitForSelector('.themes');
+  await page.click('[data-theme-key="pink"]');
+  await wait(400);
+  ok((await page.evaluate(() => document.documentElement.dataset.theme)) === 'pink', 'pink tema slås til med det samme');
+  await shot('tema-pink-valg');
+  await page.reload();
+  await page.waitForSelector('#nav a');
+  ok((await page.evaluate(() => document.documentElement.dataset.theme)) === 'pink', 'temaet huskes');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('.page');
+  await wait(300);
+  await shot('tema-pink');
+  await page.goto('http://localhost:8765/#/udseende');
+  await page.waitForSelector('.themes');
+  await page.click('[data-theme-key="lys"]');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('.page');
+  await wait(300);
+  await shot('tema-lys');
+  await noOverflow('lyst tema');
+  await page.goto('http://localhost:8765/#/udseende');
+  await page.waitForSelector('.themes');
+  await page.click('[data-theme-key=""]');
+  await wait(300);
+  ok(!(await page.evaluate(() => document.documentElement.dataset.theme)), 'tilbage til standard');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

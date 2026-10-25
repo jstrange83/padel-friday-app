@@ -10,6 +10,7 @@ import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { viewNotices, loadUnread } from './views/notify.js';
+import { viewTheme, applyTheme } from './theme.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
@@ -30,6 +31,7 @@ async function loadBase() {
   // Spillere uden login, der er overtaget af en rigtig bruger, skjules
   S.profiles = Object.fromEntries(profiles.filter((p) => !p.merged_into).map((p) => [p.id, p]));
   S.realMe = S.profiles[S.session.user.id] || null;
+  if (S.realMe) applyTheme(S.realMe.theme);
   S.viewAs = readViewAs();
   S.me = S.viewAs ? S.profiles[S.viewAs] : S.realMe;
   // Valgt gruppe: den man sidst brugte, ellers den første man er med i
@@ -120,7 +122,7 @@ function renderNav() {
   if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || cur.startsWith('#/udseende'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
@@ -173,6 +175,7 @@ const ROUTES = {
   boeder: () => viewFines(),
   forslag: () => viewSuggest(),
   beskeder: () => viewNotices(),
+  udseende: () => viewTheme(),
   admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
 };
 

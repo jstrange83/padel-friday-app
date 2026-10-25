@@ -47,7 +47,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .logo { font-size: 56px; }
 
 /* Navigation */
-#nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: rgba(12, 27, 42, .96); backdrop-filter: blur(10px);
+#nav { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px);
   border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 10; }
 #nav:empty { display: none; }
 #nav a { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 8px 0 10px; font-size: 11px; color: var(--muted); gap: 2px; }
@@ -65,7 +65,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 .row:last-child { border-bottom: 0; }
 .row.wrap { flex-wrap: wrap; }
-.row.me { background: rgba(212, 245, 60, .08); }
+.row.me { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .row small, .ev small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
 .grow { flex: 1; min-width: 0; }
 .pos { width: 28px; text-align: center; font-size: 20px; }
@@ -147,14 +147,14 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 .faq summary::-webkit-details-marker { display: none; }
 .faq summary::after { content: '+'; position: absolute; right: 16px; top: 12px; font-size: 20px; color: var(--accent); }
 .faq[open] summary::after { content: '–'; }
-.faq > div { padding: 0 14px 14px; color: #cfdbe7; font-size: 15px; }
+.faq > div { padding: 0 14px 14px; color: var(--text); opacity: .9; font-size: 15px; }
 .faq p { margin: 0 0 10px; } .faq ul, .faq ol { margin: 0 0 10px; padding-left: 20px; } .faq li { margin: 4px 0; }
 .ranked { font-size: 15px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .ranked .btn { width: auto; }
 .btn.listening { background: var(--dn); border-color: var(--dn); color: #fff; animation: pulse 1s infinite; }
 @keyframes pulse { 50% { opacity: .6; } }
 .rolesel { width: auto; margin: 0; padding: 8px 10px; font-size: 14px; }
-.badge.role-admin { background: rgba(212, 245, 60, .15); color: var(--accent); }
+.badge.role-admin { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .badge.role-superbruger { background: rgba(96, 165, 250, .15); color: #93c5fd; }
 .lineup { font-size: 15px; }
 .lineup.ok { border-left: 4px solid var(--up); }
@@ -278,7 +278,7 @@ details.centerbox .mact { margin-top: 12px; }
 
 /* Læg på hjemmeskærmen */
 .gate { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; margin-bottom: calc(-76px - env(safe-area-inset-bottom)); }
-.gtop { background: linear-gradient(160deg, #1a3350, #0c1b2a); text-align: center; padding: calc(24px + env(safe-area-inset-top)) 22px 28px; position: relative; display: flex; flex-direction: column; align-items: center; }
+.gtop { background: linear-gradient(160deg, var(--card2), var(--bg)); text-align: center; padding: calc(24px + env(safe-area-inset-top)) 22px 28px; position: relative; display: flex; flex-direction: column; align-items: center; }
 .gtop h1 { font-size: 26px; margin: 12px 0 6px; }
 .gtop p { margin: 0; color: var(--muted); max-width: 380px; }
 .gicon { width: 96px; height: 96px; border-radius: 22px; box-shadow: 0 10px 24px rgba(0, 0, 0, .4); }
@@ -396,7 +396,7 @@ details.centerbox .mact { margin-top: 12px; }
 a.mp.busy { opacity: .6; pointer-events: none; }
 .faq .fedit summary { padding: 2px 0; font-weight: 400; position: static; }
 .faq .fedit summary::after, .faq[open] .fedit summary::after { content: none; }
-.badge.auto { background: rgba(212, 245, 60, .12); color: var(--accent); font-weight: 600; }
+.badge.auto { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-weight: 600; }
 .myfine .badge.auto { margin-left: 4px; }
 
 /* Spilledag: kompakt top, runde-faner og resultatfelter */
@@ -473,3 +473,21 @@ a.ev, .match, .fine, .card.sug, .list .row, .myfine, .logrow, .stats-page .head,
 .nrow.unread { border-left: 4px solid var(--accent); }
 .nrow small { display: block; margin-top: 2px; }
 .pushask p { margin: 0 0 4px; }
+
+
+/* Temaer: vælges under Profil → Udseende */
+:root[data-theme="pink"] { --bg: #1f0b1a; --card: #2e1328; --card2: #3d1a36; --line: #5a2850; --text: #fdeef8; --muted: #d39cc4; --accent: #ff5fb7; --accent-ink: #1f0b1a; }
+:root[data-theme="rosa"] { --bg: #fff0f7; --card: #ffffff; --card2: #ffe1f0; --line: #f4c3dc; --text: #3a1030; --muted: #96587f; --accent: #e3268b; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="lys"] { --bg: #f2f5f9; --card: #ffffff; --card2: #e8eef5; --line: #d3dde8; --text: #0c1b2a; --muted: #5a6f86; --accent: #16a34a; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="hav"] { --bg: #04202b; --card: #0a3140; --card2: #0f4256; --line: #175b73; --text: #e8f8ff; --muted: #8fc3d6; --accent: #2dd4bf; --accent-ink: #04202b; }
+:root[data-theme="lilla"] { --bg: #160f2b; --card: #221845; --card2: #2e2160; --line: #41307f; --text: #f1edff; --muted: #a99cd6; --accent: #b694ff; --accent-ink: #160f2b; }
+:root[data-theme="nat"] { --bg: #0a0a0a; --card: #161616; --card2: #222222; --line: #303030; --text: #f5f5f5; --muted: #a3a3a3; --accent: #f5c542; --accent-ink: #0a0a0a; }
+:root[data-theme="rosa"] .faq > div, :root[data-theme="lys"] .faq > div { opacity: 1; }
+
+.themes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.theme { border: 2px solid var(--line); border-radius: 16px; padding: 10px; cursor: pointer; text-align: left; font: inherit; color: var(--text); background: var(--card); }
+.theme.on { border-color: var(--accent); }
+.theme .tprev { border-radius: 10px; padding: 10px; height: 74px; display: flex; flex-direction: column; gap: 6px; }
+.theme .tprev i { display: block; height: 14px; border-radius: 6px; }
+.theme .tprev b { display: block; height: 18px; width: 60%; border-radius: 8px; }
+.theme span { display: block; margin-top: 8px; font-weight: 700; }
