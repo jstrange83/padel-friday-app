@@ -446,7 +446,7 @@ export async function viewClubJoin(g) {
   const pick = !g;
   let clubs = [];
   if (!g) {
-    const list = await discoverList();
+    const list = await joinableClubs();
     clubs = await Promise.all(list.map(async (c) => ({ id: c.id, ...(await q(sb.rpc('padel_club_join_info', { g: c.id })).catch(() => ({ name: c.name }))) })));
     if (!clubs.length) {
       app.innerHTML = `<div class="page club"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Meld et barn ind</h1>
@@ -511,8 +511,14 @@ export async function discoverList() {
     return cands.filter((g) => !kids.some((k) => k.group_id === g.id && ['ansoegt', 'aktiv'].includes(k.status))).map((g) => ({ id: g.id, name: g.name }));
   } catch { return cands.map((g) => ({ id: g.id, name: g.name })); }
 }
+// Klubber man kan melde et barn ind i: dem der kan findes + dem man selv er med i
+export async function joinableClubs() {
+  const mine = S.groups.filter((g) => g.kind === 'klub' && !g.archived && S.members.some((m) => m.group_id === g.id && m.player_id === S.me?.id && m.status === 'aktiv')).map((g) => ({ id: g.id, name: g.name }));
+  const disc = await discoverList();
+  return [...mine, ...disc.filter((d) => !mine.some((m) => m.id === d.id))];
+}
 export async function discoverRow() {
-  return (await discoverList()).length ? '<a class="row" href="#/klub-ind" id="discRow"><span class="grow">🧒 Meld et barn ind i en klub</span><span class="muted">›</span></a>' : '';
+  return (await joinableClubs()).length ? '<a class="row" href="#/klub-ind" id="discRow"><span class="grow">🧒 Meld et barn ind i en klub</span><span class="muted">›</span></a>' : '';
 }
 
 // ---------- Mine børn (på profilen) ----------
@@ -538,7 +544,7 @@ export async function myKidsSection(page = false) {
   const mineK = kids.filter((k) => k.player_id !== S.me.id && gds.some((x) => x.kid_id === k.id && x.user_id === S.me.id));
   // Kun klubber, man selv er med i eller har børn i (ikke alle klubber, superadmin kan se)
   const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (S.members.some((m) => m.group_id === x.id && m.player_id === S.me.id && m.status === 'aktiv') || mineK.some((k) => k.group_id === x.id)));
-  if (!mineK.length && !clubs.length) return '';
+  if (!mineK.length) return '';
   // Hold og trænere pr. klub
   const per = {};
   for (const g of [...new Set(mineK.map((k) => k.group_id))]) {
@@ -559,7 +565,7 @@ export async function myKidsSection(page = false) {
       <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">Meld ${esc(k.name.split(' ')[0])} ud</button></div>
     </details>`;
     }).join('')}
-    ${clubs.map((c) => `<a class="btn ghost kidjoin" href="#/klub-ind/${c.id}">➕ Meld ${mineK.some((k) => k.group_id === c.id) ? 'et barn mere' : 'et barn'} ind${clubs.length > 1 ? ` (${esc(c.name)})` : ''}</a>`).join('')}`;
+    ${page ? `<a class="btn ghost kidjoin" href="#/klub-ind">➕ Meld et barn mere ind</a>` : ''}`;
 }
 
 export function bindMyKids(rerender) {
