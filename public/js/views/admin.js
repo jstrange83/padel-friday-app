@@ -17,10 +17,9 @@ export async function viewAdmin() {
   app.innerHTML = `
   <div class="page admin">
     <h1>Admin</h1>
-    ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand</span></label>
-      <p class="muted small">Slået til får du en ✏️ på kasserne rundt i appen, så du kan rette og slette alt. Gælder kun på denne enhed.</p></div>` : ''}
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
+    ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand <small class="muted">(ret og slet alt, på denne enhed)</small></span></label></div>` : ''}
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
   const em = document.getElementById('editMode');
@@ -46,15 +45,15 @@ const noLoginNote = (p) => (p.placeholder ? '<p class="muted small">Har ikke opr
 
 // Opret en spiller, der ikke selv har oprettet sig
 function createPlayerBox() {
-  return `<details class="card newplayer" ${S.newPlayerOpen ? 'open' : ''}><summary><b>➕ Opret spiller</b></summary>
+  return `<div class="card newplayer" ${S.newPlayerOpen ? '' : 'hidden'}><b>➕ Opret spiller</b>
     <form id="newPlayer">
       <p class="muted small">Til en spiller, der ikke har oprettet sig selv. Spilleren kan med det samme tilmeldes og sættes på hold. Når de senere opretter sig med samme telefonnummer, overtager de profilen med kampe og point.</p>
       <label>Navn<input name="name" required maxlength="60" autocomplete="off"></label>
       <label>Telefonnummer<input name="phone" type="tel" inputmode="tel" required placeholder="Fx 12 34 56 78" autocomplete="off"></label>
       <div class="lbl">Køn</div>${radios('npgender', GENDER, '')}
       <div class="lbl">Foretrukken side</div>${radios('npside', SIDE, 'begge')}
-      <button class="btn primary">Opret spiller i ${esc(group()?.name || 'gruppen')}</button>
-    </form></details>`;
+      <div class="mact"><button type="button" class="btn sm ghost" id="newPlayerClose">Luk</button><button class="btn sm primary">Opret spiller</button></div>
+    </form></div>`;
 }
 
 function allPlayers() {
@@ -62,7 +61,7 @@ function allPlayers() {
   const gname = (g) => S.groups.find((x) => x.id === g)?.name || 'Gruppe';
   return `
     ${playersBar()}
-    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${all.length})</b><span class="muted">›</span></summary>
+    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${all.length})</b></summary>
     <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
     <div class="list compact">${all.map((p) => {
       const ms = S.members.filter((m) => m.player_id === p.id && m.status !== 'fjernet');
@@ -95,14 +94,16 @@ function playersTab() {
   const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${ROLE[r]}</span>` : ''; };
   return `
     ${playersBar()}
-    <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
-      <button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm primary" id="invite">📤 Inviter</button></div>
+    <div class="card invitebar"><div><b>${esc(group()?.name || '')}</b> <small class="muted">· ${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
+      <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm" id="newPlayerBtn">➕ Opret</button><button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
     ${createPlayerBox()}
-    <div class="card rankmode"><div class="lbl">🏆 Rangliste for ${esc(group()?.name || 'gruppen')}</div>
+    <details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Gruppens indstillinger</b><small class="muted">Rangliste: ${{ alle: 'alle', gruppe: 'kun gruppen', ingen: 'ingen' }[group()?.ranking_mode || 'alle']} · Bøder: ${group()?.fines_enabled ? 'til' : 'fra'}</small></summary>
+    <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
       ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
-      <p class="muted small">Der er én fælles rangliste med de samme point i alle grupper. Vælg om gruppen ser alle spillere, kun sine egne, eller ingen rangliste (kampene giver stadig point).</p></div>
-    <div class="card"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
+      <p class="muted small">Én fælles rangliste med samme point i alle grupper. Vælg om gruppen ser alle, kun sine egne, eller ingen (kampene giver stadig point).</p></div>
+    <div class="finesrow"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
       <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
+    </details>
 
     ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
@@ -110,7 +111,7 @@ function playersTab() {
         <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
     }).join('')}</div>` : ''}
 
-    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${players.length})</b><span class="muted">›</span></summary>
+    <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 Spillere (${players.length})</b></summary>
     <input type="search" id="playerSearch" placeholder="🔍 Find spiller…" autocomplete="off">
     <div class="list compact" id="players">${players.map((p) => `
       <details class="prow" data-name="${esc(p.name.toLowerCase())}">
@@ -279,8 +280,12 @@ function bind() {
 
   // Gruppens admin: opret spiller, rangliste og bødekasse
   const np = document.getElementById('newPlayer');
+  const gs = app.querySelector('details.gset');
+  if (gs) gs.ontoggle = () => (S.gsetOpen = gs.open);
+  const npb = document.getElementById('newPlayerBtn');
+  if (npb) npb.onclick = () => { S.newPlayerOpen = true; np.closest('.newplayer').hidden = false; np.elements.name.focus(); };
   if (np) {
-    np.closest('details').ontoggle = (e) => (S.newPlayerOpen = e.target.open);
+    document.getElementById('newPlayerClose').onclick = () => { S.newPlayerOpen = false; np.closest('.newplayer').hidden = true; };
     np.onsubmit = async (e) => {
       e.preventDefault();
       const btn = np.querySelector('button.primary');

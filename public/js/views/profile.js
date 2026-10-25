@@ -35,28 +35,30 @@ export function renderProfile(isNew) {
       <div class="grow">
         <h1>${esc(p.name)}</h1>${editBtn('padel_profiles', p.id)}
         <small>${isSuper() ? 'Superadmin · ' : ''}${GENDER[p.gender]} · ${SIDE[p.side]}${phone ? ` · ${fmtPhone(phone)}` : ''}</small>
+        ${mine.length ? `<div class="gchips">${mine.map((m) => `<span class="gchip">${esc(group(m.group_id)?.name || 'Gruppe')}${m.status === 'afventer' ? ' ⏳' : roleIn(p.id, m.group_id) && roleIn(p.id, m.group_id) !== 'bruger' ? ` · ${ROLE[roleIn(p.id, m.group_id)]}` : ''}</span>`).join('')}</div>` : ''}
       </div>
       <div class="pts"><b>${groupElo(p.id)}</b><small>point</small></div>
     </div>
 
-    ${mine.length ? `<div class="list groups-mine">${mine.map((m) => `<div class="row">
-      <div class="grow"><b>${esc(group(m.group_id)?.name || 'Gruppe')}</b>
-        <small>${m.status === 'afventer' ? '⏳ Venter på godkendelse' : ROLE[roleIn(p.id, m.group_id)] || 'Bruger'}</small></div>
-      </div>`).join('')}</div>` : ''}
-
     ${!phone ? `<div class="card warnbox">📱 ${viewing ? 'Spilleren mangler et telefonnummer.' : 'Tilføj dit telefonnummer, så admin kan få fat i dig.'}</div>` : ''}
     <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ ${viewing ? 'Ret oplysninger' : 'Ret mine oplysninger'}</b><span class="muted">›</span></summary>${form(p, false)}</details>
 
+    <h3>Min padel</h3>
     <div class="list links">
       <a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>
       ${group()?.fines_enabled ? '<a class="row" href="#/boeder"><span class="grow">💸 Bødekasse</span><span class="muted">›</span></a>' : ''}
-      ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende</span><span class="muted">›</span></a>'}
       <a class="row" href="#/beskeder" id="notRow"><span class="grow">🔔 Beskeder og notifikationer</span>${S.unread && !viewing ? `<span class="badge new">${S.unread} nye</span>` : '<span class="muted">›</span>'}</a>
+    </div>
+    <h3>Appen</h3>
+    <div class="list links">
+      ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende</span><span class="muted">›</span></a>'}
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
-      ${viewing ? '' : '<button class="row logout" id="logout"><span class="grow">↩️ Log ud</span></button>'}
-      ${p.is_superadmin ? '' : `<button class="row delme" id="deleteMe"><span class="grow">🗑 ${viewing ? 'Slet spilleren' : 'Slet min profil'}</span></button>`}
+    </div>
+    <div class="pfoot">
+      ${viewing ? '' : '<button class="btn" id="logout">↩️ Log ud</button>'}
+      ${p.is_superadmin ? '' : `<button class="link sm dn" id="deleteMe">🗑 ${viewing ? 'Slet spilleren' : 'Slet min profil'}</button>`}
     </div>
   </div>`;
   bind(false);

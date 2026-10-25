@@ -50,11 +50,13 @@ export async function viewEvents() {
       ? mine ? `<button class="btn sm quick" data-off="${e.id}">Afmeld</button>`
         : canJoin(e) ? `<button class="btn sm primary quick" data-on="${e.id}">Tilmeld</button>` : ''
       : e.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
-    return `<a class="ev" href="#/fredag/${e.id}">${editBtn('padel_events', e.id)}
+    // Kort og overskueligt: spiltype (eller egen titel), sted og plads, og om man selv er med
+    const what = `${e.title ? esc(e.title) : FORMAT[e.format]}${e.team_mode !== 'aaben' ? ` · ${MODE[e.team_mode]}` : ''}`;
+    const me = mine ? (waitNo >= 0 ? `<span class="evme warn">⏳ Nr. ${waitNo + 1} på venteliste</span>` : '<span class="evme ok">✓ Du er med</span>') : '';
+    return `<a class="ev ${mine && waitNo < 0 ? 'mine' : ''}" href="#/fredag/${e.id}">${editBtn('padel_events', e.id)}
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
-      <div class="grow"><b>${esc(e.title || group()?.name || 'Padel')}</b>
-        <small>${esc(centerById(e.center_id)?.name || '')} · ${FORMAT[e.format]} · ${MODE[e.team_mode]}</small>
-        <small>${n} tilmeldt · ${status}${mine ? (waitNo >= 0 ? ` · <span class="warn">Du er nr. ${waitNo + 1} på venteliste</span>` : ' · <span class="ok">Du er med</span>') : ''}</small></div>
+      <div class="grow"><b>${what}</b>
+        <small>${esc(centerById(e.center_id)?.name || '')} · ${n} tilmeldt · ${status}</small>${me}</div>
       ${btn}</a>`;
   };
   const coming = [...running, ...upcoming];
@@ -65,7 +67,7 @@ export async function viewEvents() {
     ${pendingCard()}
     ${pushPromptCard()}
     ${noticeCard()}
-    ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer på din profil, så admin kan få fat i dig. ›</a>' : ''}
+    ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
     ${coming.map(card).join('') || (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}

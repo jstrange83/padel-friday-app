@@ -544,3 +544,27 @@ textarea { font-size: 16px; }
 .mact.contact .phone { flex: 1 1 100%; }
 .switch span { min-width: 0; }
 .switch .badge, .myfine .badge.auto { white-space: normal; }
+
+/* Oprydning: spilledage */
+.ev.mine { box-shadow: inset 4px 0 0 var(--accent); }
+.ev .evme { display: inline-block; margin-top: 4px; font-size: 13px; font-weight: 700; }
+.ev .evme.ok { color: var(--up); } .ev .evme.warn { color: var(--warn); }
+.phonetip { padding: 10px 14px; font-size: 14px; }
+.link.sm.dn { color: var(--dn); }
+
+/* Oprydning: profil */
+.gchips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.gchip { font-size: 12px; font-weight: 600; background: var(--card2); border-radius: 99px; padding: 3px 9px; color: var(--muted); }
+.pfoot { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 22px 0 6px; }
+.pfoot .btn { width: 100%; }
+
+/* Oprydning: admin */
+.invitebar { display: block; }
+.invitebar .mact { margin-top: 10px; }
+.invitebar .mact .btn { width: auto; flex: 1 1 0; }
+.newplayer > b { display: block; margin-bottom: 4px; }
+.gset > summary { display: flex; flex-direction: column; gap: 2px; cursor: pointer; list-style: none; }
+.gset > summary::-webkit-details-marker { display: none; }
+.gset .finesrow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.editcard { padding: 12px 14px; }
+.editcard small { font-weight: 400; }

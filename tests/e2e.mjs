@@ -430,7 +430,7 @@ try {
   ok((await page.locator('#toast').innerText()).includes('bedt om at komme med') || (await text()).includes('lørdagspadel'), 'anmodning sendt');
   await page.click('#nav a:has-text("Profil")').catch(() => {});
   await wait(300);
-  ok((await text()).includes('venter på godkendelse'), 'profil viser ventende anmodning');
+  ok((await page.locator('.gchip').allInnerTexts()).some((t) => t.includes('⏳')), 'profil viser ventende anmodning');
   await page.click('#logout');
 
   // Brian godkender Anne
@@ -482,6 +482,7 @@ try {
   await wait(300);
   ok(await page.locator('details.plist:not([open])').count() === 1, 'spillerlisten under Admin er foldet sammen');
   ok(!(await page.locator('#nav').innerText()).includes('Bøder'), 'bødekassen er slået fra som standard');
+  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
   await page.check('#finesOn');
   await wait(500);
   ok((await page.locator('#nav').innerText()).includes('Bøder'), 'Bøder kommer i menuen, når den slås til');
@@ -632,7 +633,7 @@ try {
   await page.waitForSelector('.page.admin');
   await page.click('[data-pgroup="g-fre"]');
   await wait(300);
-  await page.locator('details.newplayer summary').click();
+  await page.click('#newPlayerBtn');
   await page.fill('#newPlayer input[name=name]', 'Nikolaj Ny');
   await page.fill('#newPlayer input[name=phone]', '11 22 33 44');
   await page.click('#newPlayer label:has-text("Mand")');
@@ -842,7 +843,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(400);
   ok((await page.locator('.list').innerText()).includes('Test Anders'), 'fælles rangliste viser spillere fra alle grupper');
   await page.goto('http://localhost:8765/#/admin');
-  await page.waitForSelector('.rankmode');
+  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
   await page.click('.rankmode label:has-text("Kun gruppen")');
   await wait(500);
   await page.goto('http://localhost:8765/#/rangliste');
@@ -850,7 +851,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(400);
   ok(!(await page.locator('.page').innerText()).includes('Test Anders'), '"Kun gruppen" viser kun gruppens spillere');
   await page.goto('http://localhost:8765/#/admin');
-  await page.waitForSelector('.rankmode');
+  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
   await page.click('.rankmode label:has-text("Ingen")');
   await wait(500);
   await loginAs('jimmy@test');

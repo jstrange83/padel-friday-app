@@ -199,7 +199,7 @@ function myNight(c, st) {
 
   const myDone = (n) => rounds[n]?.some((x) => x.status === 'bekraeftet' && [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const nos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
-  if (!nos.length) return card('Din tilmelding', `<p>✅ Du er med. ${esc(lineupText(L, c.courts.length))}</p>${signRow}`);
+  if (!nos.length) return card('Din tilmelding', `<p>✅ Du er med <span class="muted">· nr. ${signed.indexOf(me) + 1} af ${signed.length}</span></p>${signRow}`);
   let r, now;
   if (c.free) {
     // Første runde, hvor jeg mangler at spille (eller holder pause i en runde der ikke er færdig)
@@ -300,8 +300,10 @@ function freeBar(c) {
   const extra = roundNos.length && !futureRounds.length;
   // Én stor knap kun når der er noget at gøre (lav plan / alt er spillet). Ellers en lille række.
   let primary = '';
-  if (canPlan) primary = `<button class="btn primary" id="makePlan">📋 Lav dagsplan (${totalRounds} runder)</button>`;
-  else if (allDone) primary = '<button class="btn primary" id="finish">🏁 Afslut dagen</button>';
+  if (canPlan) {
+    return `<div class="runbar"><div class="mact"><button class="btn sm primary" id="makePlan" title="${totalRounds} runder">📋 Lav dagsplan</button>${admin ? '<button class="btn sm ghost danger" id="delEvent">Slet dagen</button>' : ''}</div></div>`;
+  }
+  if (allDone) primary = '<button class="btn primary" id="finish">🏁 Afslut dagen</button>';
   const small = [
     canRedoPlan ? '<button class="btn sm" id="redoPlan">🔄 Ny plan</button>' : '',
     !allDone && ev.status === 'igang' ? '<button class="btn sm ghost" id="finish">Afslut dagen</button>' : '',
@@ -324,7 +326,7 @@ function matchCard(c, m) {
   const myTeam = onA ? 'a' : onB ? 'b' : null;
   const future = !c.free && m.round_no > ev.current_round;
   const mic = SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '';
-  let status = '', actions = '';
+  let status = '', actions = '', links = '';
   if (m.status === 'planlagt' && future) {
     // Rotation: kommende runde, kun hold kan rettes (link i toppen af kortet)
   } else if (m.status === 'planlagt') {
@@ -343,13 +345,14 @@ function matchCard(c, m) {
   } else {
     const d = delta[m.id + m.a_left];
     if (d !== undefined) status = `<span class="badge">Point ${sign(d)} / ${sign(-d)}</span>`;
-    if (run || myTeam) actions = `<button class="btn sm" data-act="enter" data-id="${m.id}">Ret</button>`;
-    if (run) actions += `<button class="btn sm" data-act="reset" data-id="${m.id}">Nulstil</button>`;
+    // Spillet kamp: kun små links, så listen er kort
+    if (run || myTeam) links = `<button class="link sm" data-act="enter" data-id="${m.id}">Ret</button>`;
+    if (run) links += `<button class="link sm dn" data-act="reset" data-id="${m.id}">Nulstil</button>`;
   }
   const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
   const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
-    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
+    <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
