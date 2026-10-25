@@ -477,10 +477,23 @@ export async function viewClubJoin(g) {
 
 // ---------- Find en klub (lille linje under Profil) ----------
 export async function discoverRow() {
-  if (S.viewAs) return '';
   let list = [];
-  try { list = await q(sb.rpc('padel_discover_clubs')); } catch { return ''; }
-  return (list || []).map((c) => `<div class="card discover" data-disc="${c.id}"><a class="grow" href="#/klub-ind/${c.id}">🧒 Har du børn, der spiller padel?<small class="muted">${esc(c.name)} · meld dem ind her ›</small></a><button class="icon sm" data-discx="${c.id}" aria-label="Luk">✕</button></div>`).join('');
+  if (S.viewAs) {
+    // "Se som": regn det ud for den viste person (samme regler som i databasen)
+    const me = S.me, dismissed = me.dismissed_clubs || [];
+    const cands = S.groups.filter((g) => g.kind === 'klub' && g.club_discoverable && !g.archived && !dismissed.includes(g.id)
+      && !S.members.some((m) => m.group_id === g.id && m.player_id === me.id && ['aktiv', 'afventer'].includes(m.status)));
+    if (cands.length) {
+      try {
+        const gds = await q(sb.from('padel_club_guardians').select('kid_id').eq('user_id', me.id).eq('active', true));
+        const kids = gds.length ? await q(sb.from('padel_club_kids').select('group_id,status').in('id', gds.map((x) => x.kid_id))) : [];
+        list = cands.filter((g) => !kids.some((k) => k.group_id === g.id && ['ansoegt', 'aktiv'].includes(k.status)));
+      } catch { list = cands; }
+    }
+  } else {
+    try { list = await q(sb.rpc('padel_discover_clubs')); } catch { return ''; }
+  }
+  return (list || []).map((c) => `<div class="card discover" data-disc="${c.id}"><a class="grow" href="#/klub-ind/${c.id}">🧒 Har du børn, der spiller padel?<small class="muted">${esc(c.name)} · meld dem ind her ›</small></a>${S.viewAs ? '' : `<button class="icon sm" data-discx="${c.id}" aria-label="Luk">✕</button>`}</div>`).join('');
 }
 export function bindDiscover() {
   app.querySelectorAll('[data-discx]').forEach((b) => (b.onclick = async () => {

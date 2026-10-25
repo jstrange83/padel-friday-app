@@ -1385,6 +1385,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await shot('klub-barn');
   await noOverflow('klub barn');
 
+  // "Se som" en spiller uden børn: linjen om klubben vises som for spilleren selv
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate(() => { sessionStorage.setItem('fp-viewas', 'u-6'); localStorage.setItem('fp-group', 'g-fre'); });
+  await page.goto('http://localhost:8765/#/profil');
+  await page.reload();
+  await page.waitForSelector('.discover');
+  ok((await page.locator('.discover').innerText()).includes('Har du børn'), 'Se som: linjen om klubben vises som for spilleren');
+  await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
+
   // Visning: superadmin kan se appen som almindelig bruger og skifte tilbage
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
