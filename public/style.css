@@ -669,3 +669,19 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .pct { font-weight: 800; min-width: 48px; text-align: right; }
 .pct.low { color: var(--dn); } .pct.mid { color: var(--warn); } .pct.high { color: var(--up); }
 .chips.static .chip { cursor: pointer; }
+/* Klub etape 3 */
+.badge.trial { background: rgba(96, 165, 250, .15); color: #93c5fd; }
+.tr.event { border-left: 4px solid #60a5fa; }
+.tr.event > summary { list-style: none; cursor: pointer; }
+.tr.event > summary::-webkit-details-marker { display: none; }
+.tr.event summary small { display: block; margin-top: 2px; }
+.evadmin { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.evform .frow input[type=time] { width: 104px; }
+.krow.task .btn { flex: 0 0 auto; width: 120px; }
+.waitbox { border-left: 4px solid var(--warn); }
+.trtools { gap: 16px; }
+.tmax { margin: 8px 0; }
+.krow.task .btn.on.yes { background: var(--up); border-color: var(--up); color: #06210f; font-weight: 700; }
+.evform textarea, .evform input:not([type=checkbox]), .evform select { width: 100%; box-sizing: border-box; }
+.evform .frow input[type=time] { width: 100%; min-width: 112px; }
+.evform .frow > label:not(.grow) { flex: 1 1 112px; }

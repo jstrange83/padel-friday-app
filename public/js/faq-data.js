@@ -402,4 +402,18 @@ export const FAQ = [
     q: 'Hvor ser jeg fremmøde?',
     a: `<p>Trænere ser under <b>Admin → Fremmøde</b>, hvor ofte hvert barn er kommet de sidste 4, 8 eller 16 uger. Det tæller de træninger, hvor fremmødet er krydset af under Træning. Børn med lavt fremmøde står øverst.</p>`,
   },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvordan virker arrangementer og forældrehjælp?',
+    a: `<p>Trænerne kan oprette arrangementer, fx stævner, klubmesterskab eller sommerafslutning, med <b>➕ Arrangement</b> under Træning. De står mellem træningerne med 📅.</p>
+<ul><li>Tryk <b>Tilmeld</b> ud for dit barn. Er der maks. antal, står der "Fuldt", når pladserne er brugt.</li>
+<li>Koster det noget, kan du betale med MobilePay eller trykke "Har betalt". Træneren bekræfter.</li>
+<li>Under <b>🙋 Forældrehjælp</b> kan du melde dig til fx kørsel eller kage. Alle kan se, hvem der hjælper.</li></ul>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvad er venteliste og prøvetræning?',
+    a: `<p>Admin kan sætte <b>maks. antal børn</b> på et hold. Er holdet fuldt, kan træneren sætte et nyt barn på <b>venteliste</b>. Forældrene får besked, og trænerne får besked, når der bliver plads.</p>
+<p>Ved indmeldelse kan man krydse af, at barnet gerne vil <b>prøve 1-2 træninger</b> først. Træneren kan så give barnet prøvetræning. Barnet er med til træning og betaler ikke kontingent, indtil træneren melder det ind som medlem.</p>`,
+  },
 ];

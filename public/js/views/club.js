@@ -44,7 +44,18 @@ export async function loadClub(g = S.groupId, range = null) {
     kidIds.length ? q(sb.from('padel_club_kid_info').select('*').in('kid_id', kidIds)).catch(() => []) : [],
     q(sb.rpc('padel_club_trainer_contacts', { g })).catch(() => []),
   ]);
-  S.club = { g, teams, sessions, kids, absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers: trainers || [] };
+  // Arrangementer fra perioden og frem (med tilmeldinger og hjælpeopgaver)
+  const evFrom = range ? new Date(`${range.from}T00:00:00Z`).toISOString() : new Date(Date.now() - 864e5).toISOString();
+  const events = await q(sb.from('padel_club_events').select('*').eq('group_id', g).gte('starts_at', evFrom).order('starts_at')).catch(() => []);
+  const eids = events.map((e) => e.id);
+  const [signups, tasks, counts] = await Promise.all([
+    eids.length ? q(sb.from('padel_club_event_signups').select('*').in('event_id', eids)).catch(() => []) : [],
+    eids.length ? q(sb.from('padel_club_tasks').select('*').in('event_id', eids).eq('active', true).order('sort')).catch(() => []) : [],
+    eids.length ? q(sb.rpc('padel_club_event_counts', { g })).catch(() => []) : [],
+  ]);
+  const tids2 = tasks.map((t) => t.id);
+  const helpers = tids2.length ? await q(sb.from('padel_club_task_helpers').select('*').in('task_id', tids2).eq('active', true)).catch(() => []) : [];
+  S.club = { g, teams, sessions, kids, absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers: trainers || [], events, signups, tasks, helpers, counts: counts || [] };
   return S.club;
 }
 
@@ -61,6 +72,11 @@ const cancelOf = (sid, day) => C().cancels.find((c) => c.session_id === sid && c
 const present = (sid, day, kid) => C().attendance.find((a) => a.session_id === sid && a.day === day && a.kid_id === kid)?.present;
 const feeOf = (kid) => C().fees.find((f) => f.kid_id === kid)?.status || 'ubetalt';
 const guardianNames = (kid) => C().guardians.filter((x) => x.kid_id === kid).map((x) => nameOf(x.user_id)).join(', ');
+const evCount = (e) => C().counts.find((x) => x.event_id === e)?.n ?? C().signups.filter((x) => x.event_id === e && x.status === 'tilmeldt').length;
+const signOf = (e, kid) => C().signups.find((x) => x.event_id === e && x.kid_id === kid && x.status === 'tilmeldt');
+const isEvManager = (e) => (e.team_id ? isTeamTrainer(e.team_id) : canRun());
+const evTime = (iso) => new Intl.DateTimeFormat('da-DK', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Copenhagen' }).format(new Date(iso));
+const evDay = (iso) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date(iso));
 const infoOf = (kid) => C().kidInfo.find((x) => x.kid_id === kid)?.info || '';
 // Træner for et bestemt hold: admin, eller træner sat på holdet (en træner uden hold må alle hold)
 const myAssigned = () => C().teamTrainers.filter((x) => x.user_id === S.me?.id && C().teams.some((t) => t.id === x.team_id && !t.archived));
@@ -96,21 +112,28 @@ export async function viewTraining() {
   if (trainer && S.trTeam && !liveTeams.some((t) => t.id === S.trTeam)) S.trTeam = null;
   const teamIds = trainer ? (S.trTeam ? [S.trTeam] : liveTeams.map((t) => t.id)) : [...new Set(active.map((k) => k.team_id).filter(Boolean))];
   const occ = occurrences(teamIds, from, to);
-  const unpaid = gr.club_fee_label && gr.club_fee ? active.filter((k) => feeOf(k.id) !== 'betalt') : [];
+  // Arrangementer: hele klubben eller mine hold (trænere: deres hold), flettet ind efter dato
+  const evs = C().events.filter((e) => (trainer ? (!e.team_id || teamIds.includes(e.team_id) || isAdmin()) : (!e.team_id || teamIds.includes(e.team_id))) && (trainer || !e.cancelled || evDay(e.starts_at) >= today));
+  const items = [...occ.map((o) => ({ day: o.day, t: t5(o.s.start_time), o })), ...evs.map((e) => ({ day: evDay(e.starts_at), t: evTime(e.starts_at), e }))]
+    .sort((a, b) => a.day.localeCompare(b.day) || a.t.localeCompare(b.t));
+  const unpaid = gr.club_fee_label && gr.club_fee ? active.filter((k) => !k.trial && feeOf(k.id) !== 'betalt') : [];
 
   app.innerHTML = `
   <div class="page club">
     <div class="head"><h1>Træning</h1></div>
     ${groupBar(viewTraining)}
-    ${mine.filter((k) => k.status === 'ansoegt').map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
+    ${mine.filter((k) => k.status === 'ansoegt' && !k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
     ${active.filter((k) => !k.team_id).map((k) => `<div class="card warnbox">👋 <b>${esc(k.name)}</b> er optaget. Træneren sætter snart ${k.player_id === S.me?.id ? 'dig' : 'barnet'} på et hold.</div>`).join('')}
     ${unpaid.length ? feeCard(gr, unpaid) : ''}
     ${trainer && liveTeams.length > 1 ? `<div class="chips"><button class="chip ${S.trTeam ? '' : 'on'}" data-trteam="">Alle hold</button>${liveTeams.map((t) => `<button class="chip ${S.trTeam === t.id ? 'on' : ''}" data-trteam="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : ''}
-    ${trainer ? `<div class="trtools"><button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Vis de sidste 2 uger (fremmøde)'}</button></div>` : ''}
-    ${occ.length ? occ.map((o) => (trainer ? trainerCard(o, today) : parentCard(o, active, today))).join('')
+    ${trainer ? `<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button><button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Sidste 2 uger'}</button></div>` : ''}
+    ${trainer && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
+    ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
+    ${active.filter((k) => k.trial).map((k) => `<div class="card infobox">👋 <b>${esc(k.name)}</b> er til prøvetræning${team(k.team_id) ? ` på ${esc(team(k.team_id).name)}` : ''}. Træneren melder ${k.player_id === S.me?.id ? 'dig' : 'barnet'} ind, når I er klar.</div>`).join('')}
+    ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer, active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
-    ${occ.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
+    ${items.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
     ${!trainer ? trainersCard(teamIds) : ''}
     <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
     ${!trainer ? '<p class="center"><a class="link sm" href="#/profil">👧 Mine børn og indmeldelse ›</a></p>' : ''}
@@ -169,7 +192,7 @@ function trainerCard(o, today) {
     </summary>${cancelLine(c)}
     <div class="trlist">${kids.map((k) => {
       const a = absOf(o.s.id, o.day, k.id), yes = coming(o.s.id, o.day, k.id);
-      return `<div class="krow"><span class="grow">${esc(k.name)}${kidFlags(k)}${yes ? '' : `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
+      return `<div class="krow"><span class="grow">${esc(k.name)}${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${yes ? '' : `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
     <div class="mact">${c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
@@ -177,6 +200,7 @@ function trainerCard(o, today) {
 }
 
 function bindTraining() {
+  bindEvents(viewTraining);
   app.querySelectorAll('[data-trteam]').forEach((b) => (b.onclick = () => { S.trTeam = b.dataset.trteam || null; viewTraining(); }));
   document.getElementById('trPast')?.addEventListener('click', () => { S.trPast = !S.trPast; viewTraining(); });
   document.getElementById('trMore')?.addEventListener('click', () => { S.trWeeks += 2; viewTraining(); });
@@ -222,6 +246,116 @@ function bindTraining() {
   }));
   app.querySelectorAll('[data-feeundo]').forEach((b) => (b.onclick = async () => {
     try { await q(sb.rpc('padel_club_fee_set', { p_kid: b.dataset.feeundo, p_status: 'ubetalt' })); viewTraining(); } catch {}
+  }));
+}
+
+// ---------- Arrangementer ----------
+const evWhen = (e) => `${cap(dayLabel(evDay(e.starts_at)))} kl. ${evTime(e.starts_at)}${e.ends_at ? `–${evTime(e.ends_at)}` : ''}`;
+function eventCard(e, trainer, active, today) {
+  const n = evCount(e.id), full = e.max_kids && n >= e.max_kids;
+  const late = e.deadline && Date.now() > Date.parse(e.deadline);
+  const kids = active.filter((k) => !e.team_id || k.team_id === e.team_id);
+  const gr = group();
+  const tasks = C().tasks.filter((t) => t.event_id === e.id);
+  const helpersOf = (t) => C().helpers.filter((h) => h.task_id === t.id);
+  const meta = [e.place, e.price ? kr(e.price) : 'Gratis', e.max_kids ? `${n}/${e.max_kids} pladser` : `${n} tilmeldt`, e.deadline ? `tilmelding senest ${fmtDate(e.deadline, { day: 'numeric', month: 'short' })}` : ''].filter(Boolean);
+  const mgr = trainer && isEvManager(e);
+  const open = S.evOpen === e.id;
+  const body = `
+    ${e.cancelled ? '<div class="trcancel">❌ Aflyst</div>' : ''}
+    ${e.description ? `<p class="ptext">${rich(e.description)}</p>` : ''}
+    ${!e.cancelled ? kids.map((k) => {
+      const sg = signOf(e.id, k.id);
+      return `<div class="krow"><span class="grow">${kidLabel(k)}${sg && e.price ? `<small class="muted">${{ betalt: '✓ Betalt', afventer: '⏳ Betaling afventer', ubetalt: 'Ikke betalt' }[sg.paid]}</small>` : ''}</span>
+        ${late && !sg ? '<span class="badge">Frist overskredet</span>' : `<div class="yesno"><button class="btn sm ${sg ? 'on yes' : ''}" data-evsign="${e.id}|${k.id}|tilmeldt" ${!sg && full ? 'disabled' : ''}>${sg ? '✓ Tilmeldt' : full ? 'Fuldt' : 'Tilmeld'}</button><button class="btn sm" data-evsign="${e.id}|${k.id}|afmeldt" ${sg ? '' : 'disabled'}>Afmeld</button></div>`}</div>
+        ${sg && e.price && sg.paid === 'ubetalt' ? `<div class="mact">${gr.club_fee_url ? `<a class="btn sm primary" href="${esc(gr.club_fee_url)}" target="_blank" rel="noopener" data-evpay="${e.id}|${k.id}">💳 Betal ${kr(e.price)}</a>` : ''}<button class="btn sm" data-evpay="${e.id}|${k.id}" data-only>Har betalt</button></div>` : ''}`;
+    }).join('') : ''}
+    ${tasks.length && !e.cancelled ? `<div class="lbl">🙋 Forældrehjælp</div>${tasks.map((t) => {
+      const hs = helpersOf(t), mineH = hs.some((h) => h.user_id === S.me?.id);
+      return `<div class="krow task"><span class="grow"><b>${esc(t.title)}</b> <small class="muted">${hs.length}/${t.slots}</small>${hs.length ? `<small class="muted">${hs.map((h) => esc(nameOf(h.user_id).split(' ')[0])).join(', ')}</small>` : ''}</span>
+        ${mineH ? `<button class="btn sm on yes" data-task="${t.id}|0">✓ Hjælper</button>` : `<button class="btn sm" data-task="${t.id}|1" ${hs.length >= t.slots ? 'disabled' : ''}>${hs.length >= t.slots ? 'Fyldt' : 'Jeg hjælper'}</button>`}</div>`;
+    }).join('')}` : ''}
+    ${mgr ? eventAdmin(e) : ''}`;
+  return `<details class="card tr event ${e.cancelled ? 'cancelled' : ''}" data-ev="${e.id}" ${open || !trainer ? 'open' : ''}><summary>
+      <div class="trhead"><b>📅 ${esc(e.title)}</b><span class="badge">${esc(team(e.team_id)?.name || 'Hele klubben')}</span></div>
+      <small class="muted">${evWhen(e)}</small><small class="muted">${meta.map(esc).join(' · ')}</small></summary>${body}</details>`;
+}
+
+// Træneren: deltagerliste med betaling, rediger og aflys
+function eventAdmin(e) {
+  const list = C().signups.filter((x) => x.event_id === e.id && x.status === 'tilmeldt').map((x) => ({ x, k: C().kids.find((k) => k.id === x.kid_id) })).filter((y) => y.k).sort((a, b) => a.k.name.localeCompare(b.k.name));
+  return `<div class="evadmin"><div class="lbl">Tilmeldte (${list.length})</div>
+    ${list.map(({ x, k }) => `<div class="krow"><span class="grow">${esc(k.name)}${kidFlags(k)}</span>${e.price ? (x.paid === 'betalt' ? `<button class="btn sm on yes" data-evpaid="${e.id}|${k.id}|ubetalt">✓ Betalt</button>` : `<button class="btn sm" data-evpaid="${e.id}|${k.id}|betalt">${x.paid === 'afventer' ? '⏳ Bekræft' : 'Betalt?'}</button>`) : ''}</div>`).join('') || '<p class="muted small">Ingen tilmeldte endnu.</p>'}
+    <div class="mact"><button class="btn sm" data-evedit="${e.id}">✏️ Ret</button>${e.cancelled ? `<button class="btn sm" data-evcancel="${e.id}|0">↩️ Genopret</button>` : `<button class="btn sm ghost danger" data-evcancel="${e.id}|1">Aflys</button>`}</div></div>`;
+}
+
+function eventForm(id) {
+  const e = id ? C().events.find((x) => x.id === id) : null;
+  const tasks = e ? C().tasks.filter((t) => t.event_id === e.id) : [];
+  const dIn = (iso) => (iso ? evDay(iso) : ''), tIn = (iso) => (iso ? evTime(iso) : '');
+  return `<form class="card evform" id="evForm" data-id="${e?.id || ''}"><b>${e ? '✏️ Ret arrangement' : '➕ Nyt arrangement'}</b>
+    <label>Titel<input name="title" required maxlength="100" value="${esc(e?.title || '')}" placeholder="Fx Klubmesterskab eller sommerafslutning"></label>
+    <label>For<select name="team"><option value="">Hele klubben</option>${myTeams().map((t) => `<option value="${t.id}" ${e?.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
+    <div class="frow"><label class="grow">Dato<input name="day" type="date" required value="${dIn(e?.starts_at)}"></label><label>Fra<input name="st" type="time" required value="${tIn(e?.starts_at) || '10:00'}"></label><label>Til<input name="en" type="time" value="${tIn(e?.ends_at)}"></label></div>
+    <label>Sted<input name="place" maxlength="100" value="${esc(e?.place || '')}" placeholder="Fx Padelhuset Gilleleje"></label>
+    <label>Beskrivelse <small class="muted">(valgfri)</small><textarea name="desc" rows="3" maxlength="2000">${esc(e?.description || '')}</textarea></label>
+    <div class="frow"><label class="grow">Pris (kr.)<input name="price" type="number" min="0" value="${e?.price || ''}" placeholder="0 = gratis"></label><label class="grow">Maks. antal<input name="max" type="number" min="0" value="${e?.max_kids || ''}" placeholder="Ingen grænse"></label></div>
+    <label>Tilmelding senest <small class="muted">(valgfri)</small><input name="deadline" type="date" value="${dIn(e?.deadline)}"></label>
+    <label>Forældrehjælp <small class="muted">(én opgave pr. linje: opgave, antal)</small><textarea name="tasks" rows="3" placeholder="Kørsel, 3&#10;Kage, 2">${tasks.map((t) => `${esc(t.title)}, ${t.slots}`).join('\n')}</textarea></label>
+    <div class="mact"><button type="button" class="btn ghost" id="evCancel">Annuller</button><button class="btn primary">${e ? 'Gem' : 'Opret'}</button></div></form>`;
+}
+
+// Dato + klokkeslæt i dansk tid → ISO
+const cphISO = (day, time) => new Date(startMs(day, time)).toISOString();
+
+function bindEvents(rerender) {
+  document.getElementById('evNew')?.addEventListener('click', () => { S.evEdit = null; rerender(); });
+  document.getElementById('evCancel')?.addEventListener('click', () => { S.evEdit = undefined; rerender(); });
+  app.querySelectorAll('details[data-ev]').forEach((d) => d.querySelector('summary').addEventListener('click', () => { S.evOpen = d.open ? null : d.dataset.ev; }));
+  const f = document.getElementById('evForm');
+  if (f) f.onsubmit = async (ev) => {
+    ev.preventDefault();
+    const old = f.dataset.id ? C().events.find((x) => x.id === f.dataset.id) : null;
+    const oldTasks = old ? C().tasks.filter((t) => t.event_id === old.id) : [];
+    const tasks = f.tasks.value.split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
+      const m = l.match(/^(.*?)[,;:]\s*(\d+)\s*$/); const title = (m ? m[1] : l).trim();
+      return { id: oldTasks.find((t) => t.title.toLowerCase() === title.toLowerCase())?.id || null, title, slots: m ? +m[2] : 1 };
+    });
+    const btn = f.querySelector('button.primary'); busy(btn, true);
+    try {
+      const id = await q(sb.rpc('padel_club_save_event', { p_id: old?.id || null, g: S.groupId, p_team: f.team.value || null, p_title: f.title.value, p_desc: f.desc.value,
+        p_starts: cphISO(f.day.value, f.st.value), p_ends: f.en.value ? cphISO(f.day.value, f.en.value) : null, p_place: f.place.value,
+        p_deadline: f.deadline.value ? cphISO(f.deadline.value, '23:59') : null, p_price: +f.price.value || 0, p_max: +f.max.value || 0, p_cancelled: old?.cancelled || false, p_tasks: tasks }));
+      S.evEdit = undefined; S.evOpen = id; toast(old ? 'Arrangementet er gemt' : 'Arrangementet er oprettet, og holdet har fået besked'); rerender();
+    } catch { busy(btn, false); }
+  };
+  app.querySelectorAll('[data-evedit]').forEach((b) => (b.onclick = () => { S.evEdit = b.dataset.evedit; rerender(); window.scrollTo(0, 0); }));
+  app.querySelectorAll('[data-evcancel]').forEach((b) => (b.onclick = async () => {
+    const [id, on] = b.dataset.evcancel.split('|'), e = C().events.find((x) => x.id === id);
+    if (on === '1' && !confirm(`Aflys ${e.title}? Alle får besked.`)) return;
+    const tasks = C().tasks.filter((t) => t.event_id === id).map((t) => ({ id: t.id, title: t.title, slots: t.slots }));
+    try { await q(sb.rpc('padel_club_save_event', { p_id: id, g: S.groupId, p_team: e.team_id, p_title: e.title, p_desc: e.description, p_starts: e.starts_at, p_ends: e.ends_at, p_place: e.place, p_deadline: e.deadline, p_price: e.price || 0, p_max: e.max_kids || 0, p_cancelled: on === '1', p_tasks: tasks })); rerender(); } catch {}
+  }));
+  app.querySelectorAll('[data-evsign]').forEach((b) => (b.onclick = async () => {
+    const [e, k, st] = b.dataset.evsign.split('|');
+    if (b.classList.contains('on')) return;
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_event_signup', { p_event: e, p_kid: k, p_status: st })); S.evOpen = e; toast(st === 'tilmeldt' ? 'Tilmeldt 🎉' : 'Afmeldt'); rerender(); } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-evpay]').forEach((b) => (b.onclick = async (ev) => {
+    if (b.dataset.only !== undefined) ev.preventDefault();
+    const [e, k] = b.dataset.evpay.split('|');
+    try { await q(sb.rpc('padel_club_event_paid', { p_event: e, p_kid: k, p_status: 'afventer' })); } catch { return; }
+    S.evOpen = e; toast('Tak! Træneren bekræfter betalingen'); setTimeout(rerender, b.tagName === 'A' ? 600 : 0);
+  }));
+  app.querySelectorAll('[data-evpaid]').forEach((b) => (b.onclick = async () => {
+    const [e, k, st] = b.dataset.evpaid.split('|');
+    try { await q(sb.rpc('padel_club_event_paid', { p_event: e, p_kid: k, p_status: st })); S.evOpen = e; rerender(); } catch {}
+  }));
+  app.querySelectorAll('[data-task]').forEach((b) => (b.onclick = async () => {
+    const [t, on] = b.dataset.task.split('|');
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_task_help', { p_task: t, p_on: on === '1' })); S.evOpen = C().tasks.find((x) => x.id === t)?.event_id; toast(on === '1' ? 'Tak for hjælpen! 🙌' : 'Du er taget af opgaven'); rerender(); } catch { busy(b, false); }
   }));
 }
 
@@ -283,12 +417,14 @@ export const kidFormFields = (k = {}, i = 0, collect = false) => `
   <label>Vigtigt for træneren <small class="muted">(valgfri, kun barnets trænere kan se det)</small><textarea name="kinfo" rows="2" maxlength="1000" placeholder="Fx noget træneren skal vide for barnets skyld">${esc(k.info || '')}</textarea></label>
   ${collect ? `<label>Adresse <small class="muted">(bruges til kommunens tilskud)</small><input name="kaddr" required maxlength="200" autocomplete="street-address" value="${esc(k.address || '')}" placeholder="Vej og nr., postnr. og by"></label>` : ''}`;
 const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + 1}</legend>${kidFormFields({}, i, collect)}
+  <label class="switch"><input type="checkbox" name="ktrial"><span>Vi vil gerne prøve 1-2 træninger først</span></label>
   <label>Besked til træneren <small class="muted">(valgfri)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
 const readKid = (root, i) => ({
   name: root.querySelector('[name=kname]').value, birth_date: root.querySelector('[name=kbirth]').value || null,
   gender: root.querySelector(`[name=kgender${i}]:checked`)?.value || null,
   photo_ok: root.querySelector(`[name=kphoto${i}]:checked`) ? root.querySelector(`[name=kphoto${i}]:checked`).value === 'ja' : null,
   info: root.querySelector('[name=kinfo]').value, address: root.querySelector('[name=kaddr]')?.value || null, note: root.querySelector('[name=knote]')?.value || null,
+  trial: !!root.querySelector('[name=ktrial]')?.checked,
 });
 
 export async function viewClubJoin(g) {
@@ -314,7 +450,7 @@ export async function viewClubJoin(g) {
     const kids = [...f.querySelectorAll('.kidf')].map((fs, i) => readKid(fs, i));
     const btn = f.querySelector('button.primary'); busy(btn, true);
     try {
-      await q(sb.rpc('padel_club_apply_v2', { g, p_kids: kids }));
+      await q(sb.rpc('padel_club_apply_v3', { g, p_kids: kids }));
       toast('Tak! En træner godkender indmeldelsen');
       await hooks.loadBase();
       if (S.groups.some((x) => x.id === g) && S.members.some((m) => m.group_id === g && m.player_id === S.me.id && m.status === 'aktiv')) setGroup(g);
@@ -391,22 +527,31 @@ const kidMeta = (k) => [age(k), GENDER_KID[k.gender], guardianNames(k.id), k.pla
 export function clubKidsTab() {
   if (!canRun()) return '';
   const kids = C().kids, teams = myTeams(), allTeams = C().teams.filter((t) => !t.archived);
-  const pend = kids.filter((k) => k.status === 'ansoegt');
+  const pend = kids.filter((k) => k.status === 'ansoegt' && !k.waitlist);
+  const wait = kids.filter((k) => k.status === 'ansoegt' && k.waitlist).sort((a, b) => a.created_at.localeCompare(b.created_at));
   const act = kids.filter((k) => k.status === 'aktiv');
-  const teamSel = (k, attr, list = allTeams) => `<select class="sm" ${attr} aria-label="Hold"><option value="">Intet hold</option>${list.map((t) => `<option value="${t.id}" ${k.team_id === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>`;
+  const cnt = (t) => act.filter((k) => k.team_id === t).length;
+  const fullT = (t) => { const tm = team(t); return tm?.max_kids && cnt(t) >= tm.max_kids; };
+  const tLabel = (t) => `${esc(t.name)}${t.max_kids ? ` (${cnt(t.id)}/${t.max_kids}${cnt(t.id) >= t.max_kids ? ' fuldt' : ''})` : ''}`;
+  const teamSel = (k, attr, list = allTeams) => `<select class="sm" ${attr} aria-label="Hold"><option value="">Intet hold</option>${list.map((t) => `<option value="${t.id}" ${k.team_id === t.id ? 'selected' : ''}>${tLabel(t)}</option>`).join('')}</select>`;
   const byTeam = [...teams.map((t) => ({ t, ks: act.filter((k) => k.team_id === t.id) })), { t: null, ks: act.filter((k) => !k.team_id || !allTeams.some((t) => t.id === k.team_id)) }].filter((x) => x.ks.length);
   const collect = !!group().club_collect_address;
   return `
     ${pend.length ? `<div class="card pendingbox"><b>⏳ Nye indmeldelser (${pend.length})</b>${pend.map((k) => `
-      <div class="kpend"><div><b>${esc(k.name)}</b>${kidFlags(k)}<small class="muted">${esc([age(k), GENDER_KID[k.gender]].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
+      <div class="kpend"><div><b>${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}${kidFlags(k)}<small class="muted">${esc([age(k), GENDER_KID[k.gender]].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
         <label class="kteam">Hold${teamSel(k, `data-pteam="${k.id}"`)}</label>
-        <div class="mact"><button class="btn sm ghost" data-kno="${k.id}">Afvis</button><button class="btn sm primary" data-kok="${k.id}">Godkend</button></div></div>`).join('')}</div>` : ''}
+        <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|venteliste">Venteliste</button></div>
+        <div class="mact"><button class="btn sm" data-kdo="${k.id}|proeve">Prøvetræning</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Godkend</button></div></div>`).join('')}</div>` : ''}
+    ${wait.length ? `<div class="card waitbox"><b>⏳ Venteliste (${wait.length})</b>${wait.map((k, i) => `
+      <div class="kpend"><div><b>${i + 1}. ${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}<small class="muted">Venter på ${esc(team(k.team_id)?.name || 'et hold')}${fullT(k.team_id) ? ' (fuldt)' : ' · der er plads nu'} · ${esc(guardianNames(k.id))}</small></div>
+        <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|proeve">Prøve</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Optag</button></div></div>`).join('')}</div>` : ''}
     ${!isAdmin() && myAssigned().length ? `<p class="muted small">Du ser dine egne hold: ${teams.map((t) => esc(t.name)).join(', ')}.</p>` : ''}
     ${byTeam.map(({ t, ks }) => `<details class="card plist" ${S.kidsOpen?.[t?.id || 'none'] ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : 'Uden hold'} (${ks.length})</b></summary>
-      <div class="list compact">${ks.map((k, i) => `<details class="prow"><summary><span class="grow"><b>${esc(k.name)}</b>${kidFlags(k)}${feeBadge(k)}<small>${kidMeta(k)}</small></span><span class="muted">›</span></summary>
+      <div class="list compact">${ks.map((k, i) => `<details class="prow"><summary><span class="grow"><b>${esc(k.name)}</b>${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${k.trial ? '' : feeBadge(k)}<small>${kidMeta(k)}</small></span><span class="muted">›</span></summary>
         <form class="ppanel kedit" data-kedit="${k.id}">
           ${infoOf(k.id) ? `<div class="infobox">⚠️ ${esc(infoOf(k.id))}</div>` : ''}
           ${k.photo_ok === false ? '<div class="infobox">🚫📷 Må ikke være på billeder</div>' : ''}
+          ${k.trial ? `<div class="mact"><button type="button" class="btn sm primary" data-kdo="${k.id}|aktiv">✓ Meld ind som medlem</button></div>` : ''}
           ${kidFormFields({ ...k, info: infoOf(k.id) }, 200 + i, collect || !!k.address)}
           <label>Hold${teamSel(k, 'name="team"')}</label>
           <div class="mact"><button type="button" class="btn sm ghost danger" data-kout="${k.id}">Meld ud</button><button class="btn sm primary">Gem</button></div>
@@ -416,14 +561,20 @@ export function clubKidsTab() {
 export function bindClubKids(refresh) {
   const kid = (id) => C().kids.find((k) => k.id === id);
   app.querySelectorAll('details[data-kt]').forEach((d) => (d.ontoggle = () => { (S.kidsOpen ||= {})[d.dataset.kt] = d.open; }));
-  app.querySelectorAll('[data-kok]').forEach((b) => (b.onclick = async () => {
-    const team = app.querySelector(`[data-pteam="${b.dataset.kok}"]`)?.value || null;
+  app.querySelectorAll('[data-kdo]').forEach((b) => (b.onclick = async () => {
+    const [id, act] = b.dataset.kdo.split('|'), k = kid(id);
+    const teamId = app.querySelector(`[data-pteam="${id}"]`)?.value || k.team_id || null;
+    const tm = team(teamId), n = C().kids.filter((x) => x.status === 'aktiv' && x.team_id === teamId && x.id !== id).length;
+    if (act === 'afvist' && !confirm(`Afvis ${k.name}?`)) return;
+    if (act === 'venteliste' && !teamId) return toast('Vælg hvilket hold barnet skal vente på', true);
+    const joining = k.status !== 'aktiv' || k.team_id !== teamId;
+    if (['aktiv', 'proeve'].includes(act) && joining && tm?.max_kids && n >= tm.max_kids && !confirm(`${tm.name} er fuldt (${n}/${tm.max_kids}). Optag alligevel?`)) return;
     busy(b, true);
-    try { await q(sb.rpc('padel_club_decide', { p_kid: b.dataset.kok, p_status: 'aktiv', p_team: team })); toast(`${kid(b.dataset.kok).name} er godkendt. Forældrene har fået besked`); await refresh(); } catch { busy(b, false); }
-  }));
-  app.querySelectorAll('[data-kno]').forEach((b) => (b.onclick = async () => {
-    if (!confirm(`Afvis indmeldelsen af ${kid(b.dataset.kno).name}?`)) return;
-    try { await q(sb.rpc('padel_club_decide', { p_kid: b.dataset.kno, p_status: 'afvist', p_team: null })); await refresh(); } catch {}
+    try {
+      await q(sb.rpc('padel_club_decide_v2', { p_kid: id, p_action: act, p_team: teamId }));
+      toast({ aktiv: k.trial ? `${k.name} er nu medlem` : `${k.name} er godkendt. Forældrene har fået besked`, proeve: `${k.name} er velkommen til prøvetræning`, venteliste: `${k.name} er sat på venteliste`, afvist: `${k.name} er afvist` }[act]);
+      await refresh();
+    } catch { busy(b, false); }
   }));
   app.querySelectorAll('form[data-kedit]').forEach((f, n) => (f.onsubmit = async (e) => {
     e.preventDefault();
@@ -446,7 +597,7 @@ export function bindClubKids(refresh) {
 export function clubFeesTab() {
   const gr = group();
   if (!gr.club_fee_label) return `<div class="card empty"><p class="muted">Der er ikke sat et kontingent op endnu.${isAdmin() ? ' Det gøres under Medlemmer → Klubbens indstillinger.' : ' Bed klubbens admin om at sætte det op.'}</p></div>`;
-  const act = C().kids.filter((k) => k.status === 'aktiv');
+  const act = C().kids.filter((k) => k.status === 'aktiv' && !k.trial);
   const n = (st) => act.filter((k) => feeOf(k.id) === st).length;
   const teams = C().teams.filter((t) => !t.archived);
   const groups = [...teams.map((t) => ({ t, ks: act.filter((k) => k.team_id === t.id) })), { t: null, ks: act.filter((k) => !teams.some((t) => t.id === k.team_id)) }].filter((x) => x.ks.length);
@@ -539,8 +690,9 @@ export function clubTeamsTab() {
   return `
     ${teams.map((t) => {
       const ss = C().sessions.filter((s) => s.team_id === t.id && s.active).sort((a, b) => a.weekday - b.weekday || t5(a.start_time).localeCompare(t5(b.start_time)));
-      return `<details class="card teamcard" data-team="${t.id}" ${S.teamOpen === t.id ? 'open' : ''}><summary><span class="grow"><b>${esc(t.name)}</b><small class="muted">${count(t.id)} børn · ${ss.length ? ss.map((s) => `${WEEKDAY[s.weekday].slice(0, 3).toLowerCase()} ${t5(s.start_time)}`).join(', ') : 'ingen tider'}${trainersOf(t.id).length ? ` · ${trainersOf(t.id).map((x) => esc(x.name.split(' ')[0])).join(', ')}` : ''}</small></span><span class="muted">›</span></summary>
+      return `<details class="card teamcard" data-team="${t.id}" ${S.teamOpen === t.id ? 'open' : ''}><summary><span class="grow"><b>${esc(t.name)}</b><small class="muted">${count(t.id)}${t.max_kids ? `/${t.max_kids}` : ''} børn · ${ss.length ? ss.map((s) => `${WEEKDAY[s.weekday].slice(0, 3).toLowerCase()} ${t5(s.start_time)}`).join(', ') : 'ingen tider'}${trainersOf(t.id).length ? ` · ${trainersOf(t.id).map((x) => esc(x.name.split(' ')[0])).join(', ')}` : ''}</small></span><span class="muted">›</span></summary>
         ${admin ? `<div class="lbl">Trænere på holdet</div>${coaches.length ? `<div class="checks coach">${coaches.map((u) => `<label><input type="checkbox" data-coach="${t.id}" value="${u}" ${onTeam(t.id, u) ? 'checked' : ''}><span>${esc(nameOf(u).split(' ')[0])}</span></label>`).join('')}</div>` : '<p class="muted small">Gør først nogen til Træner under Medlemmer.</p>'}` : ''}
+        ${admin ? `<form class="frow tmax" data-tmax="${t.id}"><label class="grow">Maks. antal børn <small class="muted">(tom = ingen grænse)</small><input name="max" type="number" min="0" value="${t.max_kids || ''}"></label><button class="btn sm">Gem</button></form>` : ''}
         <div class="lbl">Træningstider</div>
         ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place ? `<small class="muted">${esc(s.place)}</small>` : ''}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
         <details class="srow new"><summary><span class="grow">➕ Tilføj træningstid</span></summary>${sessForm(null, t.id)}</details>
@@ -566,6 +718,10 @@ export function bindClubTeams(refresh) {
     const t = team(b.dataset.tarch);
     if (!confirm(`Slet holdet ${t.name}?\n\nBørnene på holdet bliver i klubben, men uden hold, indtil du sætter dem på et nyt.`)) return;
     try { await q(sb.rpc('padel_club_save_team', { p_id: t.id, g, p_name: t.name, p_archived: true })); await refresh(); } catch {}
+  }));
+  app.querySelectorAll('form[data-tmax]').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault();
+    try { await q(sb.rpc('padel_club_set_team_max', { p_team: f.dataset.tmax, p_max: +f.max.value || 0 })); S.teamOpen = f.dataset.tmax; toast('Gemt'); await refresh(); } catch {}
   }));
   app.querySelectorAll('[data-coach]').forEach((cb) => (cb.onchange = async () => {
     const t = cb.dataset.coach, users = [...app.querySelectorAll(`[data-coach="${t}"]:checked`)].map((x) => x.value);
@@ -689,7 +845,7 @@ export async function loadClubPending() {
   const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && canRun(x.id));
   if (!clubs.length) return;
   try {
-    const rows = await q(sb.from('padel_club_kids').select('id,group_id').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'));
+    const rows = (await q(sb.from('padel_club_kids').select('id,group_id,waitlist').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'))).filter((r) => !r.waitlist);
     for (const r of rows) S.clubPendingBy[r.group_id] = (S.clubPendingBy[r.group_id] || 0) + 1;
     S.clubPending = rows.length;
   } catch {}

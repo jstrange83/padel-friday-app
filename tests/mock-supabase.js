@@ -21,7 +21,7 @@ function seed() {
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
     padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [], padel_notifications: [], padel_push_subs: [],
-    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [] };
+    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [], padel_club_events: [], padel_club_event_signups: [], padel_club_tasks: [], padel_club_task_helpers: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -570,6 +570,59 @@ RPC.padel_club_set_absence = (a) => {
   db.padel_club_absence.find((x) => x.session_id === a.p_session && x.day === a.p_day && x.kid_id === a.p_kid).late = late;
   if (late) notify(db.padel_club_team_trainers.filter((x) => x.team_id === k.team_id && x.active).map((x) => x.user_id), 'klub_sent_afbud', 'Sent afbud: ' + k.name, a.p_reason || '', '/#/traening');
 };
+
+
+// Etape 3: arrangementer, forældrehjælp, venteliste, prøvetræning
+const EV = (id) => db.padel_club_events.find((e) => e.id === id);
+Object.assign(RPC, {
+  padel_club_apply_v3: ({ g, p_kids }) => {
+    const n = RPC.padel_club_apply_v2({ g, p_kids });
+    const ks = p_kids.filter((y) => y.name?.trim());
+    db.padel_club_kids.filter((k) => k.group_id === g && k.created_by === uid()).slice(-n).forEach((k, i) => { k.trial_requested = !!ks[i].trial; k.waitlist = false; k.trial = false; });
+    return n;
+  },
+  padel_club_decide_v2: ({ p_kid, p_action, p_team }) => {
+    const k = KID(p_kid); needTrainer(k.group_id);
+    if (p_action === 'venteliste') { Object.assign(k, { status: 'ansoegt', waitlist: true, team_id: p_team || k.team_id }); return; }
+    if (p_action === 'afvist') { Object.assign(k, { status: 'afvist', waitlist: false }); return; }
+    RPC.padel_club_decide({ p_kid, p_status: 'aktiv', p_team });
+    Object.assign(k, { waitlist: false, trial: p_action === 'proeve' });
+  },
+  padel_club_set_team_max: ({ p_team, p_max }) => { if (!isAdm(teamGroup(p_team))) throw new Error('Kun klubbens admin'); db.padel_club_teams.find((t) => t.id === p_team).max_kids = p_max || null; },
+  padel_club_save_event: (a) => {
+    const g = a.p_id ? EV(a.p_id).group_id : a.g; needTrainer(g);
+    if (!a.p_title?.trim()) throw new Error('Skriv en titel');
+    const v = { team_id: a.p_team, title: a.p_title.trim(), description: a.p_desc || null, starts_at: a.p_starts, ends_at: a.p_ends, place: a.p_place || null, deadline: a.p_deadline, price: a.p_price || null, max_kids: a.p_max || null, cancelled: !!a.p_cancelled };
+    let id = a.p_id;
+    if (id) Object.assign(EV(id), v); else { id = uuid(); db.padel_club_events.push({ id, group_id: g, created_by: uid(), created_at: now(), ...v }); notify(clubPeople(g, a.p_team), 'klub_arrangement', '📅 ' + v.title, '', '/#/traening'); }
+    const keep = (a.p_tasks || []).map((t) => t.id).filter(Boolean);
+    db.padel_club_tasks.filter((t) => t.event_id === id && !keep.includes(t.id)).forEach((t) => (t.active = false));
+    (a.p_tasks || []).forEach((t, i) => { if (t.id) Object.assign(db.padel_club_tasks.find((x) => x.id === t.id), { title: t.title, slots: t.slots, active: true }); else db.padel_club_tasks.push({ id: uuid(), event_id: id, title: t.title, slots: t.slots || 1, sort: i + 1, active: true }); });
+    return id;
+  },
+  padel_club_event_signup: ({ p_event, p_kid, p_status }) => {
+    const e = EV(p_event);
+    if (!kidMine(p_kid) && !canRun(e.group_id)) throw new Error('Du kan kun tilmelde dine egne børn');
+    const n = db.padel_club_event_signups.filter((x) => x.event_id === p_event && x.status === 'tilmeldt' && x.kid_id !== p_kid).length;
+    if (p_status === 'tilmeldt' && e.max_kids && n >= e.max_kids) throw new Error('Arrangementet er fuldt');
+    const cur = db.padel_club_event_signups.find((x) => x.event_id === p_event && x.kid_id === p_kid);
+    upsert('padel_club_event_signups', ['event_id', 'kid_id'], { event_id: p_event, kid_id: p_kid, status: p_status, paid: cur?.paid || 'ubetalt' });
+  },
+  padel_club_event_paid: ({ p_event, p_kid, p_status }) => {
+    const x = db.padel_club_event_signups.find((y) => y.event_id === p_event && y.kid_id === p_kid && y.status === 'tilmeldt');
+    if (!x) throw new Error('Barnet er ikke tilmeldt');
+    const boss = canRun(EV(p_event).group_id) || treasurer(EV(p_event).group_id);
+    if (!boss && p_status === 'betalt') throw new Error('Det har du ikke adgang til');
+    if (!boss && x.paid === 'betalt') return;
+    x.paid = p_status;
+  },
+  padel_club_task_help: ({ p_task, p_on }) => {
+    const t = db.padel_club_tasks.find((x) => x.id === p_task);
+    if (p_on && db.padel_club_task_helpers.filter((h) => h.task_id === p_task && h.active && h.user_id !== uid()).length >= t.slots) throw new Error('Der er allerede nok hjælpere');
+    upsert('padel_club_task_helpers', ['task_id', 'user_id'], { task_id: p_task, user_id: uid(), active: !!p_on });
+  },
+  padel_club_event_counts: ({ g }) => db.padel_club_events.filter((e) => e.group_id === g).map((e) => ({ event_id: e.id, n: db.padel_club_event_signups.filter((x) => x.event_id === e.id && x.status === 'tilmeldt').length })),
+});
 
 export function createClient() {
   let cb = () => {};
