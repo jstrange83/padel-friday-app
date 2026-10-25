@@ -130,7 +130,9 @@ export function groupBar(onChange) {
   const gs = myGroups();
   if (gs.length < 2) return '';
   setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); hooks.renderNav?.(); onChange(); })), 0);
-  return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}</button>`).join('')}</div>`;
+  // Tal på gruppen, når nogen venter på godkendelse der (så man kan se, hvor tallet på Admin kommer fra)
+  const waiting = (id) => (S.viewAs ? 0 : (S.clubPendingBy?.[id] || 0) + pendingForMe().filter((m) => m.group_id === id).length);
+  return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}${waiting(g.id) ? ` <b class="chipbadge">${waiting(g.id)}</b>` : ''}</button>`).join('')}</div>`;
 }
 
 // Telefonnummer (kun synligt for spilleren selv, gruppens admins/superbrugere og superadmin)

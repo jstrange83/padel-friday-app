@@ -639,3 +639,4 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .admin .tab { flex: 1 1 auto; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
 .kpend .kteam { margin: 8px 0 0; }
 .kpend .kteam select { margin-top: 4px; }
+.chipbadge { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 99px; background: var(--dn); color: #fff; font-size: 12px; line-height: 18px; text-align: center; }

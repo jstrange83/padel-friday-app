@@ -13,7 +13,7 @@ export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin). I en klub: Børn og Hold og tider (trænere)
   const club = isClub() && S.groupId;
   const tabs = [
-    club && canRun() ? ['boern', `👧 Børn${S.clubPending ? ` (${S.clubPending})` : ''}`] : null,
+    club && canRun() ? ['boern', `👧 Børn${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
     club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
     (isAdmin() && S.groupId) || isSuper() ? ['spillere', club ? '👥 Medlemmer' : '👥 Spillere'] : null,
     isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null, isSuper() && hasSuggest() ? ['forslag', '💡 Forslag'] : null].filter(Boolean);

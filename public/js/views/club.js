@@ -444,10 +444,14 @@ export function bindClubSettings(refresh) {
 
 // Antal børn der venter på godkendelse i klubber, hvor jeg er træner (til tallet på Admin)
 export async function loadClubPending() {
-  S.clubPending = 0;
+  S.clubPending = 0; S.clubPendingBy = {};
   const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && canRun(x.id));
   if (!clubs.length) return;
-  try { S.clubPending = (await q(sb.from('padel_club_kids').select('id').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'))).length; } catch {}
+  try {
+    const rows = await q(sb.from('padel_club_kids').select('id,group_id').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'));
+    for (const r of rows) S.clubPendingBy[r.group_id] = (S.clubPendingBy[r.group_id] || 0) + 1;
+    S.clubPending = rows.length;
+  } catch {}
 }
 
 // Invitationslink til klubben
