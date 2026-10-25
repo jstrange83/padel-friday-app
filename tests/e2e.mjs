@@ -828,6 +828,44 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(600);
   ok(!(await page.locator('.prow', { hasText: 'Test Dennis' }).innerText()).includes('Slettet'), 'superadmin kan gendanne en slettet spiller');
 
+  // Én fælles rangliste: Brians gruppe ser også spillere fra Fredagspadel; admin kan vælge "kun gruppen" eller "ingen"
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'brian@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a');
+  await page.goto('http://localhost:8765/#/rangliste');
+  await page.waitForSelector('.page h1');
+  await wait(400);
+  ok((await page.locator('.list').innerText()).includes('Test Anders'), 'fælles rangliste viser spillere fra alle grupper');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.rankmode');
+  await page.click('.rankmode label:has-text("Kun gruppen")');
+  await wait(500);
+  await page.goto('http://localhost:8765/#/rangliste');
+  await page.waitForSelector('.page h1');
+  await wait(400);
+  ok(!(await page.locator('.page').innerText()).includes('Test Anders'), '"Kun gruppen" viser kun gruppens spillere');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.rankmode');
+  await page.click('.rankmode label:has-text("Ingen")');
+  await wait(500);
+  await loginAs('jimmy@test');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'test7@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a');
+  await wait(500);
+  if (await page.locator('#fbModal').count()) await page.click('#fbLater');
+  await page.locator('[data-group]', { hasText: 'Lørdagspadel' }).click();
+  await wait(400);
+  ok(!(await page.locator('#nav').innerText()).includes('Rangliste'), '"Ingen rangliste" skjuler ranglisten for spillerne');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

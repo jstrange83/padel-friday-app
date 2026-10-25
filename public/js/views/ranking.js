@@ -1,65 +1,42 @@
-// Ranglisten (pr. gruppe, og fælles for superadmin) og den enkelte spillers statistik.
+// Den fælles rangliste og den enkelte spillers statistik.
 import { sb, S, app, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, activeMembers, groupElo, group, groupBar, esc, nameOf, first, fmtDate, q } from '../core.js';
 import { startViewAs } from '../viewas.js';
 import { editBtn } from '../editmode.js';
 
-// Gruppens godkendte kampe med dato, format og pointændringer
-async function groupData(g) {
-  const evs = await q(sb.from('padel_events').select('id,starts_at,format').eq('group_id', g));
-  if (!evs.length) return { ms: [], changes: [] };
-  const ev = Object.fromEntries(evs.map((e) => [e.id, e]));
-  const ms = (await q(sb.from('padel_matches').select('id,event_id,a_left,a_right,b_left,b_right,score_a,score_b,created_at')
-    .in('event_id', evs.map((e) => e.id)).eq('status', 'bekraeftet').order('created_at'))).map((m) => ({ ...m, ev: ev[m.event_id] }));
-  const changes = ms.length ? await q(sb.from('padel_elo_changes').select('match_id,player_id,group_delta,delta,created_at')
-    .in('match_id', ms.map((m) => m.id)).eq('active', true).order('created_at', { ascending: false })) : [];
-  return { ms, changes };
-}
-
 const TABS = [['point', '🏆 Point'], ['maaned', '⭐ Måned'], ['aeg', '🥚 Æg'], ['streak', '🔥 Streak']];
 const MONTHS = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
+const MODE_TXT = { alle: 'Alle spillere fra alle grupper', gruppe: `Kun spillere fra gruppen`, ingen: 'Gruppen har ingen rangliste' };
 
+// Én fælles rangliste med samme point i alle grupper. Gruppens admin bestemmer, om den viser alle eller kun gruppen.
 export async function viewRanking() {
-  const showGlobal = isSuper() || S.settings.global_ranking_public;
-  const global = S.rankTab === 'global' && showGlobal;
   const kind = S.rankKind || 'point';
-  let rows, unit = '', note = '';
-  if (global) {
-    rows = (await q(sb.rpc('padel_global_ranking'))).map((r) => ({ id: r.id, name: r.name, gender: r.gender, val: r.elo, n: Number(r.matches), form: [] }));
-  } else {
-    const { ms, changes } = await groupData(S.groupId);
-    const people = activeMembers().map((m) => S.profiles[m.player_id]).filter(Boolean);
-    const stat = Object.fromEntries(people.map((p) => [p.id, { n: 0, form: [], month: 0, eggs: 0, cur: 0, best: 0 }]));
-    for (const c of changes) { const s = stat[c.player_id]; if (s && s.form.length < 5) s.form.push(c.group_delta ?? c.delta); }
-    const now = new Date(), mStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const dl = Object.fromEntries(changes.map((c) => [c.match_id + c.player_id, c.group_delta ?? c.delta]));
-    for (const m of ms) {
-      const sets = ['saet', 'klassisk'].includes(m.ev.format);
-      for (const [pid, my, th] of [[m.a_left, m.score_a, m.score_b], [m.a_right, m.score_a, m.score_b], [m.b_left, m.score_b, m.score_a], [m.b_right, m.score_b, m.score_a]]) {
-        const s = stat[pid]; if (!s) continue;
-        s.n++;
-        if (new Date(m.ev.starts_at).getTime() >= mStart) s.month += dl[m.id + pid] || 0;
-        if (sets && th === 0 && my >= 6) s.eggs++;
-        if (my > th) { s.cur++; s.best = Math.max(s.best, s.cur); } else s.cur = 0;
-      }
-    }
-    const val = { point: (p) => groupElo(p.id), maaned: (p) => stat[p.id].month, aeg: (p) => stat[p.id].eggs, streak: (p) => stat[p.id].cur }[kind];
-    rows = people.map((p) => ({ id: p.id, name: p.name, gender: p.gender, val: val(p), ...stat[p.id] }));
-    if (kind === 'maaned') { unit = 'point'; note = `Flest point vundet i ${MONTHS[now.getMonth()]}.`; rows = rows.filter((r) => r.n); }
-    if (kind === 'aeg') { unit = 'æg'; note = 'Flest sæt vundet 6‑0 (eller 7‑0) i Ét sæt pr. runde og Klassisk.'; rows = rows.filter((r) => r.val > 0); }
-    if (kind === 'streak') { unit = 'i træk'; note = 'Flest kampe vundet i træk lige nu. Længste står under navnet.'; rows = rows.filter((r) => r.n); }
+  const mode = group()?.ranking_mode || 'alle';
+  if (mode === 'ingen' && !isAdmin()) {
+    app.innerHTML = `<div class="page"><h1>Rangliste</h1>${groupBar(viewRanking)}<p class="muted">${esc(group()?.name || 'Gruppen')} har ikke en rangliste. Kampene giver stadig point på den fælles rangliste.</p></div>`;
+    return;
   }
+  const data = await q(sb.rpc('padel_ranking', { g: S.groupId }));
+  const now = new Date();
+  const val = { point: (r) => r.elo, maaned: (r) => r.month_pts, aeg: (r) => r.eggs, streak: (r) => r.cur_streak }[kind];
+  let rows = data.map((r) => ({ id: r.id, name: r.name, gender: r.gender, val: val(r), n: r.matches, form: r.form || [], best: r.best_streak }));
+  let unit = '', note = '';
+  if (kind === 'maaned') { unit = 'point'; note = `Flest point vundet i ${MONTHS[now.getMonth()]}.`; rows = rows.filter((r) => r.n && r.val); }
+  if (kind === 'aeg') { unit = 'æg'; note = 'Flest sæt vundet 6‑0 (eller 7‑0) i Ét sæt pr. runde og Klassisk.'; rows = rows.filter((r) => r.val > 0); }
+  if (kind === 'streak') { unit = 'i træk'; note = 'Flest kampe vundet i træk lige nu. Længste står under navnet.'; rows = rows.filter((r) => r.n); }
   if (S.filter !== 'alle') rows = rows.filter((p) => p.gender === S.filter);
   rows.sort((a, b) => b.val - a.val || (b.best || 0) - (a.best || 0) || a.name.localeCompare(b.name));
-  const plain = global || kind === 'point';
+  const plain = kind === 'point';
   const active = plain ? rows.filter((p) => p.n) : rows, fresh = plain ? rows.filter((p) => !p.n) : [];
+  // Kun spillere fra egne grupper har en statistikside, man kan åbne
+  const link = (p) => (S.profiles[p.id] ? `href="#/spiller/${p.id}"` : '');
 
   const row = (p, i) => {
     const medal = ['🥇', '🥈', '🥉'][i] || `<span class="rk">${i + 1}</span>`;
     const form = (p.form || []).map((d) => `<i class="${d > 0 ? 'up' : d < 0 ? 'dn' : 'eq'}"></i>`).join('');
-    const sub = kind === 'streak' && !global ? `længste ${p.best}` : `${p.n} ${p.n === 1 ? 'kamp' : 'kampe'} <span class="form">${form}</span>`;
-    const v = kind === 'maaned' && !global ? `${p.val > 0 ? '+' : ''}${p.val}` : p.val;
-    return `<a class="row ${p.id === S.me.id ? 'me' : ''}" href="#/spiller/${p.id}">
-      <div class="pos">${medal}</div>${global ? editBtn('padel_profiles', p.id) : editBtn('padel_group_members', `${S.groupId}|${p.id}`)}
+    const sub = kind === 'streak' ? `længste ${p.best}` : `${p.n} ${p.n === 1 ? 'kamp' : 'kampe'} <span class="form">${form}</span>`;
+    const v = kind === 'maaned' ? `${p.val > 0 ? '+' : ''}${p.val}` : p.val;
+    return `<a class="row ${p.id === S.me.id ? 'me' : ''}" ${link(p)}>
+      <div class="pos">${medal}</div>${editBtn('padel_profiles', p.id)}
       <div class="grow"><b>${esc(p.name)}</b><small>${sub}</small></div>
       <div class="elo">${v}${unit ? `<small class="unit">${unit}</small>` : ''}</div></a>`;
   };
@@ -67,25 +44,20 @@ export async function viewRanking() {
   app.innerHTML = `
   <div class="page">
     <h1>Rangliste</h1>
-    ${showGlobal ? `<div class="chips tabs"><button class="chip ${!global ? 'on' : ''}" data-tab="group">${esc(group()?.name || 'Gruppe')}</button>
-      <button class="chip ${global ? 'on' : ''}" data-tab="global">🌍 Fælles</button></div>` : groupBar(viewRanking)}
-    ${global ? (S.settings.global_ranking_public ? '' : '<p class="muted small">Den fælles rangliste på tværs af grupper er kun synlig for dig som superadmin.</p>')
-      : `<div class="tabbar">${TABS.map(([k, t]) => `<button class="tab ${kind === k ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>`}
+    ${groupBar(viewRanking)}
+    ${mode === 'ingen' ? '<div class="card warnbox">Gruppen har valgt ingen rangliste, så spillerne kan ikke se den. Du ser den, fordi du er admin.</div>' : ''}
+    <p class="muted small">${mode === 'gruppe' ? `Viser kun spillere fra ${esc(group()?.name || 'gruppen')}` : 'Fælles rangliste for alle grupper'}${isAdmin() ? ' · <a class="link" href="#/admin">skift under Admin</a>' : ''}</p>
+    <div class="tabbar">${TABS.map(([k, t]) => `<button class="tab ${kind === k ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>
     <div class="chips">${[['alle', 'Alle'], ['mand', 'Mænd'], ['kvinde', 'Kvinder']].map(([k, v]) =>
       `<button class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${v}</button>`).join('')}</div>
     ${note ? `<p class="muted small">${note}</p>` : ''}
     <div class="list">${active.map(row).join('') || '<p class="muted pad">Ingen endnu.</p>'}</div>
     ${fresh.length ? `<details class="faq fresh"><summary>Ikke spillet endnu (${fresh.length})</summary><div>${fresh.map((p) =>
-      `<a class="logrow" href="#/spiller/${p.id}"><span class="grow">${esc(p.name)}</span><span class="muted">${p.val}</span></a>`).join('')}</div></details>` : ''}
+      `<a class="logrow" ${link(p)}><span class="grow">${esc(p.name)}</span><span class="muted">${p.val}</span></a>`).join('')}</div></details>` : ''}
     ${plain ? '<p class="muted small">Alle starter på 1000 point. Slår man et stærkere hold, giver det flere point. <a class="link" href="#/faq">Sådan virker point</a></p>' : ''}
   </div>`;
   app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
   app.querySelectorAll('[data-kind]').forEach((b) => (b.onclick = () => { S.rankKind = b.dataset.kind; viewRanking(); }));
-  app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.rankTab = b.dataset.tab; viewRanking(); }));
-  if (showGlobal && !global && isSuper()) {
-    const bar = groupBar(viewRanking);
-    if (bar) app.querySelector('.chips.tabs').insertAdjacentHTML('afterend', bar);
-  }
 }
 
 export async function viewPlayer(id) {
@@ -94,7 +66,7 @@ export async function viewPlayer(id) {
   const [ms, ch] = await Promise.all([
     q(sb.from('padel_matches').select('*, padel_events(starts_at,format,group_id)')
       .or(`a_left.eq.${id},a_right.eq.${id},b_left.eq.${id},b_right.eq.${id}`).eq('status', 'bekraeftet').order('created_at', { ascending: true })),
-    q(sb.from('padel_elo_changes').select('match_id,delta,group_delta,group_elo_before').eq('player_id', id).eq('active', true)),
+    q(sb.from('padel_elo_changes').select('match_id,delta,elo_before').eq('player_id', id).eq('active', true)),
   ]);
   const chg = Object.fromEntries(ch.map((c) => [c.match_id, c]));
   // Kampe i den valgte gruppe, ældste først
@@ -105,11 +77,11 @@ export async function viewPlayer(id) {
       m, date: new Date(m.padel_events.starts_at), sc: onA ? m.score_a : m.score_b, th: onA ? m.score_b : m.score_a,
       mate: onA ? (m.a_left === id ? m.a_right : m.a_left) : (m.b_left === id ? m.b_right : m.b_left),
       opps: onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right],
-      d: c?.group_delta ?? c?.delta ?? 0, after: c ? (c.group_elo_before ?? 1000) + (c.group_delta ?? 0) : null,
+      d: c?.delta ?? 0, after: c ? (c.elo_before ?? 1000) + (c.delta ?? 0) : null,
       set: ['saet', 'klassisk'].includes(m.padel_events.format),
     };
   });
-  const rank = activeMembers().map((x) => x.elo).sort((a, b) => b - a).indexOf(groupElo(id)) + 1;
+  const rank = activeMembers().map((x) => groupElo(x.player_id)).sort((a, b) => b - a).indexOf(groupElo(id)) + 1;
   const canViewAs = !S.viewAs && p.id !== S.realMe.id && (S.realMe.is_superadmin || isAdmin());
   const PER = [['30', '30 dage'], ['90', '90 dage'], ['365', 'År'], ['all', 'Alt']];
   S.statPer ||= '90';
@@ -213,12 +185,12 @@ async function loadHist(pid) {
   const [ms, ch] = await Promise.all([
     q(sb.from('padel_matches').select('id, padel_events(starts_at,group_id)')
       .or(`a_left.eq.${pid},a_right.eq.${pid},b_left.eq.${pid},b_right.eq.${pid}`).eq('status', 'bekraeftet')),
-    q(sb.from('padel_elo_changes').select('match_id,group_delta,group_elo_before').eq('player_id', pid).eq('active', true)),
+    q(sb.from('padel_elo_changes').select('match_id,delta,elo_before').eq('player_id', pid).eq('active', true)),
   ]);
   const when = Object.fromEntries(ms.filter((m) => m.padel_events?.group_id === S.groupId).map((m) => [m.id, new Date(m.padel_events.starts_at).getTime()]));
   const cs = ch.filter((c) => when[c.match_id] != null).sort((a, b) => when[a.match_id] - when[b.match_id]);
-  const hist = cs.map((c) => ({ t: when[c.match_id], v: (c.group_elo_before ?? 1000) + (c.group_delta ?? 0) }));
-  if (cs.length) hist.unshift({ t: when[cs[0].match_id] - 864e5, v: cs[0].group_elo_before ?? 1000 });
+  const hist = cs.map((c) => ({ t: when[c.match_id], v: (c.elo_before ?? 1000) + (c.delta ?? 0) }));
+  if (cs.length) hist.unshift({ t: when[cs[0].match_id] - 864e5, v: cs[0].elo_before ?? 1000 });
   return { id: pid, hist };
 }
 

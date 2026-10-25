@@ -109,7 +109,9 @@ hooks.route = () => route();
 
 function renderNav() {
   if (!S.groupId) { navEl.innerHTML = ''; return; }
-  const items = [['#/fredage', '🎾', 'Spilledage'], ['#/rangliste', '🏆', 'Rangliste']];
+  const items = [['#/fredage', '🎾', 'Spilledage']];
+  // Gruppens admin kan vælge ingen rangliste; så er den skjult for spillerne
+  if (group()?.ranking_mode !== 'ingen' || isAdmin()) items.push(['#/rangliste', '🏆', 'Rangliste']);
   // Bødekassen vises kun i grupper, hvor admin har slået den til
   if (group()?.fines_enabled) items.push(['#/boeder', '💸', 'Bøder']);
   items.push(['#/profil', '👤', 'Profil']);

@@ -169,6 +169,27 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  padel_set_ranking_mode: ({ g, p_mode }) => { db.padel_groups.find((x) => x.id === g).ranking_mode = p_mode; },
+  padel_ranking: ({ g }) => {
+    const mode = db.padel_groups.find((x) => x.id === g)?.ranking_mode || 'alle';
+    if (mode === 'ingen' && !(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) return [];
+    const inGroup = (pid, gg) => db.padel_group_members.some((m) => m.player_id === pid && m.status === 'aktiv' && (!gg || m.group_id === gg) && !db.padel_groups.find((x) => x.id === m.group_id)?.archived);
+    const mStart = new Date(new Date(tick).getFullYear(), new Date(tick).getMonth(), 1).toISOString();
+    return db.padel_profiles.filter((p) => !p.deleted_at && !p.merged_into && (mode === 'gruppe' ? inGroup(p.id, g) : inGroup(p.id))).map((p) => {
+      const r = { id: p.id, name: p.name, gender: p.gender, elo: p.elo, matches: 0, form: [], month_pts: 0, eggs: 0, cur_streak: 0, best_streak: 0 };
+      const cs = db.padel_elo_changes.filter((c) => c.player_id === p.id && c.active).sort((a, b) => a.created_at.localeCompare(b.created_at));
+      for (const c of cs) {
+        const m = db.padel_matches.find((x) => x.id === c.match_id), ev = db.padel_events.find((e) => e.id === m.event_id);
+        const onA = [m.a_left, m.a_right].includes(p.id), my = onA ? m.score_a : m.score_b, th = onA ? m.score_b : m.score_a;
+        r.matches++; r.form.push(c.delta);
+        if (ev.starts_at >= mStart) r.month_pts += c.delta;
+        if (['saet', 'klassisk'].includes(ev.format) && th === 0 && my >= 6) r.eggs++;
+        if (my > th) { r.cur_streak++; r.best_streak = Math.max(r.best_streak, r.cur_streak); } else r.cur_streak = 0;
+      }
+      r.form = r.form.slice(-5).reverse();
+      return r;
+    });
+  },
   padel_delete_player: ({ p_user }) => {
     const p = db.padel_profiles.find((x) => x.id === p_user);
     if (p.is_superadmin) throw new Error('En superadmin kan ikke slettes');

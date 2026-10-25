@@ -44,7 +44,8 @@ export const myGroups = () => liveGroups().filter((g) => isSuper() || member(S.m
 export const group = (g = S.groupId) => S.groups.find((x) => x.id === g);
 export const activeMembers = (g = S.groupId) => S.members.filter((m) => m.group_id === g && m.status === 'aktiv');
 // Point i gruppens egen rangliste
-export const groupElo = (pid, g = S.groupId) => member(pid, g)?.elo ?? 1000;
+// Én fælles rangliste: samme point i alle grupper
+export const groupElo = (pid) => S.profiles[pid]?.elo ?? 1000;
 export const groupCenterIds = (g = S.groupId) => S.groupCenters.filter((c) => c.group_id === g && c.enabled).map((c) => c.center_id);
 export function setGroup(g) {
   S.groupId = g;

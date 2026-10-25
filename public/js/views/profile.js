@@ -36,12 +36,13 @@ export function renderProfile(isNew) {
         <h1>${esc(p.name)}</h1>${editBtn('padel_profiles', p.id)}
         <small>${isSuper() ? 'Superadmin · ' : ''}${GENDER[p.gender]} · ${SIDE[p.side]}${phone ? ` · ${fmtPhone(phone)}` : ''}</small>
       </div>
+      <div class="pts"><b>${groupElo(p.id)}</b><small>point</small></div>
     </div>
 
     ${mine.length ? `<div class="list groups-mine">${mine.map((m) => `<div class="row">
       <div class="grow"><b>${esc(group(m.group_id)?.name || 'Gruppe')}</b>
         <small>${m.status === 'afventer' ? '⏳ Venter på godkendelse' : ROLE[roleIn(p.id, m.group_id)] || 'Bruger'}</small></div>
-      ${m.status === 'aktiv' ? `<div class="pts"><b>${groupElo(p.id, m.group_id)}</b><small>point</small></div>` : ''}</div>`).join('')}</div>` : ''}
+      </div>`).join('')}</div>` : ''}
 
     ${!phone ? `<div class="card warnbox">📱 ${viewing ? 'Spilleren mangler et telefonnummer.' : 'Tilføj dit telefonnummer, så admin kan få fat i dig.'}</div>` : ''}
     <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ ${viewing ? 'Ret oplysninger' : 'Ret mine oplysninger'}</b><span class="muted">›</span></summary>${form(p, false)}</details>

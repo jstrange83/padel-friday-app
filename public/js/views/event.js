@@ -85,7 +85,7 @@ function context({ ev, signups, matches, changes, log }) {
   const planPlayers = new Set(futureRounds.flatMap((r) => [...inRound(r)]));
 
   const delta = {};
-  for (const c of changes) delta[c.match_id + c.player_id] = c.group_delta ?? c.delta;
+  for (const c of changes) delta[c.match_id + c.player_id] = c.delta;
 
   const f = ev.format;
   const totalRounds = Math.max(1, Math.floor(ev.duration_minutes / ev.round_minutes));

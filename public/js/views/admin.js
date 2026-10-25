@@ -98,6 +98,9 @@ function playersTab() {
     <div class="card invitebar"><div class="grow"><b>${esc(group()?.name || '')}</b><small>${players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       <button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button><button class="btn sm primary" id="invite">📤 Inviter</button></div>
     ${createPlayerBox()}
+    <div class="card rankmode"><div class="lbl">🏆 Rangliste for ${esc(group()?.name || 'gruppen')}</div>
+      ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
+      <p class="muted small">Der er én fælles rangliste med de samme point i alle grupper. Vælg om gruppen ser alle spillere, kun sine egne, eller ingen rangliste (kampene giver stadig point).</p></div>
     <div class="card"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
       <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
 
@@ -163,13 +166,7 @@ function groupsTab() {
         <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="nc" value="${c.id}"><span>${esc(c.name)}</span></label>`).join('')}</div>
         <button class="btn primary">Opret gruppe</button>
       </form>
-    </details>
-
-    <div class="card">
-      <label class="switch"><input type="checkbox" id="globalPublic" ${S.settings.global_ranking_public ? 'checked' : ''}>
-        <span>Vis den fælles rangliste for alle</span></label>
-      <p class="muted small">Slået fra kan kun du se den fælles rangliste på tværs af grupper.</p>
-    </div>`;
+    </details>`;
 }
 
 // ---------- Centre og baner (superadmin) ----------
@@ -280,6 +277,36 @@ function bind() {
     };
   });
 
+  // Gruppens admin: opret spiller, rangliste og bødekasse
+  const np = document.getElementById('newPlayer');
+  if (np) {
+    np.closest('details').ontoggle = (e) => (S.newPlayerOpen = e.target.open);
+    np.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = np.querySelector('button.primary');
+      busy(btn, true);
+      try {
+        await q(sb.rpc('padel_admin_create_player', { g, p_name: np.elements.name.value, p_phone: np.phone.value, p_gender: np.npgender.value, p_side: np.npside.value }));
+        toast(`${np.elements.name.value.trim()} er oprettet`);
+        S.newPlayerOpen = false;
+        await refresh();
+      } catch { busy(btn, false); }
+    };
+  }
+
+  app.querySelectorAll('input[name=rankmode]').forEach((r) => (r.onchange = async () => {
+    try { await q(sb.rpc('padel_set_ranking_mode', { g, p_mode: r.value })); toast({ alle: 'Ranglisten viser alle spillere', gruppe: 'Ranglisten viser kun gruppen', ingen: 'Gruppen har nu ingen rangliste' }[r.value]); await refresh(); } catch {}
+  }));
+  const fo = document.getElementById('finesOn');
+  if (fo) fo.onchange = async (e) => {
+    try {
+      await q(sb.rpc('padel_set_fines', { g, p_enabled: e.target.checked, p_pay_to: group()?.fines_pay_to || null, p_note: group()?.fines_note || null }));
+      toast(e.target.checked ? 'Bødekassen er slået til' : 'Bødekassen er slået fra');
+      await refresh();
+      hooks.renderNav?.();
+    } catch { e.target.checked = !e.target.checked; }
+  };
+
   if (!isSuper()) return;
 
   // Superadmin: centre for gruppen
@@ -333,37 +360,7 @@ function bind() {
     } catch { busy(btn, false); }
   };
 
-  const np = document.getElementById('newPlayer');
-  if (np) {
-    np.closest('details').ontoggle = (e) => (S.newPlayerOpen = e.target.open);
-    np.onsubmit = async (e) => {
-      e.preventDefault();
-      const btn = np.querySelector('button.primary');
-      busy(btn, true);
-      try {
-        await q(sb.rpc('padel_admin_create_player', { g, p_name: np.elements.name.value, p_phone: np.phone.value, p_gender: np.npgender.value, p_side: np.npside.value }));
-        toast(`${np.elements.name.value.trim()} er oprettet`);
-        S.newPlayerOpen = false;
-        await refresh();
-      } catch { busy(btn, false); }
-    };
-  }
 
-  const fo = document.getElementById('finesOn');
-  if (fo) fo.onchange = async (e) => {
-    try {
-      await q(sb.rpc('padel_set_fines', { g, p_enabled: e.target.checked, p_pay_to: group()?.fines_pay_to || null, p_note: group()?.fines_note || null }));
-      toast(e.target.checked ? 'Bødekassen er slået til' : 'Bødekassen er slået fra');
-      await refresh();
-      hooks.renderNav?.();
-    } catch { e.target.checked = !e.target.checked; }
-  };
-
-  const gp = document.getElementById('globalPublic');
-  if (gp) gp.onchange = async (e) => {
-    try { await q(sb.rpc('padel_set_global_public', { p_public: e.target.checked })); toast(e.target.checked ? 'Den fælles rangliste er nu synlig for alle' : 'Kun du kan se den fælles rangliste'); await hooks.loadBase(); }
-    catch { e.target.checked = !e.target.checked; }
-  };
 
   on('[data-rencenter]', async (b) => {
     const c = centerById(b.dataset.rencenter), n = prompt('Nyt navn', c.name);

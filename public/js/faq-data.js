@@ -24,6 +24,12 @@ export const FAQ = [
   },
   {
     cat: 'Point og rangliste',
+    q: 'Er der én rangliste for alle grupper?',
+    a: `<p>Ja. Alle har ét pointtal, som gælder i alle grupper, og kampe i alle grupper tæller med.</p>
+<p>Gruppens admin vælger under <b>Admin</b>, om gruppens rangliste viser <b>alle spillere</b>, <b>kun gruppens spillere</b> eller <b>ingen rangliste</b>. Med "ingen" er ranglisten skjult i gruppen, men kampene giver stadig point.</p>`,
+  },
+  {
+    cat: 'Point og rangliste',
     q: 'Hvad viser prikkerne ved mit navn på ranglisten?',
     a: `<p>De viser dine seneste 5 kampe. Grøn betyder, at du fik point, rød at du mistede point.</p>`,
   },
@@ -129,8 +135,8 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvad er grupper, og kan jeg være med i flere?',
-    a: `<p>Hver gruppe, fx Fredagspadel og Lørdagspadel, har sine egne spilledage, spillere og sin egen rangliste. Du ser kun de grupper, du er med i.</p>
-<p>Du kan godt være med i flere grupper, hvis gruppens admin har godkendt dig. Har du flere grupper, skifter du mellem dem med knapperne øverst på Spilledage og Rangliste. Dine point er separate i hver gruppe.</p>`,
+    a: `<p>Hver gruppe, fx Fredagspadel og Lørdagspadel, har sine egne spilledage og spillere. Du ser kun de grupper, du er med i.</p>
+<p>Du kan godt være med i flere grupper, hvis gruppens admin har godkendt dig. Har du flere grupper, skifter du mellem dem med knapperne øverst på Spilledage og Rangliste. Der er <b>én fælles rangliste</b>, så du har de samme point, uanset hvilken gruppe du spiller i.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
@@ -148,7 +154,7 @@ export const FAQ = [
     a: `<p>Roller gælder pr. gruppe.</p>
 <p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
 <p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller, lægge Americano på ranglisten og styre bødekassen. Superbrugere kan også give bøder og godkende betalinger.</p>
-<p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, og kan se den fælles rangliste på tværs af grupper. Superadmin kan slette (arkivere) en gruppe under Admin → Grupper, så ingen kan bruge den længere; kampe og point gemmes, og gruppen kan hentes tilbage. Superadmin kan også slå <b>Redigeringstilstand</b> til under Admin og så rette og slette spilledage, kampe, bøder, takster, point og forslag direkte, hvor de står.</p>`,
+<p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, Superadmin kan slette (arkivere) en gruppe under Admin → Grupper, så ingen kan bruge den længere; kampe og point gemmes, og gruppen kan hentes tilbage. Superadmin kan også slå <b>Redigeringstilstand</b> til under Admin og så rette og slette spilledage, kampe, bøder, takster, point og forslag direkte, hvor de står.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
