@@ -154,7 +154,7 @@ export const FAQ = [
     a: `<p>Roller gælder pr. gruppe.</p>
 <p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
 <p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller, lægge Americano på ranglisten og styre bødekassen. Superbrugere kan også give bøder og godkende betalinger.</p>
-<p><b>Superadmin</b> opretter grupper, vælger hvilke centre hver gruppe må bruge, Superadmin kan slette (arkivere) en gruppe under Admin → Grupper, så ingen kan bruge den længere; kampe og point gemmes, og gruppen kan hentes tilbage. Superadmin kan også slå <b>Redigeringstilstand</b> til under Admin og så rette og slette spilledage, kampe, bøder, takster, point og forslag direkte, hvor de står.</p>`,
+<p><b>Superadmin</b> opretter grupper og vælger, hvilke centre hver gruppe må bruge. Under Admin → Grupper står gruppens admins øverst på kortet, og medlemmer og roller ligger foldet sammen under <b>Medlemmer og roller</b>. Nederst kan superadmin slette (arkivere) gruppen, så ingen kan bruge den længere; kampe og point gemmes, og gruppen kan hentes tilbage. Superadmin kan også slå <b>Redigeringstilstand</b> til under Admin og så rette og slette spilledage, kampe, bøder, takster, point og forslag direkte, hvor de står.</p>`,
   },
   {
     cat: 'Tilmelding og konto',

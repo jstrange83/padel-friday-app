@@ -25,7 +25,7 @@ export async function viewAdmin() {
   const em = document.getElementById('editMode');
   if (em) em.onchange = () => { setEditMode(em.checked); toast(em.checked ? 'Redigering er slået til' : 'Redigering er slået fra'); };
   if (S.adminTab === 'forslag') bindSuggestTab(viewAdmin);
-  app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); viewAdmin(); }));
+  app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { S.gmemOpen = false; setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
   app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });
   bind();
@@ -138,23 +138,26 @@ function groupsTab() {
     .sort((a, b) => ['admin', 'superbruger', 'bruger'].indexOf(a.role) - ['admin', 'superbruger', 'bruger'].indexOf(b.role) || S.profiles[a.player_id].name.localeCompare(S.profiles[b.player_id].name));
   const admins = mem.filter((m) => m.role === 'admin');
   const count = (id) => S.members.filter((m) => m.group_id === id && m.status === 'aktiv').length;
+  const live = liveGroups();
+  const adminNames = admins.map((m) => esc(S.profiles[m.player_id].name.split(' ')[0])).join(', ');
   return `
-    <div class="chips groups">${liveGroups().map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>
-    ${g ? `<div class="card">
-      <div class="head"><b class="big">${esc(group()?.name || '')}</b><button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
-      <div class="lbl">Centre gruppen må bruge</div>
+    ${live.length > 1 ? `<div class="chips groups">${live.map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>` : ''}
+    ${g ? `<div class="card gcard">
+      <div class="head"><div class="grow"><b class="big">${esc(group()?.name || '')}</b>
+        <small class="muted gsum">${mem.length === 1 ? '1 spiller' : `${mem.length} spillere`} · ${admins.length ? `Admin: ${adminNames}` : '<span class="warn">ingen admin</span>'}</small></div>
+        <button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
+      <div class="lbl">Centre</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
-      <div class="lbl">Tilføj en eksisterende spiller</div>
-      <input type="search" id="superAdd" placeholder="➕ Søg blandt alle spillere…" autocomplete="off"><div id="superHits" class="hits"></div>
-      <div class="lbl">Medlemmer (${mem.length}) ${admins.length ? '' : '<span class="warn">· gruppen har ingen admin</span>'}</div>
+      <details class="gmem" ${S.gmemOpen || !admins.length ? 'open' : ''}><summary><b>👥 Medlemmer og roller</b><span class="muted">${mem.length} ›</span></summary>
+      <input type="search" id="superAdd" placeholder="➕ Tilføj spiller…" autocomplete="off"><div id="superHits" class="hits"></div>
       <div class="mlist">${mem.map((m) => {
         const p = S.profiles[m.player_id];
         return `<div class="mrow"><span class="grow">${esc(p.name)}</span>
           <select class="rolesel sm" data-role="${p.id}" aria-label="Rolle for ${esc(p.name)}">${Object.entries(ROLE).map(([k, v]) =>
             `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <button class="icon sm" data-remove="${p.id}" aria-label="Fjern ${esc(p.name)} fra gruppen">✕</button></div>`;
-      }).join('') || '<p class="muted small">Ingen endnu.</p>'}</div>
-      <div class="mact"><button class="btn sm ghost danger" id="archiveGroup">🗄 Slet gruppe (arkivér)</button></div>
+      }).join('') || '<p class="muted small">Ingen endnu.</p>'}</div></details>
+      <div class="gfoot"><button class="link sm dn" id="archiveGroup">Slet gruppe</button></div>
     </div>` : ''}
     ${S.groups.some((x) => x.archived) ? `<details class="card archived"><summary><b>🗄 Slettede grupper (${S.groups.filter((x) => x.archived).length})</b></summary>
       ${S.groups.filter((x) => x.archived).map((x) => `<div class="mrow"><span class="grow">${esc(x.name)}<small class="muted"> · ${count(x.id)} spillere</small></span><button class="btn sm" data-unarchive="${x.id}">♻️ Hent tilbage</button></div>`).join('')}
@@ -282,6 +285,14 @@ function bind() {
   const np = document.getElementById('newPlayer');
   const gs = app.querySelector('details.gset');
   if (gs) gs.ontoggle = () => (S.gsetOpen = gs.open);
+  const gmem = app.querySelector('details.gmem');
+  if (gmem) {
+    gmem.querySelector('summary').onclick = () => (S.gmemOpen = !gmem.open);
+    // Arbejder man i listen (tilføj, rolle, fjern), bliver den stående åben
+    const keep = (e) => { if (!e.target.closest('summary')) S.gmemOpen = true; };
+    gmem.addEventListener('click', keep, true);
+    gmem.addEventListener('change', keep, true);
+  }
   const npb = document.getElementById('newPlayerBtn');
   if (npb) npb.onclick = () => { S.newPlayerOpen = true; np.closest('.newplayer').hidden = false; np.elements.name.focus(); };
   if (np) {

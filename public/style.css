@@ -566,6 +566,13 @@ textarea { font-size: 16px; }
 .gset > summary { display: flex; flex-direction: column; gap: 2px; cursor: pointer; list-style: none; }
 .gset > summary::-webkit-details-marker { display: none; }
 .gset .finesrow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.gcard .head .grow { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gcard .gsum { font-size: 14px; }
+.gmem { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.gmem > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; padding: 4px 0; }
+.gmem > summary::-webkit-details-marker { display: none; }
+.gmem[open] > summary { margin-bottom: 10px; }
+.gfoot { display: flex; justify-content: center; margin-top: 12px; }
 .editcard { padding: 12px 14px; }
 .editcard small { font-weight: 400; }
 

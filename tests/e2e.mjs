@@ -355,6 +355,7 @@ try {
   await page.click('#newGroup button');
   await wait(500);
   ok((await text()).includes('lørdagspadel'), 'gruppe oprettet og valgt');
+  ok(await page.locator('#superAdd').isVisible(), 'ny gruppe uden admin: medlemmer står åbne');
   await page.fill('#superAdd', 'bri');
   await page.locator('#superHits [data-sadd][data-r="admin"]').click();
   await wait(500);
@@ -368,6 +369,10 @@ try {
   await wait(400);
   ok(!(await page.locator('.mrow:has-text("Test Carsten")').count()), 'Carsten fjernet igen');
   await shot('superadmin');
+  await page.click('[data-group="g-fre"]');
+  await wait(400);
+  ok(!(await page.locator('#superAdd').isVisible()) && (await page.locator('.gsum').innerText()).includes('Admin:'), 'gruppekort: medlemmer foldet sammen, admin vist øverst');
+  await shot('gruppekort');
   await page.click('[data-tab="baner"]');
   await page.locator('details.centerbox summary').first().click();
   await shot('admin-baner');
