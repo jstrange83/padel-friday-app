@@ -937,6 +937,34 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(300);
   ok(!(await page.evaluate(() => document.documentElement.dataset.theme)), 'tilbage til standard');
 
+  // Nyt i appen: popup én gang efter en større opdatering; spillere ser ikke admin-nyheder
+  await loginAs('jimmy@test');
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = null; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = null; window.__mock.save(); });
+  await page.reload();
+  await page.waitForSelector('#newsModal');
+  const nm = await page.locator('#newsModal').innerText();
+  ok(nm.includes('Nyt i appen') && nm.includes('Nyt for admins'), 'admin får popup med nyheder (også admin-nyheder)');
+  await shot('nyt-i-appen');
+  await page.click('#newsOk');
+  await page.reload();
+  await page.waitForSelector('#nav a');
+  await wait(500);
+  ok(!(await page.locator('#newsModal').count()), 'popuppen kommer kun én gang');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'test5@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#nav a, .finegate');
+  if (await page.locator('.finegate').count()) await page.click('#fgOk');
+  await page.waitForSelector('#newsModal');
+  ok(!(await page.locator('#newsModal').innerText()).includes('Nyt for admins'), 'spillere ser ikke admin-nyheder');
+  await page.click('#newsOk');
+  await page.goto('http://localhost:8765/#/nyt');
+  await page.waitForSelector('.news-entry');
+  ok((await page.locator('.news-entry').count()) >= 1, 'tidligere nyheder kan læses under Profil');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

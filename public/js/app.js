@@ -11,6 +11,7 @@ import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { viewNotices, loadUnread } from './views/notify.js';
 import { viewTheme, applyTheme } from './theme.js';
+import { maybeShowNews, viewNews } from './news.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
@@ -103,6 +104,8 @@ async function gates() {
   }
   await route();
   // Én gang pr. åbning: spørg om forslag, når spilleren har spillet nok kampe
+  // "Nyt i appen" først; ellers evt. spørgsmål om forslag (aldrig to popups på én gang)
+  if (!S.viewAs && !S.newsChecked) { S.newsChecked = true; if (maybeShowNews()) return; }
   if (!S.viewAs && !S.feedbackChecked && S.groupId && hasSuggest()) { S.feedbackChecked = true; maybeAskFeedback(); }
 }
 
@@ -122,7 +125,7 @@ function renderNav() {
   if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || cur.startsWith('#/udseende'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
@@ -176,6 +179,7 @@ const ROUTES = {
   forslag: () => viewSuggest(),
   beskeder: () => viewNotices(),
   udseende: () => viewTheme(),
+  nyt: () => viewNews(app),
   admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
 };
 

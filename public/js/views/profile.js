@@ -1,6 +1,7 @@
 // Egen profil: overblik øverst, ret oplysninger i en fold-ud. Første gang: velkomstformular.
 import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
+import { latestNewsId } from '../news.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, ROLE, roleIn, groupElo, group, isSuper, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
 import { editBtn } from '../editmode.js';
 
@@ -53,6 +54,7 @@ export function renderProfile(isNew) {
     <div class="list links">
       ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende</span><span class="muted">›</span></a>'}
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
+      <a class="row" href="#/nyt"><span class="grow">🆕 Nyt i appen</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
     </div>
@@ -79,6 +81,8 @@ function bind(isNew) {
         await q(sb.rpc('padel_admin_set_phone', { p_user: S.viewAs, p_phone: f.phone.value }));
       } else {
         await q(sb.rpc('padel_save_profile', { p_name: f.name.value, p_gender: f.gender.value, p_side: f.side.value }));
+        // Nye spillere skal ikke have gamle nyheder
+        if (isNew) { try { await q(sb.rpc('padel_set_news_seen', { p_id: latestNewsId() })); } catch {} }
         const claimed = await q(sb.rpc('padel_set_phone_v2', { p_phone: f.phone.value }));
         if (claimed) {
           toast('Velkommen! Dine kampe og point fra før er flyttet over til dig');

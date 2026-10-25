@@ -568,3 +568,10 @@ textarea { font-size: 16px; }
 .gset .finesrow { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .editcard { padding: 12px 14px; }
 .editcard small { font-weight: 400; }
+
+/* Nyt i appen */
+.news-card { max-height: 85vh; overflow-y: auto; }
+.news-entry + .news-entry { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.news-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.news-entry ul { margin: 8px 0 0; padding-left: 4px; list-style: none; }
+.news-entry li { margin: 6px 0; font-size: 15px; line-height: 1.4; }

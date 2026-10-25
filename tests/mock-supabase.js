@@ -13,9 +13,9 @@ function seed() {
   ];
   const names = ['Anders', 'Bo', 'Carsten', 'Dennis', 'Erik', 'Frank', 'Anne', 'Berit', 'Camilla', 'Dorthe', 'Eva', 'Freja'];
   const sides = ['venstre', 'hojre', 'begge'];
-  const profiles = [{ id: 'u-admin', name: 'Jimmy', gender: 'mand', side: 'hojre', elo: 1000, is_admin: true, is_superadmin: true, role: 'admin', email: 'jimmy@test' },
-    ...names.map((n, i) => ({ id: 'u-' + (i + 1), name: 'Test ' + n, gender: i < 6 ? 'mand' : 'kvinde', side: sides[i % 3], elo: 1000, is_admin: false, role: 'bruger', email: `test${i + 1}@fredagspadel.test` })),
-    { id: 'u-brian', name: 'Brian', gender: 'mand', side: 'venstre', elo: 1000, is_admin: false, role: 'bruger', email: 'brian@test' }];
+  const profiles = [{ id: 'u-admin', name: 'Jimmy', gender: 'mand', side: 'hojre', elo: 1000, is_admin: true, is_superadmin: true, role: 'admin', email: 'jimmy@test', news_seen: '9999' },
+    ...names.map((n, i) => ({ id: 'u-' + (i + 1), name: 'Test ' + n, gender: i < 6 ? 'mand' : 'kvinde', side: sides[i % 3], elo: 1000, is_admin: false, role: 'bruger', email: `test${i + 1}@fredagspadel.test`, news_seen: '9999' })),
+    { id: 'u-brian', name: 'Brian', gender: 'mand', side: 'venstre', elo: 1000, is_admin: false, role: 'bruger', email: 'brian@test', news_seen: '9999' }];
   const groups = [{ id: 'g-fre', name: 'Fredagspadel' }];
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
@@ -192,6 +192,7 @@ const autoFine = (s) => {
 };
 
 const RPC = {
+  padel_set_news_seen: ({ p_id }) => { if (me()) me().news_seen = p_id; },
   padel_set_theme: ({ p_theme }) => { me().theme = p_theme; },
   padel_vapid_public: () => 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
   padel_save_push: ({ p_endpoint, p_p256dh, p_auth }) => { db.padel_push_subs.push({ endpoint: p_endpoint, user_id: uid(), p256dh: p_p256dh, auth: p_auth, enabled: true }); },
