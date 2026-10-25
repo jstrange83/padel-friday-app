@@ -483,7 +483,8 @@ export async function myKidsSection(page = false) {
     q(sb.from('padel_club_kid_info').select('*').in('kid_id', ids)).catch(() => []),
   ]) : [[], []];
   const mineK = kids.filter((k) => k.player_id !== S.me.id && gds.some((x) => x.kid_id === k.id && x.user_id === S.me.id));
-  const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (S.members.some((m) => m.group_id === x.id && m.player_id === S.me.id && m.status === 'aktiv') || kids.some((k) => k.group_id === x.id)));
+  // Kun klubber, man selv er med i eller har børn i (ikke alle klubber, superadmin kan se)
+  const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (S.members.some((m) => m.group_id === x.id && m.player_id === S.me.id && m.status === 'aktiv') || mineK.some((k) => k.group_id === x.id)));
   if (!mineK.length && !clubs.length) return '';
   // Hold og trænere pr. klub
   const per = {};
