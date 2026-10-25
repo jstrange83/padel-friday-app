@@ -700,7 +700,7 @@ export function clubStaffCard() {
       ${role(id) === 'admin' ? '' : `<div class="checks rights">${RIGHTS.map(([k, l]) => `<label><input type="checkbox" name="${k}" ${st(id)[k] ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`}
       <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
-      <div class="mact"><button class="btn sm primary">Gem</button></div></form>`).join('')}
+      <div class="mact">${st(id).board_title || RIGHTS.some(([k]) => st(id)[k]) ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
     ${others.length ? `<form class="frow" id="addStaff"><label class="grow">Tilføj en person<select name="u"><option value="">Vælg…</option>${others.map((id) => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label><button class="btn sm">Tilføj</button></form>` : ''}
   </details>`;
 }
@@ -717,6 +717,15 @@ export function bindClubStaff(refresh) {
       await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('treasurer'), p_post: v('can_post'), p_events: v('can_events'), p_approve: v('can_approve'), p_cert_date: f.cert.value || null }));
       S.staffAdd = null; toast('Gemt'); await loadClub(S.groupId); await refresh();
     } catch { busy(btn, false); }
+  }));
+  app.querySelectorAll('[data-staffrm]').forEach((b) => (b.onclick = async () => {
+    const id = b.dataset.staffrm;
+    if (!confirm(`Fjern ${nameOf(id)} fra bestyrelsen og tag rettighederne fra?\n\nPersonen bliver i klubben (som medlem, træner eller admin som før).`)) return;
+    busy(b, true);
+    try {
+      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: id, p_title: null, p_treasurer: false, p_post: false, p_events: false, p_approve: false, p_cert_date: C().certs.find((x) => x.user_id === id)?.cert_date || null }));
+      toast(`${nameOf(id)} er fjernet fra bestyrelsen`); await loadClub(S.groupId); await refresh();
+    } catch { busy(b, false); }
   }));
   const ad = document.getElementById('addStaff');
   if (ad) ad.onsubmit = (e) => { e.preventDefault(); if (ad.u.value) { S.staffAdd = ad.u.value; refresh(); } };

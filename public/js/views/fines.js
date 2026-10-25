@@ -121,7 +121,7 @@ export async function viewFines() {
     ${kings.length ? `<h3>🏆 Bødekonger</h3><div class="list">${kings.map(([pid, a], i) => `<div class="row ${pid === me ? 'me' : ''}"><div class="pos">${i + 1}</div><div class="grow">${esc(nameOf(pid))}</div><b>${kr(a)}</b></div>`).join('')}</div>` : ''}
 
     <details class="card faq"><summary><b>📋 Takster</b></summary><div>
-      ${types.filter((t) => t.active).map((t) => `<div class="myfine">${editBtn('padel_fine_types', t.id)}<span class="grow">${esc(t.name)}${autoTag(t)}</span><b>${kr(t.amount)}${t.per_minute ? ' pr. minut' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
+      ${types.filter((t) => t.active).map((t) => `<div class="myfine rate">${editBtn('padel_fine_types', t.id)}<span class="grow">${esc(t.name)}${autoTag(t)}</span><b>${kr(t.amount)}${t.per_minute ? '<small> pr. min.</small>' : ''}</b></div>`).join('') || '<p class="muted">Ingen takster endnu.</p>'}
     </div></details>
 
     ${admin ? settings(gr, types) : ''}
@@ -188,7 +188,9 @@ export function bindGive(g, eventId, people, onDone) {
 }
 
 const AUTO = { afbud: 'automatisk ved afmelding', afbud_dagen: 'automatisk ved afmelding på dagen' };
-const autoTag = (t) => (t.auto ? ` <span class="badge auto">⚡ ${AUTO[t.auto]}</span>` : '');
+// Automatiske takster: en lille linje under navnet (ikke et mærke, der knækker over flere linjer)
+const AUTO_SHORT = { afbud: 'Automatisk ved afbud', afbud_dagen: 'Automatisk ved afbud samme dag' };
+const autoTag = (t) => (t.auto ? `<small class="autonote">⚡ ${AUTO_SHORT[t.auto]}</small>` : '');
 const autoSel = (a) => `<label>Automatisk<select name="auto"><option value="">Nej, gives af admin</option>${Object.entries(AUTO).map(([k, v]) => `<option value="${k}" ${a === k ? 'selected' : ''}>Ja, ${v}</option>`).join('')}</select></label>`;
 const unitSel = (pm) => `<select name="unit" aria-label="Enhed"><option value="fast" ${pm ? '' : 'selected'}>kr.</option><option value="minut" ${pm ? 'selected' : ''}>kr. pr. minut</option></select>`;
 

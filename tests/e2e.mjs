@@ -1260,10 +1260,21 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const pf = page.locator('form[data-staff="u-nyforaelder"]');
   await pf.locator('select[name=title]').selectOption('Kasserer');
   await pf.locator('label:has(input[name=treasurer])').click();
-  await pf.locator('button').click();
+  await pf.locator('button.primary').click();
   await wait(500);
   ok((await page.evaluate(() => window.__mock.db().padel_club_staff.find((x) => x.user_id === 'u-nyforaelder')?.board_title)) === 'Kasserer', 'Pia sat som kasserer i bestyrelsen med ret til kontingent');
   await shot('klub-bestyrelse');
+  // Fjern og sæt igen (Pia skal være kasserer i resten af testen)
+  await page.locator('form[data-staff="u-nyforaelder"] [data-staffrm]').click();
+  await wait(500);
+  ok(!(await page.evaluate(() => window.__mock.db().padel_club_staff.find((x) => x.user_id === 'u-nyforaelder')?.board_title)) && !(await page.locator('form[data-staff="u-nyforaelder"]').count()), 'bestyrelsesmedlem kan fjernes');
+  await page.locator('#addStaff select').selectOption({ label: 'Pia Forælder' });
+  await page.click('#addStaff button');
+  await page.waitForSelector('form[data-staff="u-nyforaelder"]');
+  await page.locator('form[data-staff="u-nyforaelder"] select[name=title]').selectOption('Kasserer');
+  await page.locator('form[data-staff="u-nyforaelder"] label:has(input[name=treasurer])').click();
+  await page.locator('form[data-staff="u-nyforaelder"] button.primary').click();
+  await wait(500);
   await noOverflow('klub bestyrelse');
   await freshLogin('nyforaelder@test');
   await page.waitForSelector('#nav a');
