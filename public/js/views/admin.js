@@ -7,7 +7,7 @@ import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
-import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer } from './club.js';
+import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance } from './club.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin). I en klub: Børn og Hold og tider (trænere)
@@ -15,17 +15,19 @@ export async function viewAdmin() {
   const tabs = [
     club && canRun() ? ['boern', `👧 Børn${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
     club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
+    club && canRun() ? ['fremmode', '📊 Fremmøde'] : null,
     club && isTreasurer() ? ['kontingent', '💳 Kontingent'] : null,
     (isAdmin() && S.groupId) || isSuper() ? ['spillere', club ? '👥 Medlemmer' : '👥 Spillere'] : null,
     isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null, isSuper() && hasSuggest() ? ['forslag', '💡 Forslag'] : null].filter(Boolean);
   if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
   if (S.adminTab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
   if (club && ['boern', 'hold', 'kontingent', 'spillere'].includes(S.adminTab)) { await loadClub(S.groupId); await loadClubPending(); }
-  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab }[S.adminTab];
+  if (club && S.adminTab === 'fremmode') await loadAttendance(S.attWeeks || 8);
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab }[S.adminTab];
   app.innerHTML = `
   <div class="page admin">
     <h1>Admin</h1>
-    ${club && ['boern', 'hold', 'kontingent'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
+    ${club && ['boern', 'hold', 'kontingent', 'fremmode'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
     ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand <small class="muted">(ret og slet alt, på denne enhed)</small></span></label></div>` : ''}
@@ -38,6 +40,7 @@ export async function viewAdmin() {
   if (S.adminTab === 'boern') bindClubKids(clubRefresh);
   if (S.adminTab === 'hold') bindClubTeams(clubRefresh);
   if (S.adminTab === 'kontingent') bindClubFees(clubRefresh);
+  if (S.adminTab === 'fremmode') bindClubAttendance(clubRefresh);
   if (S.adminTab === 'spillere' && club) { bindClubSettings(clubRefresh); bindClubStaff(clubRefresh); }
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { S.gmemOpen = false; setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));

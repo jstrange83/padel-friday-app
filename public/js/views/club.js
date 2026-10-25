@@ -11,6 +11,12 @@ const dayLabel = (d) => new Intl.DateTimeFormat('da-DK', { weekday: 'long', day:
 const t5 = (t) => String(t || '').slice(0, 5);
 export const WEEKDAY = { 1: 'Mandag', 2: 'Tirsdag', 3: 'Onsdag', 4: 'Torsdag', 5: 'Fredag', 6: 'Lørdag', 7: 'Søndag' };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Starttid i ms for en dato + klokkeslæt i dansk tid
+const startMs = (day, time) => {
+  const guess = Date.parse(`${day}T${t5(time)}:00Z`);
+  const off = new Date(guess).toLocaleString('sv-SE', { timeZone: 'Europe/Copenhagen' }).replace(' ', 'T') + 'Z';
+  return guess - (Date.parse(off) - guess);
+};
 const kr = (n) => `${Number(n).toLocaleString('da-DK')} kr.`;
 // Tekst fra trænerne: linjeskift og links
 const rich = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');
@@ -106,6 +112,7 @@ export async function viewTraining() {
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
     ${occ.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
     ${!trainer ? trainersCard(teamIds) : ''}
+    <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
     ${!trainer ? '<p class="center"><a class="link sm" href="#/profil">👧 Mine børn og indmeldelse ›</a></p>' : ''}
   </div>`;
   bindTraining();
@@ -162,7 +169,7 @@ function trainerCard(o, today) {
     </summary>${cancelLine(c)}
     <div class="trlist">${kids.map((k) => {
       const a = absOf(o.s.id, o.day, k.id), yes = coming(o.s.id, o.day, k.id);
-      return `<div class="krow"><span class="grow">${esc(k.name)}${kidFlags(k)}${yes ? '' : `<small class="no">Afbud${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
+      return `<div class="krow"><span class="grow">${esc(k.name)}${kidFlags(k)}${yes ? '' : `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
     <div class="mact">${c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
@@ -173,14 +180,22 @@ function bindTraining() {
   app.querySelectorAll('[data-trteam]').forEach((b) => (b.onclick = () => { S.trTeam = b.dataset.trteam || null; viewTraining(); }));
   document.getElementById('trPast')?.addEventListener('click', () => { S.trPast = !S.trPast; viewTraining(); });
   document.getElementById('trMore')?.addEventListener('click', () => { S.trWeeks += 2; viewTraining(); });
+  document.getElementById('calLink')?.addEventListener('click', showCalendar);
   app.querySelectorAll('details[data-tr]').forEach((d) => d.querySelector('summary').addEventListener('click', () => { S.trOpen = d.open ? null : d.dataset.tr; }));
   app.querySelectorAll('[data-abs]').forEach((b) => (b.onclick = async () => {
     const [sid, day, kid, st] = b.dataset.abs.split('|');
     if (b.classList.contains('on')) return;
+    // Afbudsfrist: for sent er stadig muligt, men træneren får besked
+    let reason = null;
+    const hrs = group().club_absence_hours, s = session(sid);
+    if (st === 'afbud' && hrs && s && Date.now() > startMs(day, s.start_time) - hrs * 3600e3) {
+      reason = prompt(`Afbudsfristen er ${hrs} ${hrs === 1 ? 'time' : 'timer'} før træning, så træneren får besked om det sene afbud.\n\nSkriv evt. en kort grund:`, '');
+      if (reason === null) return;
+    }
     busy(b, true);
     try {
-      await q(sb.rpc('padel_club_set_absence', { p_session: sid, p_day: day, p_kid: kid, p_status: st, p_reason: null }));
-      toast(st === 'afbud' ? 'Afbud er givet' : 'Godt, vi ses! 🎾');
+      await q(sb.rpc('padel_club_set_absence', { p_session: sid, p_day: day, p_kid: kid, p_status: st, p_reason: reason }));
+      toast(st === 'afbud' ? (reason !== null ? 'Afbud er givet, og træneren har fået besked' : 'Afbud er givet') : 'Godt, vi ses! 🎾');
       viewTraining();
     } catch { busy(b, false); }
   }));
@@ -584,6 +599,9 @@ export function clubSettingsCard() {
       <p class="muted small">Find linket i MobilePay: åbn boksen og tryk "Del boks".</p>
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
+      <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
+      <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
+      <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>
       <label>Om klubben <small class="muted">(vises øverst under Opslag)</small><textarea name="info" rows="4" maxlength="2000" placeholder="Fx kontaktinfo på trænerne, hvad man skal have med, regler ved afbud">${esc(gr.club_info || '')}</textarea></label>
       <button class="btn primary">Gem</button>
     </form></details>`;
@@ -596,8 +614,72 @@ export function bindClubSettings(refresh) {
   f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
-    try { await q(sb.rpc('padel_club_set_fee_v2', { g: S.groupId, p_fee: f.fee.value ? +f.fee.value : null, p_label: f.label.value, p_url: f.url.value, p_info: f.info.value, p_collect_address: f.addr.checked })); toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
+    try { await q(sb.rpc('padel_club_set_fee_v2', { g: S.groupId, p_fee: f.fee.value ? +f.fee.value : null, p_label: f.label.value, p_url: f.url.value, p_info: f.info.value, p_collect_address: f.addr.checked }));
+      await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 })); toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };
+}
+
+// ---------- Kalender-abonnement ----------
+export async function showCalendar(renew = false) {
+  let token;
+  try { token = await q(sb.rpc('padel_ical_token', { p_new: renew === true })); } catch { return; }
+  const https = `https://mxdgspfhakomblprhvto.supabase.co/functions/v1/padel-ical?t=${token}`;
+  const webcal = https.replace(/^https:/, 'webcal:');
+  const google = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
+  document.getElementById('calModal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'calModal'; wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="calTitle">
+    <div class="fgicon">📅</div><h2 id="calTitle">Træninger i din kalender</h2>
+    <p class="muted">Træningerne kommer automatisk i telefonens kalender og bliver opdateret, hvis tider ændres eller en træning aflyses.</p>
+    <div class="calbtns"><a class="btn primary" href="${webcal}">📱 iPhone / Outlook</a><a class="btn" href="${google}" target="_blank" rel="noopener">Google Kalender</a></div>
+    <p class="muted small">Android: brug Google Kalender. Virker en knap ikke, så <button class="link sm" id="calCopy">kopiér linket</button> og tilføj det som kalender-abonnement.</p>
+    <p class="muted small">Linket er personligt. Har du delt det ved en fejl, kan du <button class="link sm" id="calNew">lave et nyt</button> (det gamle holder op med at virke).</p>
+    <div class="mact"><button class="btn ghost" id="calClose">Luk</button></div></div>`;
+  document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('#calClose').onclick = close;
+  wrap.querySelector('#calCopy').onclick = async () => { try { await navigator.clipboard.writeText(https); toast('Linket er kopieret'); } catch { prompt('Kopiér linket', https); } };
+  wrap.querySelector('#calNew').onclick = () => { if (confirm('Lav et nyt link? Det gamle holder op med at virke, så du skal tilføje kalenderen igen.')) { close(); showCalendar(true); } };
+}
+
+// ---------- Admin: fremmøde ----------
+export async function loadAttendance(weeks) {
+  const to = todayISO(), from = addDays(to, -weeks * 7);
+  await loadClub(S.groupId, { from, to });
+  return { from, to };
+}
+
+export function clubAttendanceTab() {
+  const weeks = S.attWeeks || 8, teams = myTeams();
+  if (S.attTeam && !teams.some((t) => t.id === S.attTeam)) S.attTeam = null;
+  const tId = S.attTeam || teams[0]?.id;
+  if (!tId) return '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>';
+  const to = todayISO(), from = addDays(to, -weeks * 7);
+  // Træninger der er holdt: ikke aflyst, og hvor træneren har krydset fremmøde af
+  const held = occurrences([tId], from, to).filter((o) => !cancelOf(o.s.id, o.day) && C().attendance.some((a) => a.session_id === o.s.id && a.day === o.day));
+  const kids = C().kids.filter((k) => k.status === 'aktiv' && k.team_id === tId);
+  const rows = kids.map((k) => {
+    const met = held.filter((o) => present(o.s.id, o.day, k.id)).length;
+    const afb = held.filter((o) => !coming(o.s.id, o.day, k.id)).length;
+    const last = held.filter((o) => present(o.s.id, o.day, k.id)).map((o) => o.day).pop();
+    return { k, met, afb, pct: held.length ? Math.round((met / held.length) * 100) : null, last };
+  }).sort((a, b) => (a.pct ?? 101) - (b.pct ?? 101) || a.k.name.localeCompare(b.k.name));
+  const avg = rows.length && held.length ? Math.round(rows.reduce((s2, x) => s2 + x.met, 0) / (rows.length * held.length) * 100) : null;
+  return `
+    ${teams.length > 1 ? `<div class="chips">${teams.map((t) => `<button class="chip ${t.id === tId ? 'on' : ''}" data-attteam="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : ''}
+    <div class="chips static">${[4, 8, 16].map((w) => `<button class="chip ${w === weeks ? 'on' : ''}" data-attweeks="${w}">${w} uger</button>`).join('')}</div>
+    <div class="card feesum"><b>📊 ${esc(team(tId).name)} · de sidste ${weeks} uger</b>
+      <div class="ftiles"><div><b>${held.length}</b><small>træninger</small></div><div><b>${avg ?? '–'}${avg != null ? '%' : ''}</b><small>fremmøde</small></div><div><b>${kids.length}</b><small>børn</small></div></div>
+      <p class="muted small">Tæller de træninger, hvor fremmødet er krydset af.</p></div>
+    <div class="card">${rows.map((x) => `<div class="krow"><span class="grow"><b>${esc(x.k.name)}</b><small class="muted">${x.met} af ${held.length} gange${x.afb ? ` · ${x.afb} afbud` : ''}${x.last ? ` · sidst ${fmtDay(x.last)}` : ''}</small></span>
+      <span class="pct ${x.pct == null ? '' : x.pct < 50 ? 'low' : x.pct < 75 ? 'mid' : 'high'}">${x.pct == null ? '–' : `${x.pct}%`}</span></div>`).join('') || '<p class="muted small">Ingen børn på holdet.</p>'}</div>`;
+}
+
+export function bindClubAttendance(refresh) {
+  app.querySelectorAll('[data-attteam]').forEach((b) => (b.onclick = () => { S.attTeam = b.dataset.attteam; refresh(); }));
+  app.querySelectorAll('[data-attweeks]').forEach((b) => (b.onclick = () => { S.attWeeks = +b.dataset.attweeks; refresh(); }));
 }
 
 // Antal børn der venter på godkendelse i klubber, hvor jeg er træner (til tallet på Admin)

@@ -3,7 +3,7 @@ import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
-import { myKidsSection, bindMyKids } from './club.js';
+import { myKidsSection, bindMyKids, showCalendar } from './club.js';
 import { editBtn } from '../editmode.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -68,6 +68,7 @@ export function renderProfile(isNew) {
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/nyt"><span class="grow">🆕 Nyt i appen</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
+      ${club && !viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Træninger i min kalender</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
     </div>
@@ -112,6 +113,7 @@ function bind(isNew) {
     } catch { busy(btn, false); }
   };
   document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+  document.getElementById('calRow')?.addEventListener('click', (e) => { e.preventDefault(); showCalendar(); });
   document.getElementById('deleteMe')?.addEventListener('click', async (e) => {
     const who = S.viewAs ? S.me.name : 'din profil';
     if (!confirm(`Slet ${who}?\n\n${S.viewAs ? 'Spilleren' : 'Du'} forsvinder fra grupperne og ranglisten. Point og kampe gemmes: ${S.viewAs ? 'kommer spilleren' : 'kommer du'} igen (samme mail eller telefonnummer), er pointene de samme.`)) return;

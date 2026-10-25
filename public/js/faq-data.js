@@ -385,4 +385,21 @@ export const FAQ = [
 <li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Profil → Mine børn.</li></ul>
 <p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → Medlemmer → Trænere og kasserer). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
   },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Kan jeg få træningerne i min kalender?',
+    a: `<p>Ja. Tryk <b>📅 Få træningerne i din kalender</b> nederst under Træning (eller under Profil). Vælg iPhone/Outlook eller Google Kalender. Så kommer træningerne i telefonens kalender og opdateres selv, hvis en tid ændres eller en træning aflyses.</p>
+<p>Linket er personligt. Har du delt det ved en fejl, kan du lave et nyt samme sted.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Får jeg en påmindelse før træning? Og hvad er afbudsfristen?',
+    a: `<p>Hvis klubben har slået det til, får du en notifikation om eftermiddagen dagen før træning. Har du allerede givet afbud, får du ingen påmindelse.</p>
+<p>Klubben kan sætte en <b>afbudsfrist</b>, fx 2 timer før. Du kan stadig give afbud efter fristen, men så får holdets trænere besked, og du kan skrive en kort grund.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvor ser jeg fremmøde?',
+    a: `<p>Trænere ser under <b>Admin → Fremmøde</b>, hvor ofte hvert barn er kommet de sidste 4, 8 eller 16 uger. Det tæller de træninger, hvor fremmødet er krydset af under Træning. Børn med lavt fremmøde står øverst.</p>`,
+  },
 ];

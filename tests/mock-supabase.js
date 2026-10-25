@@ -555,6 +555,22 @@ const _feePaid = RPC.padel_club_fee_paid, _feeSet = RPC.padel_club_fee_set;
 RPC.padel_club_fee_paid = (a) => { const k = KID(a.p_kid); if (treasurer(k.group_id) && !canRun(k.group_id)) { upsert('padel_club_fees', ['kid_id', 'label'], { kid_id: k.id, label: db.padel_groups.find((x) => x.id === k.group_id).club_fee_label, status: 'betalt' }); return; } return _feePaid(a); };
 RPC.padel_club_fee_set = _feeSet;
 
+
+// Etape 2: påmindelser, afbudsfrist, kalender
+Object.assign(RPC, {
+  padel_club_set_options: ({ g, p_reminders, p_absence_hours }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { club_reminders: p_reminders, club_absence_hours: p_absence_hours || null }); },
+  padel_ical_token: ({ p_new }) => { const p = me(); if (!p.ical_token || p_new) p.ical_token = code() + code(); return p.ical_token; },
+});
+const _setAbs = RPC.padel_club_set_absence;
+RPC.padel_club_set_absence = (a) => {
+  _setAbs(a);
+  const k = KID(a.p_kid), g = k.group_id, hrs = db.padel_groups.find((x) => x.id === g).club_absence_hours, s = db.padel_club_sessions.find((x) => x.id === a.p_session);
+  const startMs = Date.parse(`${a.p_day}T${s.start_time.slice(0, 5)}:00+01:00`);
+  const late = a.p_status === 'afbud' && hrs > 0 && !canRun(g) && Date.now() > startMs - hrs * 3600e3;
+  db.padel_club_absence.find((x) => x.session_id === a.p_session && x.day === a.p_day && x.kid_id === a.p_kid).late = late;
+  if (late) notify(db.padel_club_team_trainers.filter((x) => x.team_id === k.team_id && x.active).map((x) => x.user_id), 'klub_sent_afbud', 'Sent afbud: ' + k.name, a.p_reason || '', '/#/traening');
+};
+
 export function createClient() {
   let cb = () => {};
   const session = () => JSON.parse(sessionStorage.getItem(SKEY) || 'null');

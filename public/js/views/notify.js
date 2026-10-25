@@ -17,17 +17,17 @@ async function pushCard() {
 }
 
 export async function viewNotices() {
-  const list = await q(sb.from('padel_notifications').select('*').eq('user_id', S.realMe.id).order('created_at', { ascending: false }).limit(50));
+  // Under "Se som" vises ingen beskeder: de tilhører kun den, de er sendt til (ellers ville man se sine egne admin-beskeder)
+  const list = S.viewAs ? [] : await q(sb.from('padel_notifications').select('*').eq('user_id', S.realMe.id).order('created_at', { ascending: false }).limit(50));
   app.innerHTML = `
   <div class="page notices-page">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/fredage')">‹ Tilbage</button>
     <h1>🔔 Beskeder</h1>
-    ${S.viewAs ? '<div class="card warnbox">Du ser dine egne beskeder (ikke spillerens).</div>' : ''}
-    ${await pushCard()}
+    ${S.viewAs ? '<div class="card warnbox">Beskeder kan kun ses af den, de er sendt til, så de vises ikke, når du ser appen som en anden.</div>' : await pushCard()}
     ${list.length ? `<div class="list">${list.map((n) => `
       <a class="row nrow ${n.read_at ? '' : 'unread'}" href="${esc(n.url || '#/fredage')}">
         <div class="grow"><b>${esc(n.title)}</b>${n.body ? `<small>${esc(n.body)}</small>` : ''}<small class="muted">${fmtDate(n.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
-      </a>`).join('')}</div>` : '<p class="muted">Ingen beskeder endnu.</p>'}
+      </a>`).join('')}</div>` : S.viewAs ? '' : '<p class="muted">Ingen beskeder endnu.</p>'}
   </div>`;
   bindPushToggle(viewNotices);
   if (list.some((n) => !n.read_at)) { try { await q(sb.rpc('padel_notifications_read')); } catch {} S.unread = 0; hooks.renderNav?.(); }

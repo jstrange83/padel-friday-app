@@ -1036,9 +1036,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
   await page.fill('#clubSet textarea[name=info]', 'Husk vand og indendørssko. Træner: Brian');
   await page.locator('#clubSet input[name=addr]').check();
+  await page.fill('#clubSet input[name=hours]', '48');
   await page.click('#clubSet button');
   await wait(500);
   ok((await page.locator('details.gset:not(.staff) summary').innerText()).includes('600'), 'kontingent sat op');
+  ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_absence_hours, clubId)) === 48, 'afbudsfrist sat til 48 timer');
   await page.click('details.staff summary');
   await page.locator('form[data-staff="u-brian"] input[name=cert]').fill('2026-09-01');
   await page.locator('form[data-staff="u-brian"] button').click();
@@ -1120,6 +1122,18 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');
   ok((await page.locator('.feecard').innerText()).includes('1.200 kr.'), 'kontingent for to børn vises');
   ok((await page.locator('.card.trainers').innerText()).includes('Brian'), 'forælderen ser holdets træner');
+  // Sent afbud (dagens træning er inden for fristen på 48 timer): træneren får besked
+  await page.locator('.tr').first().locator('.krow').last().locator('[data-abs$="|afbud"]').click();
+  await wait(500);
+  ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'klub_sent_afbud' && n.user_id === 'u-brian').length)) === 2 && (await page.evaluate(() => window.__mock.db().padel_club_absence.every((a) => a.late))), 'træneren får besked om sene afbud (inden for 48 timer)');
+  await page.locator('.tr').first().locator('.krow').last().locator('[data-abs$="|kommer"]').click();
+  await wait(500);
+  // Kalender
+  await page.click('#calLink');
+  await page.waitForSelector('#calModal');
+  ok((await page.locator('#calModal a[href^="webcal://"]').count()) === 1 && (await page.locator('#calModal a[href*="calendar.google.com"]').count()) === 1, 'kalender-abonnement med link til iPhone og Google');
+  await shot('klub-kalender');
+  await page.click('#calClose');
   await shot('klub-traening-foraelder');
   await noOverflow('klub træning forælder');
   await page.click('.feecard [data-only]');
@@ -1137,6 +1151,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('.tr.trainer').first().locator('[data-att]').first().check();
   await wait(400);
   ok((await page.evaluate(() => window.__mock.db().padel_club_attendance.filter((a) => a.present).length)) === 1, 'fremmøde krydset af');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('[data-tab="fremmode"]');
+  await page.click('[data-tab="fremmode"]');
+  await page.waitForSelector('.pct');
+  ok((await page.locator('.krow:has-text("Ida Test") .pct').innerText()) === '100%' && (await page.locator('.krow:has-text("Oscar Test") .pct').innerText()) === '0%', 'fremmødestatistik pr. barn');
+  await shot('klub-fremmode');
+  await noOverflow('klub fremmøde');
+  await page.goto('http://localhost:8765/#/traening');
+  await page.waitForSelector('.tr.trainer');
   await shot('klub-traening-traener');
   await noOverflow('klub træning træner');
   await page.locator('.tr.trainer').last().locator('summary').click();
@@ -1154,6 +1177,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#nav a[href="#/admin"]');
   await page.waitForSelector('.tabbar');
   ok(!(await page.locator('[data-tab="kontingent"]').count()) && !(await page.locator('[data-tab="spillere"]').count()), 'træneren ser ikke kontingent og medlemmer');
+  await page.click('[data-tab="boern"]');
   await page.click('details.plist summary');
   await shot('klub-boern');
   await noOverflow('klub børn');

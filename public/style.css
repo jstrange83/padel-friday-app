@@ -663,3 +663,9 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .ftiles .no { color: var(--dn); }
 .privacy ul { padding-left: 18px; } .privacy li { margin: 6px 0; line-height: 1.4; }
 .privacy .card h3 { margin-top: 0; }
+/* Klub etape 2 */
+.calbtns { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.calbtns .btn { text-decoration: none; }
+.pct { font-weight: 800; min-width: 48px; text-align: right; }
+.pct.low { color: var(--dn); } .pct.mid { color: var(--warn); } .pct.high { color: var(--up); }
+.chips.static .chip { cursor: pointer; }
