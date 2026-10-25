@@ -136,7 +136,9 @@ export async function viewTraining() {
     ${items.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
     ${!trainer ? trainersCard(teamIds) : ''}
     <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
-    ${!trainer ? '<p class="center"><a class="link sm" href="#/profil">👧 Mine børn og indmeldelse ›</a></p>' : ''}
+    ${!trainer ? `<div class="card mykids"><div class="ftop"><b>👧 Mine børn</b><a class="link sm" href="#/boern">Ret oplysninger ›</a></div>
+      ${mine.map((k) => `<div class="krow"><span class="grow">${kidLabel(k)}<small class="muted">${esc([team(k.team_id)?.name, k.status === 'ansoegt' ? (k.waitlist ? 'venteliste' : 'venter på godkendelse') : k.trial ? 'prøvetræning' : ''].filter(Boolean).join(' · '))}</small></span></div>`).join('')}
+      <div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ Meld et barn ind</a></div></div>` : ''}
   </div>`;
   bindTraining();
 }
@@ -461,7 +463,18 @@ export async function viewClubJoin(g) {
 }
 
 // ---------- Mine børn (på profilen) ----------
-export async function myKidsSection() {
+// Egen side: Mine børn (ret oplysninger, eget login, anden forælder, meld ind og ud)
+export async function viewMyKids() {
+  const h = await myKidsSection(true);
+  app.innerHTML = `<div class="page club">
+    <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/traening')">‹ Tilbage</button>
+    <h1>👧 Mine børn</h1>
+    ${h || '<div class="card empty"><p class="muted">Du har ikke meldt nogen børn ind endnu. Brug klubbens invitationslink for at melde dit barn ind.</p></div>'}
+  </div>`;
+  bindMyKids(viewMyKids);
+}
+
+export async function myKidsSection(page = false) {
   let kids = [];
   try { kids = await q(sb.from('padel_club_kids').select('*').in('status', ['ansoegt', 'aktiv']).order('name')); } catch { return ''; }
   const ids = kids.map((k) => k.id);
@@ -479,11 +492,11 @@ export async function myKidsSection() {
     per[g] = { teams, trainers: trainers || [] };
   }
   S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '' }));
-  return `<h3>Mine børn</h3>
+  return `${page ? '' : '<h3>Mine børn</h3>'}
     ${S.myKids.map((k, i) => {
       const tm = per[k.group_id]?.teams.find((t) => t.id === k.team_id);
       const ts = (per[k.group_id]?.trainers || []).filter((x) => x.team_ids.includes(k.team_id));
-      return `<details class="card kidcard"><summary><span class="grow"><b>${esc(k.name)}</b><small class="muted">${esc(group(k.group_id)?.name || 'Klub')}${tm ? ` · ${esc(tm.name)}` : ''}${k.status === 'ansoegt' ? ' · ⏳ venter på godkendelse' : ''}${k.player_id ? ' · har eget login' : ''}</small></span><span class="muted">›</span></summary>
+      return `<details class="card kidcard" ${page && S.myKids.length === 1 ? 'open' : ''}><summary><span class="grow"><b>${esc(k.name)}</b><small class="muted">${esc(group(k.group_id)?.name || 'Klub')}${tm ? ` · ${esc(tm.name)}` : ''}${k.status === 'ansoegt' ? ' · ⏳ venter på godkendelse' : ''}${k.player_id ? ' · har eget login' : ''}</small></span><span class="muted">›</span></summary>
       ${ts.length ? `<div class="lbl">Trænere</div>${ts.map(trainerLinks).join('')}` : ''}
       <details class="kidedit"><summary><span class="link sm">✏️ Ret ${esc(k.name.split(' ')[0])}s oplysninger</span></summary>
         <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address)}<button class="btn primary">Gem</button></form></details>

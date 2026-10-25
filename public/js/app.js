@@ -1,6 +1,6 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
 import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
-import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer } from './views/club.js';
+import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids } from './views/club.js';
 import { viewPrivacy } from './views/privacy.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
@@ -166,7 +166,7 @@ function renderClubNav() {
   if (canRun() || isTreasurer() || pend) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
-    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|klub-ind|privatliv)/.test(cur));
+    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
 }
 
@@ -225,6 +225,7 @@ const ROUTES = {
   nyt: () => viewNews(app),
   admin: () => (isAdmin() || isSuper() || (isClub() && (canRun() || isTreasurer())) ? viewAdmin() : ROUTES.fredage()),
   privatliv: () => viewPrivacy(),
+  boern: () => viewMyKids(),
   traening: () => (isClub() ? viewTraining() : viewEvents()),
   opslag: () => (isClub() ? viewPosts() : viewEvents()),
   'klub-ind': (g) => viewClubJoin(g),
@@ -237,7 +238,7 @@ async function route() {
   window.scrollTo(0, 0);
   let [, page, id] = (location.hash || '#/fredage').split('/');
   renderNav();
-  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv'].includes(page)) return viewNoGroup();
+  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern'].includes(page)) return viewNoGroup();
   if (isClub() && (!page || NOT_IN_CLUB.includes(page))) page = 'traening';
   try { await (ROUTES[page] || ROUTES.fredage)(id); } catch (e) { console.error(e); }
   renderNav();

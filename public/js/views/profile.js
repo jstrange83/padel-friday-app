@@ -79,7 +79,7 @@ export function renderProfile(isNew) {
   </div>`;
   bind(false);
   // Mine børn i en juniorklub (og knap til at melde flere ind)
-  if (!viewing) myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderProfile(false)); } });
+  myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderProfile(false)); } });
   // Mærke ved nye svar på forslag
   if (hasSuggest()) unseenReplies().then((n) => { const r = document.getElementById('sugRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n === 1 ? 'Nyt svar' : `${n} nye svar`}</span>`; });
 }

@@ -1132,6 +1132,13 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');
   ok((await page.locator('.feecard').innerText()).includes('1.200 kr.'), 'kontingent for to børn vises');
   ok((await page.locator('.card.trainers').innerText()).includes('Brian'), 'forælderen ser holdets træner');
+  ok((await page.locator('.card.mykids .krow').count()) === 2 && await page.locator('.card.mykids a[href^="#/klub-ind/"]').count(), 'kortet "Mine børn" på Træning med knap til at melde flere ind');
+  await page.click('.card.mykids a[href="#/boern"]');
+  await page.waitForSelector('.kidcard');
+  ok((await page.locator('.kidcard').count()) === 2 && await page.locator('.kidcard details.kidedit').count() === 2, 'siden Mine børn med Ret oplysninger');
+  await shot('klub-mine-boern');
+  await page.goto('http://localhost:8765/#/traening');
+  await page.waitForSelector('.tr');
   // Sent afbud (dagens træning er inden for fristen på 48 timer): træneren får besked
   await page.locator('.tr').first().locator('.krow').last().locator('[data-abs$="|afbud"]').click();
   await wait(500);
