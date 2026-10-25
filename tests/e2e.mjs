@@ -970,6 +970,234 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('.news-entry');
   ok((await page.locator('.news-entry').count()) >= 1, 'tidligere nyheder kan læses under Profil');
 
+  // ---------- Juniorklub ----------
+  const freshLogin = async (email, url = 'http://localhost:8765/') => {
+    await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+    await page.goto(url);
+    await page.waitForSelector('#authForm');
+    await page.fill('input[name=email]', email);
+    await page.fill('input[name=password]', 'whatever');
+    await page.click('button[type=submit]');
+  };
+  const pastGates = async () => {
+    for (let i = 0; i < 4; i++) {
+      await wait(400);
+      if (await page.locator('#skipInstall').count()) { await page.click('#skipInstall'); continue; }
+      if (await page.locator('#newsOk').count()) { await page.click('#newsOk'); continue; }
+      if (await page.locator('#fgOk').count()) { await page.click('#fgOk'); continue; }
+    }
+  };
+  // Superadmin opretter klubben og gør Brian til træner
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.page.admin');
+  await page.click('[data-tab="grupper"]');
+  await page.click('details.newgroup summary');
+  await page.fill('#newGroup input[name=name]', 'Gribskov Padelklub Junior');
+  await page.locator('#newGroup label:has-text("Juniorklub")').click();
+  await page.click('#newGroup button.primary');
+  await wait(500);
+  ok((await page.locator('.gsum').innerText()).includes('Juniorklub'), 'juniorklub oprettet');
+  const clubId = await page.evaluate(() => window.__mock.db().padel_groups.find((x) => x.kind === 'klub').id);
+  await page.fill('#superAdd', 'bri');
+  ok((await page.locator('#superHits [data-r="superbruger"]').innerText()) === 'Træner', 'i en klub hedder superbruger "Træner"');
+  await page.locator('#superHits [data-r="superbruger"]').click();
+  await wait(400);
+  // Hold og træningstider (én i dag, så fremmøde kan krydses af, og én om 2 dage)
+  const dows = await page.evaluate(() => { const d = new Date(new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date()) + 'T12:00:00Z'); const a = d.getUTCDay() || 7; return [a, ((a + 1) % 7) + 1]; });
+  await page.click('[data-tab="hold"]');
+  await page.waitForSelector('#newTeam');
+  await page.fill('#newTeam input[name=name]', 'U12');
+  await page.click('#newTeam button');
+  await page.waitForSelector('details.teamcard[open]');
+  for (const [i, wd] of dows.entries()) {
+    await page.click('details.teamcard[open] details.srow.new summary');
+    const f = page.locator('details.teamcard[open] details.srow.new form');
+    await f.locator('select[name=wd]').selectOption(String(wd));
+    await f.locator('input[name=st]').fill(i ? '17:00' : '16:00');
+    await f.locator('input[name=en]').fill(i ? '18:30' : '17:00');
+    await f.locator('input[name=place]').fill('Padelhuset Gilleleje');
+    await f.locator('button.primary').click();
+    await wait(500);
+  }
+  ok((await page.locator('details.teamcard[open] details.srow:not(.new)').count()) === 2, 'to træningstider på holdet');
+  await shot('klub-hold-tider');
+  await noOverflow('klub hold og tider');
+  // Kontingent og info
+  await page.click('[data-tab="spillere"]');
+  await page.click('details.gset summary');
+  await page.fill('#clubSet input[name=fee]', '600');
+  await page.fill('#clubSet input[name=label]', 'Efterår 2026');
+  await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
+  await page.fill('#clubSet textarea[name=info]', 'Husk vand og indendørssko. Træner: Brian');
+  await page.click('#clubSet button');
+  await wait(500);
+  ok((await page.locator('details.gset summary').innerText()).includes('600'), 'kontingent sat op');
+  await shot('klub-medlemmer');
+
+  // Forælder får invitationslinket, opretter sig og melder to børn ind
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto(`http://localhost:8765/#/velkommen/${clubId}`);
+  await page.reload();
+  await page.waitForSelector('#authForm');
+  ok((await text()).includes('juniorklub'), 'login nævner juniorklub ved invitation');
+  await wait(500);
+  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
+  await page.waitForSelector('button[type=submit]:has-text("Log ind")');
+  await page.fill('input[name=email]', 'nyforaelder@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  ok((await text()).includes('meld') && !(await page.locator('#pf label:has-text("Højre")').count()), 'forælder: velkomst nævner indmeldelse, ingen side på banen');
+  await page.fill('#pf input[name=name]', 'Pia Forælder');
+  await page.fill('#pf input[name=phone]', '22334455');
+  await page.click('#pf label:has-text("Kvinde")');
+  await page.click('#pf button.primary');
+  await pastGates();
+  await page.waitForSelector('#joinForm');
+  await page.fill('.kidf input[name=kname]', 'Oscar Test');
+  await page.fill('.kidf input[name=kyear]', '2014');
+  await page.click('#moreKid');
+  await page.locator('.kidf').nth(1).locator('input[name=kname]').fill('Ida Test');
+  await shot('klub-indmeld');
+  await noOverflow('klub indmeld');
+  await page.click('#joinForm button.primary');
+  await wait(600);
+  ok((await text()).includes('oscar test') && (await text()).includes('træner har godkendt'), 'forælder ser at børnene venter på godkendelse');
+
+  // Træneren (Brian) godkender og sætter på hold
+  await freshLogin('brian@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  const nav = await page.locator('#nav').innerText();
+  ok(nav.includes('Træning') && nav.includes('Opslag') && !nav.includes('Rangliste') && !nav.includes('Spilledage'), 'klubbens menu: Træning, Opslag, Profil, Admin');
+  ok((await page.locator('#nav a[href="#/admin"] .navbadge').innerText()) === '2', 'træneren ser tal for nye indmeldelser');
+  await page.click('#nav a[href="#/admin"]');
+  await page.waitForSelector('.kpend');
+  await shot('klub-godkend');
+  for (let i = 0; i < 2; i++) {
+    const row = page.locator('.kpend').first();
+    await row.locator('select').selectOption({ label: 'U12' });
+    await row.locator('[data-kok]').click();
+    await wait(500);
+  }
+  ok(!(await page.locator('.kpend').count()) && (await text()).includes('u12 (2)'), 'begge børn godkendt og på U12');
+  ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.user_id === 'u-nyforaelder' && n.kind === 'klub_optaget').length)) === 2, 'forælderen får besked om optagelse');
+
+  // Forælderen giver afbud og melder kontingent betalt
+  await freshLogin('nyforaelder@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/traening');
+  await page.waitForSelector('.tr');
+  ok((await page.locator('.tr').first().locator('.krow').count()) === 2, 'træningen viser begge børn');
+  await page.locator('.tr').nth(1).locator('.krow').first().locator('[data-abs$="|afbud"]').click();
+  await wait(500);
+  ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');
+  ok((await page.locator('.feecard').innerText()).includes('1.200 kr.'), 'kontingent for to børn vises');
+  await shot('klub-traening-foraelder');
+  await noOverflow('klub træning forælder');
+  await page.click('.feecard [data-only]');
+  await wait(500);
+  ok((await page.locator('.feecard').innerText()).toLowerCase().includes('venter på'), 'betaling afventer træneren');
+
+  // Træneren: ser afbud, krydser fremmøde af, aflyser, skriver opslag, bekræfter betaling
+  await freshLogin('brian@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/traening');
+  await page.waitForSelector('.tr.trainer');
+  ok((await page.locator('.tr.trainer').nth(1).locator('.trcount').innerText()).includes('1 afbud'), 'træneren ser antal afbud');
+  await page.locator('.tr.trainer').first().locator('summary').click();
+  await page.locator('.tr.trainer').first().locator('[data-att]').first().check();
+  await wait(400);
+  ok((await page.evaluate(() => window.__mock.db().padel_club_attendance.filter((a) => a.present).length)) === 1, 'fremmøde krydset af');
+  await shot('klub-traening-traener');
+  await noOverflow('klub træning træner');
+  await page.locator('.tr.trainer').last().locator('summary').click();
+  await page.locator('.tr.trainer').last().locator('[data-cancel$="|1"]').click();
+  await wait(500);
+  ok(await page.locator('.tr.cancelled').count(), 'træning aflyst');
+  await page.click('#nav a[href="#/opslag"]');
+  await page.waitForSelector('details.postnew');
+  await page.click('details.postnew summary');
+  await page.fill('#postForm input[name=title]', 'Velkommen');
+  await page.fill('#postForm textarea[name=body]', 'Første træning er i dag. Se mere på https://example.com');
+  await page.click('#postForm button.primary');
+  await wait(500);
+  ok((await page.locator('.post').count()) === 1 && (await page.locator('.post a').count()) === 1, 'opslag sendt (med link)');
+  await page.click('#nav a[href="#/admin"]');
+  await page.waitForSelector('.feesum');
+  ok((await page.locator('.feesum').innerText()).includes('2 afventer'), 'træneren ser betalinger der afventer');
+  await page.locator('details.plist').first().locator('summary').first().click();
+  await page.locator('details.prow').first().locator('summary').click();
+  await page.locator('details.prow').first().locator('[data-kfee$="|betalt"]').click();
+  await wait(400);
+  ok((await page.locator('.feesum').innerText()).includes('1 af 2'), 'træneren bekræfter betaling');
+  await shot('klub-boern');
+  await noOverflow('klub børn');
+
+  // Forælderen ser opslag og info, og deler adgang med den anden forælder
+  await freshLogin('nyforaelder@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/opslag');
+  await page.waitForSelector('.post');
+  ok((await text()).includes('husk vand') && (await text()).includes('velkommen'), 'forælder ser info og opslag');
+  ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.user_id === 'u-nyforaelder' && n.kind === 'klub_opslag').length)) === 1, 'forælder får notifikation om opslag');
+  await shot('klub-opslag');
+  await page.goto('http://localhost:8765/#/profil');
+  await page.waitForSelector('.kidcard');
+  ok((await page.locator('.kidcard').count()) === 2 && !(await page.locator('.pts').count()), 'profil viser mine børn (og ingen point)');
+  await shot('klub-profil');
+  const codes = await page.evaluate(() => { const k = window.__mock.db().padel_club_kids.find((x) => x.name === 'Oscar Test'); return [k.guardian_code, k.login_code]; });
+  // Anden forælder via link
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto(`http://localhost:8765/#/barn/${codes[0]}`);
+  await page.reload();
+  await page.waitForSelector('#authForm');
+  ok((await text()).includes('forælder til oscar test'), 'link til anden forælder forklarer hvad det er');
+  await wait(500);
+  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
+  await page.waitForSelector('button[type=submit]:has-text("Log ind")');
+  await page.fill('input[name=email]', 'nyfar@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  await page.fill('#pf input[name=name]', 'Per Far');
+  await page.fill('#pf input[name=phone]', '33445566');
+  await page.click('#pf label:has-text("Mand")');
+  await page.click('#pf button.primary');
+  await pastGates();
+  await page.waitForSelector('.tr');
+  ok((await text()).includes('oscar test') && !(await text()).includes('ida test'), 'anden forælder ser kun sit barn');
+  // Barnets eget login
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto(`http://localhost:8765/#/barn/${codes[1]}`);
+  await page.reload();
+  await page.waitForSelector('#authForm');
+  ok((await text()).includes('hej oscar'), 'barnets link hilser på barnet');
+  await wait(500);
+  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
+  await page.waitForSelector('button[type=submit]:has-text("Log ind")');
+  await page.fill('input[name=email]', 'nyoscar@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  ok(await page.locator('#pf label:has-text("Højre")').count(), 'barnet vælger selv side på banen');
+  await page.fill('#pf input[name=name]', 'Oscar Test');
+  await page.fill('#pf input[name=phone]', '44556677');
+  await page.click('#pf label:has-text("Mand")');
+  await page.click('#pf label:has-text("Højre")');
+  await page.click('#pf button.primary');
+  await pastGates();
+  await page.waitForSelector('.tr');
+  ok((await page.locator('.krow').first().innerText()).includes('(dig)'), 'barnet ser sine egne træninger');
+  await shot('klub-barn');
+  await noOverflow('klub barn');
+
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

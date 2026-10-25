@@ -5,6 +5,15 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-25b', date: '25. oktober 2026', title: 'Juniorklub i appen',
+    items: [
+      '🧒 Appen kan nu også bruges til en <b>juniorklub</b> (fx Gribskov Padelklub Junior): forældre melder børn ind, og trænerne godkender og sætter hold.',
+      '🎾 Under <b>Træning</b> ses de faste træningstider. Afbud gives med ét tryk, og trænerne krydser fremmøde af.',
+      '📣 <b>Opslag</b> fra trænerne til hele klubben eller ét hold, med notifikation.',
+      '💳 Kontingent kan betales med MobilePay, og større børn kan få deres eget login.',
+    ],
+  },
+  {
     id: '2026-10-25a', date: '25. oktober 2026', admin: true, title: 'Nyt for admins',
     items: [
       '➕ <b>Opret spiller</b> ligger nu ved siden af Inviter, for spillere der ikke selv har oprettet sig.',

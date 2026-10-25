@@ -1,5 +1,6 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
+import { viewTraining, viewPosts, viewClubJoin, loadClubPending } from './views/club.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
@@ -46,25 +47,48 @@ async function loadBase() {
   // Beskeder til superadmin (fx når en slettet spiller kommer igen)
   S.notices = [];
   if (S.realMe?.is_superadmin) { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
-  if (S.realMe) await loadUnread();
+  if (S.realMe) await Promise.all([loadUnread(), loadClubPending()]);
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
+// Link til en juniorklub: forælderen melder bagefter sit barn ind. #/barn/<kode>: barnets eget login eller anden forælder.
 function rememberJoin() {
   const m = location.hash.match(/^#\/velkommen\/([0-9a-f-]{36})/i);
   if (m) { try { localStorage.setItem('fp-join', m[1]); } catch {} }
+  const c = location.hash.match(/^#\/barn\/([0-9a-f]{12})/i);
+  if (c) { try { localStorage.setItem('fp-claim', c[1]); } catch {} }
+}
+// Hvad er man inviteret til (vises på login og velkomst)
+async function loadJoinInfo() {
+  S.joinInfo = null;
+  let g = null, c = null;
+  try { g = localStorage.getItem('fp-join'); c = localStorage.getItem('fp-claim'); } catch {}
+  try {
+    if (c) { const i = await q(sb.rpc('padel_club_code_info', { p_code: c })); if (i) S.joinInfo = { kind: i.kind, name: i.club, kid: i.kid }; }
+    else if (g && S.session) { const kind = await q(sb.rpc('padel_group_kind', { g })); if (kind) S.joinInfo = { kind, name: await q(sb.rpc('padel_group_name', { g })) }; }
+  } catch {}
 }
 async function handleJoin() {
-  let g = null;
-  try { g = localStorage.getItem('fp-join'); localStorage.removeItem('fp-join'); } catch {}
-  if (!g) return;
+  let g = null, c = null;
+  try { g = localStorage.getItem('fp-join'); localStorage.removeItem('fp-join'); c = localStorage.getItem('fp-claim'); localStorage.removeItem('fp-claim'); } catch {}
+  if (c) {
+    try { const cg = await q(sb.rpc('padel_club_claim', { p_code: c })); await loadBase(); if (myGroups().some((x) => x.id === cg)) setGroup(cg); location.hash = '#/traening'; toast('Velkommen i klubben 🎾'); return true; } catch {}
+  }
+  if (!g) return false;
   try {
     const name = await q(sb.rpc('padel_group_name', { g }));
+    // Juniorklub: forælderen melder sit barn ind (eller er allerede med)
+    if ((await q(sb.rpc('padel_group_kind', { g }))) === 'klub') {
+      if (myGroups().some((x) => x.id === g)) { setGroup(g); location.hash = '#/traening'; return true; }
+      location.hash = `#/klub-ind/${g}`;
+      return true;
+    }
     const st = await q(sb.rpc('padel_request_join', { g }));
     await loadBase();
     if (st === 'aktiv') { setGroup(g); toast(`Du er med i ${name}`); }
     else toast(`Du har bedt om at komme med i ${name}. En admin godkender dig.`);
   } catch {}
+  return false;
 }
 
 let booting = false;
@@ -77,15 +101,16 @@ async function boot() {
     rememberJoin();
     // Husk et delt fredagslink, så man lander der efter login/oprettelse
     if (location.hash.startsWith('#/fredag/')) { try { localStorage.setItem('fp-next', location.hash); } catch {} }
-    if (!S.session) { navEl.innerHTML = ''; return renderAuth(location.hash.startsWith('#/velkommen') ? 'signup' : 'login'); }
+    if (!S.session) { navEl.innerHTML = ''; await loadJoinInfo(); return renderAuth(/^#\/(velkommen|barn)/.test(location.hash) ? 'signup' : 'login'); }
     await loadBase();
-    if (!S.me) { navEl.innerHTML = ''; return renderProfile(true); }
+    if (!S.me) { navEl.innerHTML = ''; await loadJoinInfo(); return renderProfile(true); }
     if (S.realMe?.deleted_at && !S.viewAs) { navEl.innerHTML = ''; return viewDeleted(); }
-    await handleJoin();
+    const joined = await handleJoin();
     let next = null;
     try { next = localStorage.getItem('fp-next'); localStorage.removeItem('fp-next'); } catch {}
-    if (next && next !== location.hash) location.hash = next;
-    else if (location.hash.startsWith('#/velkommen')) location.hash = '#/fredage';
+    if (joined) { /* handleJoin har valgt siden */ }
+    else if (next && next !== location.hash) location.hash = next;
+    else if (/^#\/(velkommen|barn)/.test(location.hash)) location.hash = '#/fredage';
     await gates();
   } finally { booting = false; }
 }
@@ -116,6 +141,7 @@ hooks.route = () => route();
 
 function renderNav() {
   if (!S.groupId) { navEl.innerHTML = ''; return; }
+  if (isClub()) return renderClubNav();
   const items = [['#/fredage', '🎾', 'Spilledage']];
   // Gruppens admin kan vælge ingen rangliste; så er den skjult for spillerne
   if (group()?.ranking_mode !== 'ingen' || isAdmin()) items.push(['#/rangliste', '🏆', 'Rangliste']);
@@ -129,6 +155,18 @@ function renderNav() {
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
+}
+
+// Juniorklub: Træning, Opslag, Profil og (for trænere) Admin
+function renderClubNav() {
+  const cur = location.hash || '#/traening';
+  const pend = S.viewAs ? 0 : (S.clubPending || 0) + pendingForMe().length + (S.notices?.length || 0);
+  const items = [['#/traening', '🎾', 'Træning'], ['#/opslag', '📣', 'Opslag'], ['#/profil', '👤', 'Profil']];
+  if (canRun() || pend) items.push(['#/admin', '⚙️', 'Admin']);
+  const page = cur.split('/')[1] || '';
+  const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
+    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|klub-ind)/.test(cur));
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
 }
 
 // Profilen er slettet: tilbyd at genaktivere (samme point som før; man skal godkendes i gruppen igen)
@@ -148,15 +186,19 @@ function viewDeleted() {
   };
 }
 
-// Ikke med i nogen gruppe endnu: vis status på anmodninger
-function viewNoGroup() {
+// Ikke med i nogen gruppe endnu: vis status på anmodninger (og indmeldte børn i en klub)
+async function viewNoGroup() {
   const mine = S.members.filter((m) => m.player_id === S.me.id);
   const nameOfGroup = (id) => S.groups.find((g) => g.id === id)?.name || 'en gruppe';
+  let kids = [];
+  try { kids = await q(sb.from('padel_club_kids').select('*').in('status', ['ansoegt', 'aktiv'])); } catch {}
   app.innerHTML = `
   <div class="auth">
     <div class="logo">🎾</div>
     <h1>Hej ${esc(S.me.name.split(' ')[0])}</h1>
-    ${mine.some((m) => m.status === 'afventer')
+    ${kids.length ? `<p>${kids.map((k) => `<b>${esc(k.name)}</b>`).join(' og ')} er meldt ind i <b>${esc([...new Set(kids.map((k) => nameOfGroup(k.group_id)))].join(', '))}</b>.</p>
+         <p class="muted">Når en træner har godkendt indmeldelsen, kan du se træningerne og give afbud. Du får besked her i appen.</p>`
+    : mine.some((m) => m.status === 'afventer')
       ? `<p>Du har bedt om at komme med i <b>${mine.filter((m) => m.status === 'afventer').map((m) => esc(nameOfGroup(m.group_id))).join(', ')}</b>.</p>
          <p class="muted">Når en admin har godkendt dig, kan du se fredagene og tilmelde dig. Kig forbi igen senere.</p>`
       : '<p class="muted">Du er ikke med i en gruppe endnu. Bed en admin om et invitationslink til jeres gruppe.</p>'}
@@ -180,15 +222,21 @@ const ROUTES = {
   beskeder: () => viewNotices(),
   udseende: () => viewTheme(),
   nyt: () => viewNews(app),
-  admin: () => (isAdmin() || isSuper() ? viewAdmin() : viewEvents()),
+  admin: () => (isAdmin() || isSuper() || (isClub() && canRun()) ? viewAdmin() : ROUTES.fredage()),
+  traening: () => (isClub() ? viewTraining() : viewEvents()),
+  opslag: () => (isClub() ? viewPosts() : viewEvents()),
+  'klub-ind': (g) => viewClubJoin(g),
 };
+// Sider der ikke findes i en klub (spilledage, rangliste, bøder) viser Træning
+const NOT_IN_CLUB = ['fredage', 'fredag', 'ny-fredag', 'ret-fredag', 'rangliste', 'spiller', 'boeder'];
 
 async function route() {
   leavePage();
   window.scrollTo(0, 0);
-  const [, page, id] = (location.hash || '#/fredage').split('/');
+  let [, page, id] = (location.hash || '#/fredage').split('/');
   renderNav();
-  if (!S.groupId && !['profil', 'faq', 'admin'].includes(page)) return viewNoGroup();
+  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende'].includes(page)) return viewNoGroup();
+  if (isClub() && (!page || NOT_IN_CLUB.includes(page))) page = 'traening';
   try { await (ROUTES[page] || ROUTES.fredage)(id); } catch (e) { console.error(e); }
   renderNav();
 }
@@ -199,6 +247,6 @@ sb.auth.onAuthStateChange((ev, session) => {
   if (['INITIAL_SESSION', 'SIGNED_IN', 'SIGNED_OUT', 'PASSWORD_RECOVERY'].includes(ev)) setTimeout(boot, 0);
 });
 window.addEventListener('hashchange', () => {
-  if (location.hash.startsWith('#/velkommen/')) return boot();
+  if (/^#\/(velkommen|barn)\//.test(location.hash)) return boot();
   if (S.me) route();
 });

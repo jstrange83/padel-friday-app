@@ -582,3 +582,60 @@ textarea { font-size: 16px; }
 .news-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .news-entry ul { margin: 8px 0 0; padding-left: 4px; list-style: none; }
 .news-entry li { margin: 6px 0; font-size: 15px; line-height: 1.4; }
+
+/* Juniorklub: træning, opslag, indmeldelse */
+.frow { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.frow > label { margin: 0; min-width: 0; }
+.frow > .grow { flex: 1 1 120px; }
+.trhead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.trtime { font-weight: 700; white-space: nowrap; }
+.tr > small, .tr summary > small { display: block; margin-top: 2px; }
+.tr.cancelled .trhead b, .tr.cancelled .trtime { text-decoration: line-through; opacity: .7; }
+.trcancel { margin-top: 8px; color: var(--dn); font-weight: 600; font-size: 15px; }
+.krow { display: flex; align-items: center; gap: 10px; padding: 10px 0 0; margin-top: 10px; border-top: 1px solid var(--line); }
+.krow .grow { min-width: 0; }
+.krow .grow small { display: block; }
+.yesno { display: flex; gap: 6px; flex: 0 0 auto; }
+.yesno .btn { width: 92px; flex: 0 0 auto; padding: 8px 6px; }
+.yesno .btn.on.yes { background: var(--up); border-color: var(--up); color: #06210f; font-weight: 700; }
+.yesno .btn.on.no { background: var(--dn); border-color: var(--dn); color: #2a0606; font-weight: 700; }
+.badge.ok { background: rgba(74, 222, 128, .15); color: var(--up); }
+.badge.warn { background: rgba(251, 191, 36, .15); color: var(--warn); }
+.tr.trainer > summary { list-style: none; cursor: pointer; }
+.tr.trainer > summary::-webkit-details-marker { display: none; }
+.trcount { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 8px; font-size: 14px; font-weight: 600; }
+.trcount .ok { color: var(--up); } .trcount .no, .krow small.no { color: var(--dn); }
+.trcount > .muted:last-child { margin-left: auto; }
+.present { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 600; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.present input { width: 22px; height: 22px; margin: 0; accent-color: var(--up); }
+.trtools { display: flex; justify-content: flex-end; margin: -4px 0 6px; }
+.feecard p { margin: 6px 0 0; }
+.feecard .mact .btn { text-decoration: none; }
+.post .ptext, .clubinfo p { margin: 8px 0; white-space: normal; line-height: 1.45; overflow-wrap: anywhere; }
+.post.pinned { border-left: 4px solid var(--accent); }
+.ptools { display: flex; gap: 16px; justify-content: flex-end; margin-top: 6px; }
+.postnew > summary, .kidcard > summary, .teamcard > summary, .srow > summary { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.postnew > summary::-webkit-details-marker, .kidcard > summary::-webkit-details-marker, .teamcard > summary::-webkit-details-marker, .srow > summary::-webkit-details-marker { display: none; }
+.postnew[open] > summary { margin-bottom: 10px; }
+.kidcard summary .grow, .teamcard summary .grow, .srow summary .grow { min-width: 0; }
+.kidcard summary small, .teamcard summary small, .srow summary small { display: block; }
+.kidjoin { display: flex; margin: 8px 0; text-decoration: none; }
+fieldset.kidf { border: 1px solid var(--line); border-radius: 12px; padding: 4px 12px 8px; margin: 0 0 12px; min-width: 0; }
+fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
+.kpend { padding: 10px 0; border-top: 1px solid var(--line); }
+.kpend > div:first-child small { display: block; }
+.kpend .mact select { flex: 1 1 0; min-width: 0; margin: 0; }
+.feesum small { display: block; margin-top: 2px; }
+.srow { border-top: 1px solid var(--line); padding: 10px 0; }
+.srow:first-of-type { margin-top: 10px; }
+.srow.new summary { color: var(--accent); font-weight: 600; }
+.srow .sform { margin-top: 10px; }
+.sform .frow input[type=time] { width: 104px; }
+.teamcard > .mact { justify-content: space-between; }
+#newTeam input { margin: 0; }
+#newTeam .btn { flex: 0 0 auto; }
+/* Mange faner under Admin (klub + superadmin): bryd pænt over på to linjer */
+.admin .tabbar { flex-wrap: wrap; }
+.admin .tab { flex: 1 1 auto; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+.kpend .kteam { margin: 8px 0 0; }
+.kpend .kteam select { margin-top: 4px; }

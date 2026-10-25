@@ -336,4 +336,45 @@ export const FAQ = [
     q: 'Hvor kommer reglerne fra?',
     a: `<p>Svarene bygger på det internationale padelforbund FIP's officielle regler, skrevet kort og i vores egne ord. Er I i tvivl om noget særligt, så tjek <a class="link" href="https://www.padelfip.com/wp-content/uploads/2025/12/FIP_Rules-of-Padel.pdf" target="_blank" rel="noopener">FIP's regler (PDF)</a>. Spørgsmål om at spille uden for banen afhænger også af jeres center.</p>`,
   },
+  {
+    cat: 'Juniorklub',
+    q: 'Hvad er en juniorklub i appen?',
+    a: `<p>En juniorklub (fx Gribskov Padelklub Junior) er en særlig slags gruppe til børn og unge. I stedet for spilledage og rangliste har den <b>Træning</b>, <b>Opslag</b> fra trænerne, indmeldelse af børn og kontingent.</p>
+<p>Forældre og juniorer kommer ikke på voksnes rangliste.</p>`,
+  },
+  {
+    cat: 'Juniorklub',
+    q: 'Hvordan melder jeg mit barn ind?',
+    a: `<p>Åbn klubbens invitationslink (eller scan QR-koden fra træneren), opret dig som forælder, og udfyld barnets navn og fødselsår. Har du flere børn, trykker du <b>Tilføj et barn mere</b>.</p>
+<p>En træner godkender indmeldelsen og sætter barnet på et hold. Du får besked i appen. Senere kan du melde flere børn ind under <b>Profil → Mine børn</b>.</p>`,
+  },
+  {
+    cat: 'Juniorklub',
+    q: 'Hvordan giver jeg afbud til træning?',
+    a: `<p>Under <b>Træning</b> står de næste træninger. Barnet er tilmeldt automatisk. Tryk <b>Afbud</b> ud for barnet, så kan træneren se det med det samme. Fortryder du, trykker du <b>Kommer</b>.</p>
+<p>Aflyser træneren en træning, står den som aflyst, og du får en notifikation.</p>`,
+  },
+  {
+    cat: 'Juniorklub',
+    q: 'Kan mit barn få sit eget login? Og den anden forælder?',
+    a: `<p>Ja. Under <b>Profil → Mine børn</b> trykker du på barnet:</p>
+<ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon og opretter sig med. Så kan barnet selv se træninger og give afbud.</li>
+<li><b>👪 Forælder 2</b> sender et link til den anden forælder, som så får samme adgang som dig.</li></ul>`,
+  },
+  {
+    cat: 'Juniorklub',
+    q: 'Hvordan betaler jeg kontingent?',
+    a: `<p>Når klubben har sat kontingent op, står det øverst under <b>Træning</b>. Tryk <b>💳 MobilePay</b> for at betale til klubbens MobilePay Box, eller <b>Har betalt</b> hvis du har betalt på anden måde. Træneren bekræfter betalingen.</p>`,
+  },
+  {
+    cat: 'Juniorklub',
+    q: 'Jeg er træner. Hvad kan jeg?',
+    a: `<p>Klubbens admin gør dig til <b>Træner</b> under Admin → Medlemmer. Som træner kan du:</p>
+<ul><li>godkende nye børn og sætte dem på hold (Admin → Børn)</li>
+<li>oprette hold og faste træningstider (Admin → Hold og tider)</li>
+<li>se hvem der kommer, krydse fremmøde af og aflyse en træning (Træning)</li>
+<li>skrive opslag til hele klubben eller ét hold (Opslag)</li>
+<li>se og bekræfte kontingent (Admin → Børn)</li></ul>
+<p>Klubbens admin sætter kontingent, MobilePay-link og "Om klubben" op under Admin → Medlemmer → Klubbens indstillinger.</p>`,
+  },
 ];

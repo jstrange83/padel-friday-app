@@ -23,6 +23,10 @@ export const GENDER = { mand: 'Mand', kvinde: 'Kvinde' };
 export const FORMAT = { rotation: 'Rotation på tid', saet: 'Ét sæt pr. runde', americano: 'Americano', klassisk: 'Klassisk' };
 export const MODE = { aaben: 'Åben', mix: 'Mix', herre: 'Herre', dame: 'Dame' };
 export const ROLE = { bruger: 'Bruger', superbruger: 'Superbruger', admin: 'Admin' };
+// I en klub (juniorklub) hedder rollerne noget andet: superbruger = træner
+export const ROLE_CLUB = { bruger: 'Medlem', superbruger: 'Træner', admin: 'Admin' };
+export const roleNames = (g = S.groupId) => (isClub(g) ? ROLE_CLUB : ROLE);
+export const isClub = (g = S.groupId) => S.groups.find((x) => x.id === g)?.kind === 'klub';
 
 // ---------- Grupper og roller ----------
 // Superadmin ser og styrer alt. Ellers gælder rollen i den valgte gruppe.
