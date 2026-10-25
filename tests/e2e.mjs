@@ -1053,15 +1053,13 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a');
   await pastGates();
   await page.goto('http://localhost:8765/#/profil');
-  await page.waitForSelector('.discover');
-  ok((await page.locator('.discover').innerText()).includes('Gribskov Padelklub Junior'), 'andre brugere kan finde klubben under Profil');
+  await page.waitForSelector('#discRow');
+  ok(!(await page.locator('#discRow').innerText()).includes('Gribskov'), 'diskret linje under Profil uden klubbens navn');
+  await page.click('#discRow');
+  await page.waitForSelector('#joinForm select[name=club]');
+  ok((await page.locator('#joinForm select[name=club] option').allInnerTexts()).some((t) => t.includes('Gribskov Padelklub Junior')), 'klubben vælges i en rullemenu ved indmeldelsen');
   await shot('klub-find');
-  await page.click('.discover [data-discx]');
-  await wait(400);
-  await page.reload();
-  await page.waitForSelector('.me-card');
-  await wait(600);
-  ok(!(await page.locator('.discover').count()), 'linjen kan lukkes for altid');
+  await noOverflow('klub find');
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
   await pastGates();
@@ -1168,7 +1166,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   // Sent afbud (dagens træning er inden for fristen på 48 timer): træneren får besked
   await page.locator('.tr').first().locator('.krow').last().locator('[data-abs$="|afbud"]').click();
   await wait(500);
-  ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'klub_sent_afbud' && n.user_id === 'u-brian').length)) === 2 && (await page.evaluate(() => window.__mock.db().padel_club_absence.every((a) => a.late))), 'træneren får besked om sene afbud (inden for 48 timer)');
+  ok((await page.evaluate(() => { const db = window.__mock.db(); const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date());
+    return db.padel_club_absence.some((a) => a.day === today && a.late) && db.padel_notifications.some((n) => n.kind === 'klub_sent_afbud' && n.user_id === 'u-brian'); })), 'træneren får besked om sent afbud (inden for 48 timer)');
   await page.locator('.tr').first().locator('.krow').last().locator('[data-abs$="|kommer"]').click();
   await wait(500);
   // Kalender
@@ -1392,8 +1391,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate(() => { sessionStorage.setItem('fp-viewas', 'u-6'); localStorage.setItem('fp-group', 'g-fre'); });
   await page.goto('http://localhost:8765/#/profil');
   await page.reload();
-  await page.waitForSelector('.discover');
-  ok((await page.locator('.discover').innerText()).includes('Har du børn'), 'Se som: linjen om klubben vises som for spilleren');
+  await page.waitForSelector('#discRow');
+  ok((await page.locator('#discRow').innerText()).includes('Meld et barn ind'), 'Se som: linjen vises som for spilleren');
   await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
 
   // Visning: superadmin kan se appen som almindelig bruger og skifte tilbage

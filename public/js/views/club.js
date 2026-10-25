@@ -442,16 +442,33 @@ const readKid = (root, i) => ({
 });
 
 export async function viewClubJoin(g) {
-  let info = null;
-  try { info = await q(sb.rpc('padel_club_join_info', { g })); } catch {}
-  const name = info?.name || group(g)?.name;
-  const collect = !!(info?.collect_address ?? group(g)?.club_collect_address);
+  // Uden klub i adressen: vælg blandt de klubber, der kan findes i appen
+  const pick = !g;
+  let clubs = [];
+  if (!g) {
+    const list = await discoverList();
+    clubs = await Promise.all(list.map(async (c) => ({ id: c.id, ...(await q(sb.rpc('padel_club_join_info', { g: c.id })).catch(() => ({ name: c.name }))) })));
+    if (!clubs.length) {
+      app.innerHTML = `<div class="page club"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Meld et barn ind</h1>
+        <div class="card empty"><p class="muted">Der er ingen klubber at vælge lige nu. Få et link fra klubbens trænere.</p></div></div>`;
+      return;
+    }
+    g = S.joinClub && clubs.some((c) => c.id === S.joinClub) ? S.joinClub : clubs.length === 1 ? clubs[0].id : '';
+  } else {
+    let info = null;
+    try { info = await q(sb.rpc('padel_club_join_info', { g })); } catch {}
+    clubs = [{ id: g, name: info?.name || group(g)?.name, collect_address: !!(info?.collect_address ?? group(g)?.club_collect_address) }];
+  }
+  const fixed = !pick;
+  const cur = clubs.find((c) => c.id === g);
+  const collect = !!cur?.collect_address;
   app.innerHTML = `
   <div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
-    <h1>Meld ind i ${esc(name || 'klubben')}</h1>
+    <h1>${fixed && cur ? `Meld ind i ${esc(cur.name)}` : 'Meld et barn ind'}</h1>
     <p class="muted">Udfyld for hvert barn. En træner godkender indmeldelsen og sætter barnet på et hold, og du får besked her i appen.</p>
     <form id="joinForm" class="card">
+      ${fixed ? '' : `<label>Klub<select name="club" required><option value="">Vælg klub…</option>${clubs.map((c) => `<option value="${c.id}" ${c.id === g ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>`}
       <div id="kidList">${kidFields(0, collect)}</div>
       <div><button type="button" class="btn ghost" id="moreKid">➕ Tilføj et barn mere</button></div>
       <p class="muted small">Oplysningerne bruges kun af klubben. Læs mere i <a href="#/privatliv">privatlivspolitikken</a>. Større børn kan senere få deres eget login.</p>
@@ -459,47 +476,43 @@ export async function viewClubJoin(g) {
     </form>
   </div>`;
   const f = document.getElementById('joinForm');
+  // Skift klub: tegn felterne igen (adresse kan være krævet i den ene klub)
+  if (f.club) f.club.onchange = () => { S.joinClub = f.club.value; viewClubJoin(null); };
   document.getElementById('moreKid').onclick = () => { const list = document.getElementById('kidList'); list.insertAdjacentHTML('beforeend', kidFields(list.children.length, collect)); list.lastElementChild.querySelector('input').focus(); };
   f.onsubmit = async (e) => {
     e.preventDefault();
+    const gid = f.club ? f.club.value : g;
+    if (!gid) return toast('Vælg en klub', true);
     const kids = [...f.querySelectorAll('.kidf')].map((fs, i) => readKid(fs, i));
     const btn = f.querySelector('button.primary'); busy(btn, true);
     try {
-      await q(sb.rpc('padel_club_apply_v3', { g, p_kids: kids }));
+      await q(sb.rpc('padel_club_apply_v3', { g: gid, p_kids: kids }));
       toast('Tak! En træner godkender indmeldelsen');
+      S.joinClub = null;
       await hooks.loadBase();
-      if (S.groups.some((x) => x.id === g) && S.members.some((m) => m.group_id === g && m.player_id === S.me.id && m.status === 'aktiv')) setGroup(g);
+      if (S.groups.some((x) => x.id === gid) && S.members.some((m) => m.group_id === gid && m.player_id === S.me.id && m.status === 'aktiv')) setGroup(gid);
       location.hash = '#/traening';
       hooks.route();
     } catch { busy(btn, false); }
   };
 }
 
-// ---------- Find en klub (lille linje under Profil) ----------
-export async function discoverRow() {
-  let list = [];
-  if (S.viewAs) {
-    // "Se som": regn det ud for den viste person (samme regler som i databasen)
-    const me = S.me, dismissed = me.dismissed_clubs || [];
-    const cands = S.groups.filter((g) => g.kind === 'klub' && g.club_discoverable && !g.archived && !dismissed.includes(g.id)
-      && !S.members.some((m) => m.group_id === g.id && m.player_id === me.id && ['aktiv', 'afventer'].includes(m.status)));
-    if (cands.length) {
-      try {
-        const gds = await q(sb.from('padel_club_guardians').select('kid_id').eq('user_id', me.id).eq('active', true));
-        const kids = gds.length ? await q(sb.from('padel_club_kids').select('group_id,status').in('id', gds.map((x) => x.kid_id))) : [];
-        list = cands.filter((g) => !kids.some((k) => k.group_id === g.id && ['ansoegt', 'aktiv'].includes(k.status)));
-      } catch { list = cands; }
-    }
-  } else {
-    try { list = await q(sb.rpc('padel_discover_clubs')); } catch { return ''; }
-  }
-  return (list || []).map((c) => `<div class="card discover" data-disc="${c.id}"><a class="grow" href="#/klub-ind/${c.id}">🧒 Har du børn, der spiller padel?<small class="muted">${esc(c.name)} · meld dem ind her ›</small></a>${S.viewAs ? '' : `<button class="icon sm" data-discx="${c.id}" aria-label="Luk">✕</button>`}</div>`).join('');
+// ---------- Find en klub: diskret linje under Profil (klubberne ses først på indmeldelsen) ----------
+export async function discoverList() {
+  if (!S.viewAs) { try { return (await q(sb.rpc('padel_discover_clubs'))) || []; } catch { return []; } }
+  // "Se som": regn det ud for den viste person (samme regler som i databasen)
+  const me = S.me, dismissed = me.dismissed_clubs || [];
+  const cands = S.groups.filter((g) => g.kind === 'klub' && g.club_discoverable && !g.archived && !dismissed.includes(g.id)
+    && !S.members.some((m) => m.group_id === g.id && m.player_id === me.id && ['aktiv', 'afventer'].includes(m.status)));
+  if (!cands.length) return [];
+  try {
+    const gds = await q(sb.from('padel_club_guardians').select('kid_id').eq('user_id', me.id).eq('active', true));
+    const kids = gds.length ? await q(sb.from('padel_club_kids').select('group_id,status').in('id', gds.map((x) => x.kid_id))) : [];
+    return cands.filter((g) => !kids.some((k) => k.group_id === g.id && ['ansoegt', 'aktiv'].includes(k.status))).map((g) => ({ id: g.id, name: g.name }));
+  } catch { return cands.map((g) => ({ id: g.id, name: g.name })); }
 }
-export function bindDiscover() {
-  app.querySelectorAll('[data-discx]').forEach((b) => (b.onclick = async () => {
-    b.closest('.discover').remove();
-    try { await q(sb.rpc('padel_dismiss_club', { g: b.dataset.discx })); } catch {}
-  }));
+export async function discoverRow() {
+  return (await discoverList()).length ? '<a class="row" href="#/klub-ind" id="discRow"><span class="grow">🧒 Meld et barn ind i en klub</span><span class="muted">›</span></a>' : '';
 }
 
 // ---------- Mine børn (på profilen) ----------
@@ -825,7 +838,7 @@ export function clubSettingsCard() {
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
  <label class="switch"><input type="checkbox" name="disc" ${gr.club_discoverable ? 'checked' : ''}><span>🔎 Kan findes i appen</span></label>
-      <p class="muted small">Slået til: alle brugere i appen ser en lille linje under Profil: "Har du børn, der spiller padel?". Den kan lukkes, og den sender ingen beskeder.</p>
+      <p class="muted small">Slået til: brugere uden for klubben ser linjen "Meld et barn ind i en klub" under Profil, og klubben kan vælges, når de melder et barn ind. Der sendes ingen beskeder.</p>
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>

@@ -3,7 +3,7 @@ import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated } from '../core.js';
-import { myKidsSection, bindMyKids, showCalendar, discoverRow, bindDiscover } from './club.js';
+import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn } from '../editmode.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -58,7 +58,7 @@ export function renderProfile(isNew) {
     ${!viewing && hasElevated() ? `<div class="card modecard"><b>👁 Visning</b>
       ${radios('vmode', S.realMe?.is_superadmin ? { super: 'Superadmin', mine: 'Mine roller', bruger: 'Bruger' } : { mine: 'Admin', bruger: 'Bruger' }, viewMode())}
       <p class="muted small">${S.realMe?.is_superadmin ? '<b>Superadmin</b>: alt i alle grupper. <b>Mine roller</b>: kun de grupper, du er med i, med den rolle du har dér. <b>Bruger</b>: som en almindelig spiller.' : '<b>Admin</b>: med dine admin- og trænerrettigheder. <b>Bruger</b>: som en almindelig spiller.'}</p></div>` : ''}
-    <div id="kidsBox"></div><div id="discBox"></div>
+    <div id="kidsBox"></div>
     <h3>${club ? 'Mit' : 'Min padel'}</h3>
     <div class="list links">
       ${club ? '' : `<a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>`}
@@ -82,7 +82,8 @@ export function renderProfile(isNew) {
   </div>`;
   bind(false);
   // Mine børn i en juniorklub (og knap til at melde flere ind)
-  discoverRow().then((h) => { const box = document.getElementById('discBox'); if (box && h) { box.innerHTML = h; bindDiscover(); } });
+  // Diskret linje i listen, hvis der er en klub man kan melde sine børn ind i
+  discoverRow().then((h) => { const nr = document.getElementById('notRow'); if (nr && h && !document.getElementById('discRow')) nr.insertAdjacentHTML('afterend', h); });
   myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderProfile(false)); } });
   // Mærke ved nye svar på forslag
   if (hasSuggest()) unseenReplies().then((n) => { const r = document.getElementById('sugRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n === 1 ? 'Nyt svar' : `${n} nye svar`}</span>`; });
