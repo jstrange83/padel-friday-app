@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-25c', date: '25. oktober 2026', admin: true, title: 'Se appen som almindelig bruger',
+    items: ['👁 Under <b>Profil → Visning</b> kan du nu vælge at se appen som en almindelig spiller. Så kan du se, hvordan den ser ud for de andre. En bjælke øverst fører dig tilbage.'],
+  },
+  {
     id: '2026-10-25a', date: '25. oktober 2026', admin: true, title: 'Nyt for admins',
     items: [
       '➕ <b>Opret spiller</b> ligger nu ved siden af Inviter, for spillere der ikke selv har oprettet sig.',
