@@ -39,6 +39,9 @@ async function loadBase() {
   S.groupId = g;
   renderViewAsBar();
   renderEditBar();
+  // Beskeder til superadmin (fx når en slettet spiller kommer igen)
+  S.notices = [];
+  if (S.realMe?.is_superadmin) { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
@@ -110,12 +113,12 @@ function renderNav() {
   // Bødekassen vises kun i grupper, hvor admin har slået den til
   if (group()?.fines_enabled) items.push(['#/boeder', '💸', 'Bøder']);
   items.push(['#/profil', '👤', 'Profil']);
-  if (isAdmin() || pendingForMe().length) items.push(['#/admin', '⚙️', 'Admin']);
+  if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
     (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
-  const pend = S.viewAs ? 0 : pendingForMe().length;
+  const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${t}</a>`).join('');
 }
 

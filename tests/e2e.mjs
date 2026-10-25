@@ -798,6 +798,16 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#reload, #nav a, .finegate, .gate, .me-card');
   const back = await page.evaluate(() => { const db = JSON.parse(sessionStorage.getItem('mockdb')); return { del: db.padel_profiles.find((p) => p.id === 'u-3').deleted_at, m: db.padel_group_members.find((m) => m.player_id === 'u-3' && m.group_id === 'g-fre') }; });
   ok(!back.del && back.m.status === 'fjernet' && back.m.elo === elo3, 'genaktiveret med samme point; skal godkendes i gruppen igen');
+  // Superadmin får besked om, at spilleren er kommet igen
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('.notices');
+  ok((await page.locator('.notices').innerText()).includes('Test Carsten genaktiverede sin profil'), 'superadmin får besked, når en slettet spiller kommer igen');
+  ok(Number(await page.locator('#nav .navbadge').innerText()) >= 1, 'tal på Admin for beskeden');
+  await shot('kommet-igen');
+  await page.click('#noticesOk');
+  await wait(400);
+  ok(!(await page.locator('.notices').count()), 'beskeden forsvinder efter OK');
   // Admin sletter en spiller og gendanner
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/admin');

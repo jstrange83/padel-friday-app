@@ -4,6 +4,17 @@ import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
 import { editBtn } from '../editmode.js';
 
+// Kort til superadmin: slettede spillere der er kommet igen
+function noticeCard() {
+  if (S.viewAs || !S.notices?.length) return '';
+  return `<div class="card approvals notices"><div class="mtitle">♻️ Kommet igen (${S.notices.length})</div>
+    ${S.notices.map((n) => `<div class="appr">
+      <p><b>${esc(nameOf(n.player_id))}</b> ${esc(n.how)}.</p>
+      <small class="muted">${fmtDate(n.created_at, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}${n.elo != null ? ` · har ${n.elo} point med tilbage` : ''}</small>
+    </div>`).join('')}
+    <div class="mact"><button class="btn sm" id="noticesOk">OK, set</button></div></div>`;
+}
+
 // Kort øverst til admin: spillere der venter på at komme med i gruppen
 function pendingCard() {
   if (S.viewAs) return '';
@@ -51,6 +62,7 @@ export async function viewEvents() {
     <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div>
     ${groupBar(viewEvents)}
     ${pendingCard()}
+    ${noticeCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer på din profil, så admin kan få fat i dig. ›</a>' : ''}
     ${coming.map(card).join('') || (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
@@ -62,6 +74,11 @@ export async function viewEvents() {
     const btn = e.currentTarget;
     busy(btn, true);
     try { await fn(); await viewEvents(); } catch { busy(btn, false); }
+  };
+  const nok = document.getElementById('noticesOk');
+  if (nok) nok.onclick = async () => {
+    busy(nok, true);
+    try { await q(sb.rpc('padel_notices_seen', { p_ids: S.notices.map((n) => n.id) })); S.notices = []; hooks.renderNav?.(); viewEvents(); } catch { busy(nok, false); }
   };
   // Godkend/afvis nye spillere direkte herfra
   app.querySelectorAll('[data-pok]').forEach((b) => (b.onclick = async () => {

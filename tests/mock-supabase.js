@@ -20,7 +20,7 @@ function seed() {
   const members = profiles.filter((p) => p.id !== 'u-brian').map((p) => ({ group_id: 'g-fre', player_id: p.id, role: p.id === 'u-admin' ? 'admin' : 'bruger', status: 'aktiv', elo: 1000 }));
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
-    padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [] };
+    padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -176,7 +176,8 @@ const RPC = {
     db.padel_group_members.filter((m) => m.player_id === p_user && m.status !== 'fjernet').forEach((m) => (m.status = 'fjernet'));
     p.deleted_at = now();
   },
-  padel_reactivate_me: () => { me().deleted_at = null; },
+  padel_reactivate_me: () => { if (me().deleted_at) { me().deleted_at = null; db.padel_admin_notices.push({ id: uuid(), kind: 'comeback', player_id: uid(), how: 'genaktiverede sin profil (samme mail)', elo: me().elo, seen: false, created_at: now() }); } },
+  padel_notices_seen: ({ p_ids }) => { db.padel_admin_notices.filter((n) => p_ids.includes(n.id)).forEach((n) => (n.seen = true)); },
   padel_restore_player: ({ p_user }) => { db.padel_profiles.find((x) => x.id === p_user).deleted_at = null; },
   padel_archive_group: ({ g, p_archived }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { archived: p_archived }); },
   // Superadmin: ret og slet
@@ -231,6 +232,7 @@ const RPC = {
     db.padel_fines.forEach((x) => (x.player_id = sw(x.player_id)));
     db.padel_group_members.forEach((x) => (x.player_id = sw(x.player_id)));
     old.merged_into = meId;
+    if (old.deleted_at) db.padel_admin_notices.push({ id: uuid(), kind: 'comeback', player_id: meId, old_player_id: old.id, how: 'oprettede sig igen med samme telefonnummer', elo: old.elo, seen: false, created_at: now() });
     return old.id;
   },
   padel_admin_create_player: ({ g, p_name, p_phone, p_gender, p_side }) => {
