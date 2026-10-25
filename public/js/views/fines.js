@@ -107,6 +107,7 @@ export async function viewFines() {
         : '<p>😇 Du har opført dig pænt.</p>'}
     </div>
 
+    <div class="lbl">Hele gruppen</div>
     <div class="ftiles">${tile('red', 'Ubetalte', by('ubetalt'))}${tile('amber', 'Afventer', by('afventer'))}${tile('green', 'Betalte', by('betalt'))}</div>
 
     ${run && by('afventer').length ? `<div class="card approvals"><div class="mtitle">✋ Venter på godkendelse (${by('afventer').length})</div>

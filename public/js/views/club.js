@@ -594,7 +594,7 @@ export function bindMyKids(rerender) {
 }
 
 // ---------- Admin: børn ----------
-const feeBadge = (k) => (group().club_fee_label ? { betalt: '<span class="badge ok">Betalt</span>', afventer: '<span class="badge warn">Afventer</span>', ubetalt: '<span class="badge">Ikke betalt</span>' }[feeOf(k.id)] : '');
+const feeBadge = (k) => (group().club_fee_label ? { betalt: '<span class="badge ok">💳 Betalt</span>', afventer: '<span class="badge warn">💳 Afventer</span>', ubetalt: '<span class="badge">💳 Mangler</span>' }[feeOf(k.id)] : '');
 const kidMeta = (k) => [age(k), GENDER_KID[k.gender], guardianNames(k.id), k.player_id ? 'eget login' : ''].filter(Boolean).map(esc).join(' · ');
 
 export function clubKidsTab() {

@@ -27,14 +27,12 @@ export async function viewAdmin() {
   app.innerHTML = `
   <div class="page admin">
     <h1>Admin</h1>
-    ${club && ['boern', 'hold', 'kontingent', 'fremmode'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
+    ${club && ['boern', 'hold', 'kontingent', 'fremmode'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
-    ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand <small class="muted">(ret og slet alt, på denne enhed)</small></span></label></div>` : ''}
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
-  const em = document.getElementById('editMode');
-  if (em) em.onchange = () => { setEditMode(em.checked); toast(em.checked ? 'Redigering er slået til' : 'Redigering er slået fra'); };
+  app.querySelector('.tab.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
   if (S.adminTab === 'forslag') bindSuggestTab(viewAdmin);
   const clubRefresh = async () => { await viewAdmin(); hooks.renderNav?.(); };
   if (S.adminTab === 'boern') bindClubKids(clubRefresh);

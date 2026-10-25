@@ -702,3 +702,19 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .myfine.rate b { white-space: nowrap; text-align: right; }
 .myfine.rate b small { font-weight: 600; color: var(--muted); }
 .switch .autonote { margin-top: 2px; }
+
+/* Oprydning: ens fold-ud-pil (›) på alle fold-ud-kort */
+.faq summary::after { content: '›'; font-size: 22px; line-height: 1; top: 50%; transform: translateY(-50%); transition: transform .15s; color: var(--muted); }
+.faq[open] summary::after { content: '›'; transform: translateY(-50%) rotate(90deg); }
+details.plist > summary, details.gset > summary, details.givebox > summary, details.archived > summary, details.newgroup > summary, details.centerbox > summary { list-style: none; position: relative; padding-right: 28px; cursor: pointer; }
+details.plist > summary::-webkit-details-marker, details.gset > summary::-webkit-details-marker, details.givebox > summary::-webkit-details-marker, details.archived > summary::-webkit-details-marker, details.newgroup > summary::-webkit-details-marker, details.centerbox > summary::-webkit-details-marker { display: none; }
+details.plist > summary::after, details.gset > summary::after, details.givebox > summary::after, details.archived > summary::after, details.newgroup > summary::after, details.centerbox > summary::after { content: '›'; position: absolute; right: 4px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 22px; line-height: 1; transition: transform .15s; }
+details.plist[open] > summary::after, details.gset[open] > summary::after, details.givebox[open] > summary::after, details.archived[open] > summary::after, details.newgroup[open] > summary::after, details.centerbox[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+/* Admin-faner: én linje, der kan skubbes sidelæns, når der er mange */
+.admin .tabbar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.admin .tabbar::-webkit-scrollbar { display: none; }
+.admin .tab { flex: 1 0 auto; white-space: nowrap; }
+/* Træningskort lidt mere kompakte */
+.tr .krow { padding-top: 8px; margin-top: 8px; }
+.yesno .btn { padding: 6px 6px; min-height: 36px; }
+.modecard .switch { margin-top: 10px; }

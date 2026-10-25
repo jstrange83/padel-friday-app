@@ -725,7 +725,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
 
   // Redigeringstilstand for superadmin: slå til, ret en kamp, slet en bøde, slå fra
   await loginAs('jimmy@test');
-  await page.goto('http://localhost:8765/#/admin');
+  await page.goto('http://localhost:8765/#/profil');
   await page.waitForSelector('#editMode');
   ok(!(await page.locator('#editBar').count()), 'redigering er slået fra som standard');
   await page.check('#editMode');
@@ -1403,14 +1403,14 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/profil');
   await page.reload();
   await page.waitForSelector('.modecard');
-  ok((await page.locator('.modecard label').count()) === 3, 'superadmin kan vælge Superadmin, Mine roller eller Bruger');
-  await page.locator('.modecard label:has-text("Bruger")').click();
+  ok((await page.locator('.modecard .seg label').count()) === 3, 'superadmin kan vælge Superadmin, Mine roller eller Bruger');
+  await page.locator('.modecard .seg label:has-text("Bruger")').click();
   await page.waitForSelector('#viewAsBar.modebar');
   await wait(400);
   ok(!(await page.locator('#nav').innerText()).includes('Admin'), 'som almindelig bruger: ingen Admin i menuen');
   await shot('visning-bruger');
   await noOverflow('visning bruger');
-  await page.locator('.modecard label:has-text("Mine roller")').click();
+  await page.locator('.modecard .seg label:has-text("Mine roller")').click();
   await wait(600);
   ok((await page.locator('#nav').innerText()).includes('Admin') && (await page.locator('#viewAsBar.modebar').count()), 'mine roller: admin i Fredagspadel, hvor jeg er admin');
   await page.click('#viewAsBar #stopViewAs');
