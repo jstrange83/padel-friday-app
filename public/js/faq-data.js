@@ -369,12 +369,20 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Jeg er træner. Hvad kan jeg?',
-    a: `<p>Klubbens admin gør dig til <b>Træner</b> under Admin → Medlemmer. Som træner kan du:</p>
+    a: `<p>Klubbens admin gør dig til <b>Træner</b> og sætter dig på dine hold under Admin → Hold og tider. Som træner kan du på dine egne hold:</p>
 <ul><li>godkende nye børn og sætte dem på hold (Admin → Børn)</li>
-<li>oprette hold og faste træningstider (Admin → Hold og tider)</li>
+<li>rette træningstider (Admin → Hold og tider)</li>
 <li>se hvem der kommer, krydse fremmøde af og aflyse en træning (Træning)</li>
-<li>skrive opslag til hele klubben eller ét hold (Opslag)</li>
-<li>se og bekræfte kontingent (Admin → Børn)</li></ul>
-<p>Klubbens admin sætter kontingent, MobilePay-link og "Om klubben" op under Admin → Medlemmer → Klubbens indstillinger.</p>`,
+<li>skrive opslag til hele klubben eller dine hold (Opslag)</li></ul>
+<p>🚫📷 betyder, at barnet ikke må være på billeder, og ⚠️ at forældrene har skrevet noget vigtigt til træneren.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvem gør hvad i klubben?',
+    a: `<ul><li><b>Admin</b> styrer klubbens indstillinger, kontingent, hold, trænere og kasserer og ser alle børn.</li>
+<li><b>Træner</b> styrer sine egne hold.</li>
+<li><b>Kasserer</b> ser og bekræfter kontingent, sender påmindelser og henter en liste til regnskabet (Admin → Kontingent).</li>
+<li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Profil → Mine børn.</li></ul>
+<p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → Medlemmer → Trænere og kasserer). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
   },
 ];

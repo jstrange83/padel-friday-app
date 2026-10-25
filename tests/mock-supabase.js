@@ -21,7 +21,7 @@ function seed() {
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
     padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [], padel_notifications: [], padel_push_subs: [],
-    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [] };
+    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -129,7 +129,7 @@ class Query {
     } else {
       data = applyFilters(T, this.f);
       // Lidt adgangsregler for klubben: børn ses kun af trænere og egne forældre
-      if (this.t === 'padel_club_kids') data = data.filter((k) => canRun(k.group_id) || kidMine(k.id));
+      if (this.t === 'padel_club_kids') data = data.filter((k) => canRun(k.group_id) || kidMine(k.id) || db.padel_club_staff.some((x) => x.group_id === k.group_id && x.user_id === uid() && x.treasurer));
     }
     data = data.map((r) => ({ ...r }));
     for (const [c, asc] of [...this.o].reverse()) data.sort((a, b) => (a[c] > b[c] ? 1 : a[c] < b[c] ? -1 : 0) * (asc ? 1 : -1));
@@ -503,6 +503,57 @@ Object.assign(RPC, {
     return k.group_id;
   },
 });
+
+
+// Etape 1: oplysninger, trænere på hold, kasserer
+const isAdm = (g) => me()?.is_superadmin || GM(g, uid())?.status === 'aktiv' && GM(g, uid())?.role === 'admin';
+const treasurer = (g) => isAdm(g) || db.padel_club_staff.some((x) => x.group_id === g && x.user_id === uid() && x.treasurer);
+Object.assign(RPC, {
+  padel_club_apply_v2: ({ g, p_kids }) => {
+    const n = RPC.padel_club_apply({ g, p_kids });
+    const mine = db.padel_club_kids.filter((k) => k.group_id === g && k.created_by === uid()).slice(-n);
+    mine.forEach((k, i) => {
+      const x = p_kids.filter((y) => y.name?.trim())[i];
+      Object.assign(k, { birth_date: x.birth_date || null, birth_year: x.birth_date ? +x.birth_date.slice(0, 4) : null, gender: x.gender || null, photo_ok: x.photo_ok ?? null, address: x.address || null });
+      if (x.info?.trim()) db.padel_club_kid_info.push({ kid_id: k.id, info: x.info.trim() });
+    });
+    return n;
+  },
+  padel_club_update_kid: ({ p_kid, p_name, p_birth_date, p_gender, p_photo_ok, p_info, p_address }) => {
+    const k = KID(p_kid);
+    if (!kidMine(p_kid) && !canRun(k.group_id)) throw new Error('Det har du ikke adgang til');
+    Object.assign(k, { name: p_name.trim(), birth_date: p_birth_date, birth_year: p_birth_date ? +p_birth_date.slice(0, 4) : k.birth_year, gender: p_gender, photo_ok: p_photo_ok, address: p_address || null });
+    upsert('padel_club_kid_info', ['kid_id'], { kid_id: p_kid, info: p_info?.trim() || null });
+  },
+  padel_club_set_team_trainers: ({ p_team, p_users }) => {
+    if (!isAdm(teamGroup(p_team))) throw new Error('Kun klubbens admin');
+    db.padel_club_team_trainers.filter((x) => x.team_id === p_team).forEach((x) => (x.active = p_users.includes(x.user_id)));
+    p_users.forEach((u) => upsert('padel_club_team_trainers', ['team_id', 'user_id'], { team_id: p_team, user_id: u, active: true }));
+  },
+  padel_club_set_staff: ({ g, p_user, p_treasurer, p_cert_date }) => {
+    if (!isAdm(g)) throw new Error('Kun klubbens admin');
+    upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer });
+    upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
+  },
+  padel_club_set_fee_v2: (a) => { RPC.padel_club_set_fee(a); db.padel_groups.find((x) => x.id === a.g).club_collect_address = !!a.p_collect_address; },
+  padel_club_fee_reminder: ({ g }) => {
+    if (!treasurer(g)) throw new Error('Kun kasserer og admin');
+    const lbl = db.padel_groups.find((x) => x.id === g).club_fee_label;
+    const kids = db.padel_club_kids.filter((k) => k.group_id === g && k.status === 'aktiv' && !db.padel_club_fees.some((f) => f.kid_id === k.id && f.label === lbl && f.status !== 'ubetalt'));
+    const us = [...new Set(kids.flatMap((k) => db.padel_club_guardians.filter((x) => x.kid_id === k.id && x.active).map((x) => x.user_id)))];
+    notify(us, 'klub_kontingent', '💳 Husk kontingent ' + lbl, 'Kontingentet er ikke betalt endnu.', '/#/traening');
+    return us.length;
+  },
+  padel_club_trainer_contacts: ({ g }) => db.padel_group_members.filter((m) => m.group_id === g && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role))
+    .map((m) => ({ user_id: m.player_id, name: db.padel_profiles.find((p) => p.id === m.player_id)?.name, phone: db.padel_contacts.find((c) => c.player_id === m.player_id)?.phone || null,
+      team_ids: db.padel_club_team_trainers.filter((x) => x.user_id === m.player_id && x.active).map((x) => x.team_id) }))
+    .filter((x) => GM(g, x.user_id).role === 'superbruger' || x.team_ids.length),
+  padel_club_my_treasurer: () => db.padel_club_staff.filter((x) => x.user_id === uid() && x.treasurer).map((x) => x.group_id),
+});
+// Kassereren må markere betalt
+const _feePaid = RPC.padel_club_fee_paid, _feeSet = RPC.padel_club_fee_set;
+RPC.padel_club_fee_paid = (a) => { const k = KID(a.p_kid); if (treasurer(k.group_id) && !canRun(k.group_id)) { upsert('padel_club_fees', ['kid_id', 'label'], { kid_id: k.id, label: db.padel_groups.find((x) => x.id === k.group_id).club_fee_label, status: 'betalt' }); return; } return _feePaid(a); };
+RPC.padel_club_fee_set = _feeSet;
 
 export function createClient() {
   let cb = () => {};

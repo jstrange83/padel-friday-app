@@ -68,6 +68,7 @@ export function renderProfile(isNew) {
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/nyt"><span class="grow">🆕 Nyt i appen</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
+      <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
     </div>
     <div class="pfoot">
