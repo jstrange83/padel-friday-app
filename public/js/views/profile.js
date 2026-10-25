@@ -3,7 +3,7 @@ import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios } from '../core.js';
-import { myKidsSection, bindMyKids, showCalendar } from './club.js';
+import { myKidsSection, bindMyKids, showCalendar, discoverRow, bindDiscover } from './club.js';
 import { editBtn } from '../editmode.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -55,7 +55,7 @@ export function renderProfile(isNew) {
     ${!phone ? `<div class="card warnbox">📱 ${viewing ? 'Spilleren mangler et telefonnummer.' : 'Tilføj dit telefonnummer, så admin kan få fat i dig.'}</div>` : ''}
     <details class="card editbox" ${phone ? '' : 'open'}><summary><b>✏️ ${viewing ? 'Ret oplysninger' : 'Ret mine oplysninger'}</b><span class="muted">›</span></summary>${form(p, false)}</details>
 
-    <div id="kidsBox"></div>
+    <div id="kidsBox"></div><div id="discBox"></div>
     <h3>${club ? 'Mit' : 'Min padel'}</h3>
     <div class="list links">
       ${club ? '' : `<a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>`}
@@ -79,6 +79,7 @@ export function renderProfile(isNew) {
   </div>`;
   bind(false);
   // Mine børn i en juniorklub (og knap til at melde flere ind)
+  discoverRow().then((h) => { const box = document.getElementById('discBox'); if (box && h) { box.innerHTML = h; bindDiscover(); } });
   myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderProfile(false)); } });
   // Mærke ved nye svar på forslag
   if (hasSuggest()) unseenReplies().then((n) => { const r = document.getElementById('sugRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n === 1 ? 'Nyt svar' : `${n} nye svar`}</span>`; });

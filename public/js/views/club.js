@@ -430,9 +430,10 @@ const readKid = (root, i) => ({
 });
 
 export async function viewClubJoin(g) {
-  let name = group(g)?.name;
-  if (!name) { try { name = await q(sb.rpc('padel_group_name', { g })); } catch {} }
-  const collect = !!group(g)?.club_collect_address;
+  let info = null;
+  try { info = await q(sb.rpc('padel_club_join_info', { g })); } catch {}
+  const name = info?.name || group(g)?.name;
+  const collect = !!(info?.collect_address ?? group(g)?.club_collect_address);
   app.innerHTML = `
   <div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
@@ -460,6 +461,20 @@ export async function viewClubJoin(g) {
       hooks.route();
     } catch { busy(btn, false); }
   };
+}
+
+// ---------- Find en klub (lille linje under Profil) ----------
+export async function discoverRow() {
+  if (S.viewAs) return '';
+  let list = [];
+  try { list = await q(sb.rpc('padel_discover_clubs')); } catch { return ''; }
+  return (list || []).map((c) => `<div class="card discover" data-disc="${c.id}"><a class="grow" href="#/klub-ind/${c.id}">🧒 Har du børn, der spiller padel?<small class="muted">${esc(c.name)} · meld dem ind her ›</small></a><button class="icon sm" data-discx="${c.id}" aria-label="Luk">✕</button></div>`).join('');
+}
+export function bindDiscover() {
+  app.querySelectorAll('[data-discx]').forEach((b) => (b.onclick = async () => {
+    b.closest('.discover').remove();
+    try { await q(sb.rpc('padel_dismiss_club', { g: b.dataset.discx })); } catch {}
+  }));
 }
 
 // ---------- Mine børn (på profilen) ----------
@@ -769,6 +784,8 @@ export function clubSettingsCard() {
       <p class="muted small">Find linket i MobilePay: åbn boksen og tryk "Del boks".</p>
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
+ <label class="switch"><input type="checkbox" name="disc" ${gr.club_discoverable ? 'checked' : ''}><span>🔎 Kan findes i appen</span></label>
+      <p class="muted small">Slået til: alle brugere i appen ser en lille linje under Profil: "Har du børn, der spiller padel?". Den kan lukkes, og den sender ingen beskeder.</p>
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>
@@ -785,7 +802,8 @@ export function bindClubSettings(refresh) {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
     try { await q(sb.rpc('padel_club_set_fee_v2', { g: S.groupId, p_fee: f.fee.value ? +f.fee.value : null, p_label: f.label.value, p_url: f.url.value, p_info: f.info.value, p_collect_address: f.addr.checked }));
-      await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 })); toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
+      await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 }));
+      await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked })); toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };
 }
 

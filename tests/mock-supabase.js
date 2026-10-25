@@ -624,6 +624,16 @@ Object.assign(RPC, {
   padel_club_event_counts: ({ g }) => db.padel_club_events.filter((e) => e.group_id === g).map((e) => ({ event_id: e.id, n: db.padel_club_event_signups.filter((x) => x.event_id === e.id && x.status === 'tilmeldt').length })),
 });
 
+
+// Find en klub
+Object.assign(RPC, {
+  padel_club_set_discoverable: ({ g, p_on }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_discoverable = !!p_on; },
+  padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address } : null; },
+  padel_dismiss_club: ({ g }) => { const p = me(); p.dismissed_clubs = [...new Set([...(p.dismissed_clubs || []), g])]; },
+  padel_discover_clubs: () => db.padel_groups.filter((x) => x.kind === 'klub' && x.club_discoverable && !x.archived && !GM(x.id, uid())
+    && !db.padel_club_kids.some((k) => k.group_id === x.id && kidMine(k.id)) && !(me()?.dismissed_clubs || []).includes(x.id)).map((x) => ({ id: x.id, name: x.name })),
+});
+
 export function createClient() {
   let cb = () => {};
   const session = () => JSON.parse(sessionStorage.getItem(SKEY) || 'null');

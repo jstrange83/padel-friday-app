@@ -687,3 +687,6 @@ fieldset.kidf legend { font-weight: 700; padding: 0 6px; }
 .evform .frow > label:not(.grow) { flex: 1 1 112px; }
 .mykids .ftop { align-items: center; }
 .mykids .mact .btn { text-decoration: none; }
+.discover { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-left: 4px solid #60a5fa; }
+.discover a { text-decoration: none; color: inherit; font-weight: 600; min-width: 0; }
+.discover a small { display: block; font-weight: 400; margin-top: 2px; }

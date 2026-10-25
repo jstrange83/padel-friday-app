@@ -1,6 +1,6 @@
 // "Nyt i appen": vises én gang som popup, når der er kommet nye funktioner, ting er flyttet, eller større fejl er rettet.
 // Små justeringer skrives IKKE her. Nyeste øverst. id = dato (+ evt. bogstav), så de kan sammenlignes som tekst.
-// admin: true = kun for admins og superbrugere.
+// admin: true = kun for admins og superbrugere. centers: ['Gilleleje'] = kun for voksne i grupper, der spiller i det center.
 import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
@@ -27,7 +27,9 @@ export const NEWS = [
   },
 ];
 
-const forMe = () => NEWS.filter((n) => !n.admin || canRun() || isSuper());
+const inCenter = (names) => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.find((g) => g.id === m.group_id && g.kind !== 'klub' && !g.archived)
+  && S.groupCenters.some((c) => c.group_id === m.group_id && c.enabled && names.includes(S.centers.find((x) => x.id === c.center_id)?.name)));
+const forMe = () => NEWS.filter((n) => (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)));
 export const latestNewsId = () => NEWS[0]?.id || '';
 
 // Nyheder jeg ikke har set. Har man aldrig set nogen, vises kun den seneste opdatering.

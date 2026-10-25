@@ -985,6 +985,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
       if (await page.locator('#skipInstall').count()) { await page.click('#skipInstall'); continue; }
       if (await page.locator('#newsOk').count()) { await page.click('#newsOk'); continue; }
       if (await page.locator('#fgOk').count()) { await page.click('#fgOk'); continue; }
+      if (await page.locator('#fbLater').count()) { await page.click('#fbLater'); continue; }
     }
   };
   // Superadmin opretter klubben og gør Brian til træner
@@ -1044,6 +1045,31 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(500);
   ok((await page.locator('details.gset:not(.staff) summary').innerText()).includes('600'), 'kontingent sat op');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_absence_hours, clubId)) === 48, 'afbudsfrist sat til 48 timer');
+  // Klubben kan findes i appen: andre ser en lille linje under Profil, som kan lukkes
+  await page.locator('#clubSet input[name=disc]').check();
+  await page.click('#clubSet button.primary');
+  await wait(500);
+  await freshLogin('test5@fredagspadel.test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/profil');
+  await page.waitForSelector('.discover');
+  ok((await page.locator('.discover').innerText()).includes('Gribskov Padelklub Junior'), 'andre brugere kan finde klubben under Profil');
+  await shot('klub-find');
+  await page.click('.discover [data-discx]');
+  await wait(400);
+  await page.reload();
+  await page.waitForSelector('.me-card');
+  await wait(600);
+  ok(!(await page.locator('.discover').count()), 'linjen kan lukkes for altid');
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate((g) => localStorage.setItem('fp-group', g), clubId);
+  await page.goto('http://localhost:8765/#/admin');
+  await page.reload();
+  await page.waitForSelector('.tabbar');
+  await page.click('[data-tab="spillere"]');
   await page.click('details.staff summary');
   await page.locator('form[data-staff="u-brian"] input[name=cert]').fill('2026-09-01');
   await page.locator('form[data-staff="u-brian"] button').click();
