@@ -65,7 +65,7 @@ async function loadJoinInfo() {
   try { g = localStorage.getItem('fp-join'); c = localStorage.getItem('fp-claim'); } catch {}
   try {
     if (c) { const i = await q(sb.rpc('padel_club_code_info', { p_code: c })); if (i) S.joinInfo = { kind: i.kind, name: i.club, kid: i.kid }; }
-    else if (g && S.session) { const kind = await q(sb.rpc('padel_group_kind', { g })); if (kind) S.joinInfo = { kind, name: await q(sb.rpc('padel_group_name', { g })) }; }
+    else if (g) { const kind = await q(sb.rpc('padel_group_kind', { g })); if (kind) S.joinInfo = { kind, name: await q(sb.rpc('padel_group_name', { g })) }; }
   } catch {}
 }
 async function handleJoin() {

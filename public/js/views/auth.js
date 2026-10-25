@@ -7,8 +7,9 @@ export function renderAuth(mode = 'login') {
   const ji = S.joinInfo;
   const intro = ji?.kind === 'barn' ? `Hej ${esc(ji.kid.split(' ')[0])}! Opret din egen konto til <b>${esc(ji.name)}</b>, så kan du selv se dine træninger og give afbud.`
     : ji?.kind === 'foraelder' ? `Du er inviteret som forælder til <b>${esc(ji.kid)}</b> i <b>${esc(ji.name)}</b>. Opret en konto, eller log ind hvis du har en.`
-    : invited ? 'Du er inviteret med til padel! Opret en konto, eller log ind hvis du har en. Er det til en juniorklub, melder du dit barn ind bagefter.'
-    : 'Rangliste, hold og resultater til jeres padelgruppe, og træning til juniorklubben.';
+    : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
+    : invited ? 'Du er inviteret med til padel! Opret en konto, eller log ind hvis du har en, så kan du komme med i gruppen.'
+    : 'Rangliste, hold og resultater til jeres padelgruppe.';
   app.innerHTML = `
   <div class="auth">
     <div class="logo">🎾</div>

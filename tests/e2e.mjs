@@ -1039,10 +1039,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
 
   // Forælder får invitationslinket, opretter sig og melder to børn ind
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('about:blank');
   await page.goto(`http://localhost:8765/#/velkommen/${clubId}`);
-  await page.reload();
   await page.waitForSelector('#authForm');
-  ok((await text()).includes('juniorklub'), 'login nævner juniorklub ved invitation');
+  ok((await text()).includes('gribskov padelklub junior') && (await text()).includes('meld'), 'login nævner klubben og indmeldelse ved invitation: ' + (await text()).slice(0, 200));
   await wait(500);
   if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
   await page.waitForSelector('button[type=submit]:has-text("Log ind")');
@@ -1155,8 +1155,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const codes = await page.evaluate(() => { const k = window.__mock.db().padel_club_kids.find((x) => x.name === 'Oscar Test'); return [k.guardian_code, k.login_code]; });
   // Anden forælder via link
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('about:blank');
   await page.goto(`http://localhost:8765/#/barn/${codes[0]}`);
-  await page.reload();
   await page.waitForSelector('#authForm');
   ok((await text()).includes('forælder til oscar test'), 'link til anden forælder forklarer hvad det er');
   await wait(500);
@@ -1175,8 +1175,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await text()).includes('oscar test') && !(await text()).includes('ida test'), 'anden forælder ser kun sit barn');
   // Barnets eget login
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('about:blank');
   await page.goto(`http://localhost:8765/#/barn/${codes[1]}`);
-  await page.reload();
   await page.waitForSelector('#authForm');
   ok((await text()).includes('hej oscar'), 'barnets link hilser på barnet');
   await wait(500);
