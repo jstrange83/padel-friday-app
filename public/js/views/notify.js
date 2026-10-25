@@ -11,9 +11,9 @@ async function pushCard() {
   const iosHint = isIOS() && !standalone();
   if (!pushSupported() && !iosHint) return '<div class="card"><p class="muted small">Din browser kan ikke vise notifikationer. Beskederne står stadig her i appen.</p></div>';
   return `<div class="card pushcard">
-    <label class="switch"><input type="checkbox" id="pushToggle" ${on ? 'checked' : ''} ${iosHint ? 'disabled' : ''}><span>🔔 Notifikationer på denne telefon</span></label>
+    <label class="switch"><input type="checkbox" id="pushToggle" ${on ? 'checked' : ''} ${iosHint ? 'disabled' : ''}><span>🔔 Notifikationer på denne enhed</span></label>
     <p class="muted small">${iosHint ? 'På iPhone skal appen være lagt på hjemmeskærmen, før den kan sende notifikationer. Tryk Del → Føj til hjemmeskærm, og åbn appen derfra.'
-      : on ? 'Slået til. Du får besked, fx når du får en plads fra ventelisten.' : 'Slå til for at få besked på telefonen, fx når du får en plads fra ventelisten.'}</p></div>`;
+      : on ? 'Slået til. Du får besked, fx når du får en plads fra ventelisten.' : 'Slå til for at få besked på telefonen eller computeren, fx når du får en plads fra ventelisten.'}</p></div>`;
 }
 
 export async function viewNotices() {

@@ -164,7 +164,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg få notifikationer på telefonen?',
-    a: `<p>Ja. Tryk på <b>🔔</b> på Spilledage (eller <b>Profil → Beskeder og notifikationer</b>) og slå <b>Notifikationer på denne telefon</b> til.</p>
+    a: `<p>Ja. Tryk på <b>🔔</b> på Spilledage (eller <b>Profil → Beskeder og notifikationer</b>) og slå <b>Notifikationer på denne enhed</b> til.</p>
 <p>Du får fx besked, når du får en plads fra ventelisten. Admins får besked, når nogen vil være med i gruppen. Alle beskeder står også under 🔔 i appen.</p>
 <p>På iPhone skal appen være lagt på hjemmeskærmen først (Del → Føj til hjemmeskærm), og så skal den åbnes derfra.</p>`,
   },

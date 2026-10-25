@@ -18,7 +18,7 @@ export async function viewAdmin() {
   <div class="page admin">
     <h1>Admin</h1>
     ${isRealSuper() ? `<div class="card editcard"><label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand</span></label>
-      <p class="muted small">Slået til får du en ✏️ på kasserne rundt i appen, så du kan rette og slette alt. Gælder kun på denne telefon.</p></div>` : ''}
+      <p class="muted small">Slået til får du en ✏️ på kasserne rundt i appen, så du kan rette og slette alt. Gælder kun på denne enhed.</p></div>` : ''}
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
     ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
   </div>`;

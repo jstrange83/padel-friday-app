@@ -1,5 +1,5 @@
 // Redigeringstilstand for superadmin: en ✏️ på kasserne rundt i appen, som åbner et vindue
-// hvor man kan rette felterne og slette. Slås til og fra under Admin (gemmes på denne telefon).
+// hvor man kan rette felterne og slette. Slås til og fra under Admin (gemmes på denne enhed).
 import { sb, S, hooks, esc, toast, q, busy, FORMAT, MODE, GENDER, SIDE, ROLE } from './core.js';
 
 try { S.editMode = localStorage.getItem('fp-edit') === '1'; } catch { S.editMode = false; }

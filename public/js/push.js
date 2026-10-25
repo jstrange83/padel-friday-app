@@ -13,7 +13,7 @@ async function currentSub() {
   return reg.pushManager.getSubscription();
 }
 
-// Er notifikationer slået til på denne telefon?
+// Er notifikationer slået til på denne enhed?
 export async function pushOn() {
   try { return Notification.permission === 'granted' && !!(await currentSub()); } catch { return false; }
 }
