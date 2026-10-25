@@ -266,7 +266,7 @@ function runBar(c) {
   if (!run) return '';
   if (ev.status === 'afsluttet') return '<div class="runbar"><button class="btn sm" id="reopen">Genåbn dagen</button></div>';
   const next = ev.current_round + 1;
-  const nextLabel = !ev.current_round ? 'Start første runde'
+  const nextLabel = !ev.current_round ? '▶ Start runde 1'
     : lastDone && !nextPlanned ? 'Spil en ekstra runde' : `Start runde ${next}${next <= totalRounds ? ` af ${totalRounds}` : ''}`;
   if (c.free) return freeBar(c);
   const canPlan = !futureRounds.length && !lastDone;
@@ -328,7 +328,7 @@ function matchCard(c, m) {
   if (m.status === 'planlagt' && future) {
     // Rotation: kommende runde, kun hold kan rettes (link i toppen af kortet)
   } else if (m.status === 'planlagt') {
-    if (m.id === c.mineMatch) status = '<span class="badge">Tast resultat i kortet øverst ↑</span>';
+    if (m.id === c.mineMatch) status = '<span class="badge">Tast øverst ↑</span>';
     else if (myTeam || run) actions = `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>${mic}`;
   } else if (m.status === 'indtastet') {
     // Et (ændret) resultat skal godkendes af en fra modstanderholdet. Admin og superbruger kan altid.

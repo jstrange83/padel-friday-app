@@ -13,7 +13,8 @@ const server = spawn('python3', ['-m', 'http.server', '8765', '-d', path.join(ro
 await new Promise((r) => setTimeout(r, 800));
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+// Skærmbredde kan sættes med W=320 (lille telefon) for at tjekke, at alt passer
+const page = await browser.newPage({ viewport: { width: +process.env.W || 390, height: 844 }, deviceScaleFactor: 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/mobilepay:|scheme does not have a registered handler/i.test(m.text())) errors.push('console: ' + m.text()); });
@@ -49,7 +50,7 @@ const ok = (cond, msg) => { if (!cond) throw new Error('FEJL: ' + msg); console.
 const text = async () => (await page.locator('#app').innerText()).toLowerCase();
 const wait = (ms = 300) => page.waitForTimeout(ms);
 // Siden må aldrig være bredere end skærmen
-const noOverflow = async (where) => ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `ingen sidelæns scroll (${where})`);
+const noOverflow = async (where) => { if (process.env.W) { const w = await page.evaluate(() => { const cw = document.documentElement.clientWidth; return [...document.querySelectorAll('#app *')].filter((e) => e.getBoundingClientRect().right > cw + 1).slice(0, 6).map((e) => e.tagName + '.' + e.className + ' ' + Math.round(e.getBoundingClientRect().right) + ' ' + (e.textContent || '').trim().slice(0, 30)); }); if (w.length) console.log('OVERFLOW', where, w); } return ok(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), `ingen sidelæns scroll (${where})`); };
 
 try {
   await page.goto('http://localhost:8765/');

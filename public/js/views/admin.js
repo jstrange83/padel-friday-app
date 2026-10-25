@@ -80,7 +80,7 @@ function allPlayers() {
           <div class="mact">
             ${p.deleted_at ? `<button class="btn sm primary" data-restore="${p.id}">♻️ Gendan spiller</button>` : `<button class="btn sm" data-edit="${p.id}">Ret</button>
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
-            ${p.is_superadmin ? '' : `<button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller</button>`}`}
+            ${p.is_superadmin ? '' : `<button class="btn sm ghost danger" data-delplayer="${p.id}">Slet</button>`}`}
           </div>
         </div>
       </details>`;
@@ -124,7 +124,7 @@ function playersTab() {
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
             <a class="btn sm" href="#/spiller/${p.id}">Statistik</a>
           </div>
-          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button>${p.is_superadmin ? '' : `<button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller</button>`}</div>` : ''}
+          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button></div>${p.is_superadmin ? '' : `<div class="mact"><button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller helt</button></div>`}` : ''}
         </div>
       </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div></details>`;
 }
