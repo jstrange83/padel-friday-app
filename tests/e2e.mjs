@@ -1007,6 +1007,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('.gsum').innerText()).includes('Juniorklub'), 'juniorklub oprettet');
   const clubId = await page.evaluate(() => window.__mock.db().padel_groups.find((x) => x.kind === 'klub').id);
   await page.fill('#superAdd', 'bri');
+  await wait(300); await shot('tilfoej-spiller'); await noOverflow('tilføj spiller');
   ok((await page.locator('#superHits [data-r="superbruger"]').innerText()) === 'Træner', 'i en klub hedder superbruger "Træner"');
   await page.locator('#superHits [data-r="superbruger"]').click();
   await wait(400);

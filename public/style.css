@@ -762,3 +762,10 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .seg.two label { min-width: 0; }
 .compose [hidden] { display: none !important; }
 .compose .seg.wrap label { flex: 1 1 40%; }
+/* Tilføj spiller til gruppe: navn øverst, roller som tre lige store knapper */
+.addrow { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.addrow:last-child { border-bottom: 0; }
+.addrow small { display: block; margin: 2px 0 6px; }
+.addbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.addbtns .btn { width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; }
+#superHits:not(:empty) ~ .mlist .nomem { display: none; }

@@ -174,7 +174,7 @@ function groupsTab() {
           <select class="rolesel sm" data-role="${p.id}" aria-label="Rolle for ${esc(p.name)}">${Object.entries(roleNames()).map(([k, v]) =>
             `<option value="${k}" ${m.role === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
           <button class="icon sm" data-remove="${p.id}" aria-label="Fjern ${esc(p.name)} fra gruppen">✕</button></div>`;
-      }).join('') || '<p class="muted small">Ingen endnu.</p>'}</div></details>
+      }).join('') || '<p class="muted small nomem">Ingen medlemmer endnu. Søg efter en spiller ovenfor for at tilføje.</p>'}</div></details>
       <div class="gfoot"><button class="link sm dn" id="archiveGroup">Slet gruppe</button></div>
     </div>` : ''}
     ${S.groups.some((x) => x.archived) ? `<details class="card archived"><summary><b>🗄 Slettede grupper (${S.groups.filter((x) => x.archived).length})</b></summary>
@@ -370,8 +370,8 @@ function bind() {
     const t = sa.value.trim().toLowerCase();
     const hits = t ? Object.values(S.profiles).filter((p) => !p.deleted_at && member(p.id)?.status !== 'aktiv' && p.name.toLowerCase().includes(t)).slice(0, 8) : [];
     const box = document.getElementById('superHits');
-    box.innerHTML = hits.map((p) => `<div class="hitrow"><span class="grow">${esc(p.name)}</span>
-      <button class="btn sm" data-sadd="${p.id}" data-r="bruger">${roleNames().bruger}</button><button class="btn sm" data-sadd="${p.id}" data-r="superbruger">${roleNames().superbruger}</button><button class="btn sm primary" data-sadd="${p.id}" data-r="admin">Admin</button></div>`).join('')
+    box.innerHTML = hits.map((p) => `<div class="addrow"><b>${esc(p.name)}</b><small class="muted">Tilføj som</small>
+      <div class="addbtns">${['bruger', 'superbruger', 'admin'].map((r) => `<button class="btn sm" data-sadd="${p.id}" data-r="${r}">${roleNames()[r]}</button>`).join('')}</div></div>`).join('')
       || (t ? '<p class="muted small">Ingen fundet. Spilleren skal have oprettet en profil først.</p>' : '');
     box.querySelectorAll('[data-sadd]').forEach((b) => (b.onclick = async () => {
       await setMember(b.dataset.sadd, b.dataset.r, 'aktiv');
