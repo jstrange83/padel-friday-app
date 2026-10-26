@@ -718,3 +718,27 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .tr .krow { padding-top: 8px; margin-top: 8px; }
 .yesno .btn { padding: 6px 6px; min-height: 36px; }
 .modecard .switch { margin-top: 10px; }
+
+/* Login: padelbane i perspektiv + stort ordmærke */
+.authx { max-width: 440px; text-align: left; padding: calc(18px + env(safe-area-inset-top)) 20px 32px; }
+.authx .hero { margin: 0 -20px; position: relative; }
+.court { display: block; width: 100%; height: auto; }
+.court .turf { fill: var(--card2); fill: color-mix(in srgb, var(--accent) 7%, var(--card2)); }
+.court .lines line, .court .lines polygon { stroke: var(--text); stroke-opacity: .55; stroke-width: 2; fill: none; }
+.court .glass line { stroke: var(--line); stroke-width: 2; }
+.court .net { stroke: var(--text); stroke-opacity: .25; stroke-width: 14; stroke-dasharray: 2 3; }
+.court .nettop { stroke: var(--text); stroke-opacity: .9; stroke-width: 2.5; }
+.court .netpost { stroke: var(--text); stroke-opacity: .9; stroke-width: 3; }
+.court .shadow { fill: #000; fill-opacity: .35; }
+.authx .word { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(76px, 26vw, 116px); line-height: .82; letter-spacing: -1px;
+  margin: -34px 0 14px; color: var(--accent); position: relative; text-shadow: 0 6px 24px color-mix(in srgb, var(--bg) 70%, transparent); }
+.authx .intro { margin: 0 0 22px; font-size: 17px; line-height: 1.45; color: var(--text); opacity: .85; max-width: 34ch; }
+.authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--card); border-radius: 12px; margin-bottom: 16px; }
+.authtabs button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; padding: 11px 6px; border-radius: 9px; cursor: pointer; }
+.authtabs button.on { background: var(--card2); color: var(--text); }
+.authtabs button:focus-visible, .authx input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.authx form label { display: block; margin-bottom: 12px; }
+.authx form label small { display: block; margin-top: 4px; }
+.authx form .btn.primary { width: 100%; margin-top: 6px; padding: 14px; font-size: 17px; }
+.authx #forgot { display: block; margin: 12px auto 0; }
+@media (min-width: 900px) { .authx { padding-top: 48px; } }
