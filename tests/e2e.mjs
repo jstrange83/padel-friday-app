@@ -1144,6 +1144,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('.waitbox [data-kdo$="|aktiv"]').click();
   await wait(500);
   ok(!(await page.locator('.kpend').count()) && (await text()).includes('u12 (2)'), 'begge børn godkendt og på U12 (Oscar optaget fra ventelisten)');
+  ok((await page.evaluate(() => { const ns = window.__mock.db().padel_notifications.filter((n) => n.kind === 'klub_ind'); return ns.length && ns.every((n) => n.done_at); })), 'beskeden om indmeldelsen forsvinder, når børnene er behandlet');
   await page.click('details.plist summary');
   ok(await page.locator('.prow:has-text("Ida Test") .badge.nophoto').count() && await page.locator('.prow:has-text("Oscar Test") .badge.warn').count(), 'træneren ser "ingen billeder" og vigtig info');
   ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.user_id === 'u-nyforaelder' && n.kind === 'klub_optaget').length)) === 2, 'forælderen får besked om optagelse');

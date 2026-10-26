@@ -576,15 +576,22 @@ RPC.padel_club_set_absence = (a) => {
 
 
 // Etape 3: arrangementer, forældrehjælp, venteliste, prøvetræning
+// Beskeden om indmeldelse forsvinder, når forælderen ikke har flere børn, der venter på svar
+const kidDone = (k) => {
+  if (db.padel_club_kids.some((x) => x.group_id === k.group_id && x.created_by === k.created_by && x.status === 'ansoegt' && !x.waitlist)) return;
+  db.padel_notifications.filter((n) => n.ref === `kids:${k.group_id}:${k.created_by}` && !n.done_at).forEach((n) => { n.done_at = now(); n.read_at ||= now(); });
+};
 const EV = (id) => db.padel_club_events.find((e) => e.id === id);
 Object.assign(RPC, {
   padel_club_apply_v3: ({ g, p_kids }) => {
     const n = RPC.padel_club_apply_v2({ g, p_kids });
+    db.padel_notifications.filter((x) => x.kind === 'klub_ind' && !x.ref).forEach((x) => (x.ref = `kids:${g}:${uid()}`));
     const ks = p_kids.filter((y) => y.name?.trim());
     db.padel_club_kids.filter((k) => k.group_id === g && k.created_by === uid()).slice(-n).forEach((k, i) => { k.trial_requested = !!ks[i].trial; k.waitlist = false; k.trial = false; });
     return n;
   },
-  padel_club_decide_v2: ({ p_kid, p_action, p_team }) => {
+  padel_club_decide_v2: (a) => { RPC._decide_v2(a); kidDone(KID(a.p_kid)); },
+  _decide_v2: ({ p_kid, p_action, p_team }) => {
     const k = KID(p_kid); needTrainer(k.group_id);
     if (p_action === 'venteliste') { Object.assign(k, { status: 'ansoegt', waitlist: true, team_id: p_team || k.team_id }); return; }
     if (p_action === 'afvist') { Object.assign(k, { status: 'afvist', waitlist: false }); return; }
