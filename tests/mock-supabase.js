@@ -457,7 +457,7 @@ Object.assign(RPC, {
     if (p_end <= p_start) throw new Error('Sluttid skal være efter starttid');
     const v = { weekday: p_weekday, start_time: p_start + ':00', end_time: p_end + ':00', place: p_place?.trim() || null, active: p_active !== false };
     if (p_id) { Object.assign(db.padel_club_sessions.find((x) => x.id === p_id), v); return p_id; }
-    const s = { id: uuid(), team_id: p_team, ...v }; db.padel_club_sessions.push(s); return s.id;
+    const s = { id: uuid(), team_id: p_team, ...v, created_by: uid(), created_at: now() }; db.padel_club_sessions.push(s); return s.id;
   },
   padel_club_set_absence: ({ p_session, p_day, p_kid, p_status, p_reason }) => {
     if (!kidMine(p_kid) && !canRun(sessGroup(p_session))) throw new Error('Det har du ikke adgang til');
@@ -466,7 +466,7 @@ Object.assign(RPC, {
   padel_club_set_attendance: ({ p_session, p_day, p_kid, p_present }) => { needTrainer(sessGroup(p_session)); upsert('padel_club_attendance', ['session_id', 'day', 'kid_id'], { session_id: p_session, day: p_day, kid_id: p_kid, present: p_present }); },
   padel_club_cancel: ({ p_session, p_day, p_cancelled, p_note }) => {
     const g = sessGroup(p_session); needTrainer(g);
-    upsert('padel_club_cancellations', ['session_id', 'day'], { session_id: p_session, day: p_day, cancelled: p_cancelled, note: p_note || null });
+    upsert('padel_club_cancellations', ['session_id', 'day'], { session_id: p_session, day: p_day, cancelled: p_cancelled, note: p_note || null, set_by: uid(), updated_at: now() });
     const s = db.padel_club_sessions.find((x) => x.id === p_session);
     notify(clubPeople(g, s.team_id), 'klub_aflyst', (p_cancelled ? 'Træning aflyst ' : 'Træning genoprettet ') + p_day, p_note || '', '/#/traening');
   },

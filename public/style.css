@@ -769,3 +769,4 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .addbtns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .addbtns .btn { width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; }
 #superHits:not(:empty) ~ .mlist .nomem { display: none; }
+.byline { display: block; margin: 6px 0 2px; font-size: 12px; } .trcancel .byline { font-weight: 400; }

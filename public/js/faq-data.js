@@ -432,6 +432,12 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Kan jeg se, hvem der har oprettet en træning eller et arrangement?',
+    a: `<p>Ja, hvis du er klubbens admin. Under <b>Admin → Hold og tider</b> og på trænerens kort under Træning står der <b>Oprettet af</b> ved hver træningstid. Det samme står i arrangementerne. Er en træning aflyst, står der også, hvem der aflyste den.</p>
+<p>Træningstider, der blev oprettet før denne funktion kom, viser ikke, hvem der har oprettet dem.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Kan en træner skrive privat til mit barn?',
     a: `<p>Nej. Et barn er aldrig alene i en samtale med en voksen i appen:</p>
 <ul><li>Skriver barnet selv (med eget login), er barnets forældre automatisk med i samtalen.</li>

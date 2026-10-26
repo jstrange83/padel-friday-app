@@ -1035,6 +1035,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('details.teamcard[open] form[data-tmax] input[name=max]').fill('1');
   await page.locator('details.teamcard[open] form[data-tmax] button').click();
   await wait(500);
+  ok((await page.locator('details.teamcard[open] details.srow:not(.new) .byline').first().innerText()).includes('Oprettet af Jimmy'), 'admin ser hvem der har oprettet træningstiden');
   await shot('klub-hold-tider');
   await noOverflow('klub hold og tider');
   // Kontingent og info
@@ -1241,6 +1242,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#evForm button.primary');
   await wait(600);
   ok((await page.locator('details.tr.event').count()) === 1, 'arrangement oprettet');
+  ok(!(await page.locator('details.tr.event .byline').count()), 'en træner ser ikke, hvem der har oprettet');
   await page.click('#nav a[href="#/admin"]');
   await page.waitForSelector('.tabbar');
   ok(!(await page.locator('[data-tab="kontingent"]').count()) && !(await page.locator('[data-tab="spillere"]').count()), 'træneren ser ikke kontingent og medlemmer');
@@ -1444,6 +1446,16 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#discRow');
   ok((await page.locator('#discRow').innerText()).includes('Meld et barn ind'), 'Se som: linjen vises som for spilleren');
   await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
+
+  // Admin ser, hvem der har oprettet arrangementet
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate(() => localStorage.setItem('fp-group', window.__mock.db().padel_groups.find((x) => x.kind === 'klub').id));
+  await page.goto('http://localhost:8765/#/traening');
+  await page.reload();
+  await page.waitForSelector('details.tr.event');
+  ok((await page.locator('details.tr.event .byline').textContent()).includes('Oprettet af Brian'), 'admin ser, at Brian oprettede arrangementet');
 
   // Fredagspadel: en spiller skriver til admin
   await freshLogin('test5@fredagspadel.test');

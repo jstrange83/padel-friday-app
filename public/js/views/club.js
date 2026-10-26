@@ -171,7 +171,10 @@ function feeCard(gr, kids) {
 
 const head = (o) => `<div class="trhead"><b>${cap(dayLabel(o.day))}</b><span class="trtime">${t5(o.s.start_time)}–${t5(o.s.end_time)}</span></div>
   <small class="muted">${esc(team(o.s.team_id)?.name || '')}${o.s.place ? ` · ${esc(o.s.place)}` : ''}</small>`;
-const cancelLine = (c) => (c ? `<div class="trcancel">❌ Aflyst${c.note ? `: ${esc(c.note)}` : ''}</div>` : '');
+// Kun admin ser, hvem der har oprettet en træning eller et arrangement (og hvem der aflyste)
+const who = (u) => (u && S.profiles[u] ? S.profiles[u].name : '');
+const byLine = (u, at, verb = 'Oprettet') => (isAdmin() && who(u) ? `<small class="muted byline">${verb} af ${esc(who(u))}${at ? ` · ${fmtDate(at, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</small>` : '');
+const cancelLine = (c) => (c ? `<div class="trcancel">❌ Aflyst${c.note ? `: ${esc(c.note)}` : ''}${byLine(c.set_by, c.updated_at, 'Aflyst')}</div>` : '');
 
 function parentCard(o, active, today) {
   const kids = active.filter((k) => k.team_id === o.s.team_id);
@@ -203,6 +206,7 @@ function trainerCard(o, today) {
       return `<div class="krow"><span class="grow">${esc(k.name)}${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${yes ? '' : `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
+    ${byLine(o.s.created_by, o.s.created_at)}
     <div class="mact">${c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
   </details>`;
 }
@@ -272,6 +276,7 @@ function eventCard(e, trainer, active, today) {
   const body = `
     ${e.cancelled ? '<div class="trcancel">❌ Aflyst</div>' : ''}
     ${e.description ? `<p class="ptext">${rich(e.description)}</p>` : ''}
+    ${byLine(e.created_by, e.created_at)}
     ${!e.cancelled ? kids.map((k) => {
       const sg = signOf(e.id, k.id);
       return `<div class="krow"><span class="grow">${kidLabel(k)}${sg && e.price ? `<small class="muted">${{ betalt: '✓ Betalt', afventer: '⏳ Betaling afventer', ubetalt: 'Ikke betalt' }[sg.paid]}</small>` : ''}</span>
@@ -788,7 +793,7 @@ export function clubTeamsTab() {
         ${admin ? `<div class="lbl">Trænere på holdet</div>${coaches.length ? `<div class="checks coach">${coaches.map((u) => `<label><input type="checkbox" data-coach="${t.id}" value="${u}" ${onTeam(t.id, u) ? 'checked' : ''}><span>${esc(nameOf(u).split(' ')[0])}</span></label>`).join('')}</div>` : '<p class="muted small">Gør først nogen til Træner under Medlemmer.</p>'}` : ''}
         ${admin ? `<form class="frow tmax" data-tmax="${t.id}"><label class="grow">Maks. antal børn <small class="muted">(tom = ingen grænse)</small><input name="max" type="number" min="0" value="${t.max_kids || ''}"></label><button class="btn sm">Gem</button></form>` : ''}
         <div class="lbl">Træningstider</div>
-        ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place ? `<small class="muted">${esc(s.place)}</small>` : ''}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
+        ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place ? `<small class="muted">${esc(s.place)}</small>` : ''}${byLine(s.created_by, s.created_at)}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
         <details class="srow new"><summary><span class="grow">➕ Tilføj træningstid</span></summary>${sessForm(null, t.id)}</details>
         <div class="mact"><button class="link sm" data-trename="${t.id}">Omdøb holdet</button>${admin ? `<button class="link sm dn" data-tarch="${t.id}">Slet holdet</button>` : ''}</div>
       </details>`;
