@@ -3,7 +3,7 @@ import { sb, S, app, hooks, esc, toast, q, busy, fmtDate } from '../core.js';
 import { pushSupported, pushOn, enablePush, disablePush, isIOS, standalone } from '../push.js';
 
 export async function loadUnread() {
-  try { S.unread = (await q(sb.from('padel_notifications').select('id').eq('user_id', S.realMe.id).is('read_at', null).limit(99))).length; } catch { S.unread = 0; }
+  try { S.unread = (await q(sb.from('padel_notifications').select('id').eq('user_id', S.realMe.id).is('read_at', null).is('done_at', null).limit(99))).length; } catch { S.unread = 0; }
 }
 
 async function pushCard() {
@@ -18,7 +18,7 @@ async function pushCard() {
 
 export async function viewNotices() {
   // Under "Se som" vises ingen beskeder: de tilhører kun den, de er sendt til (ellers ville man se sine egne admin-beskeder)
-  const list = S.viewAs ? [] : await q(sb.from('padel_notifications').select('*').eq('user_id', S.realMe.id).order('created_at', { ascending: false }).limit(50));
+  const list = S.viewAs ? [] : await q(sb.from('padel_notifications').select('*').eq('user_id', S.realMe.id).is('done_at', null).order('created_at', { ascending: false }).limit(50));
   app.innerHTML = `
   <div class="page notices-page">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/fredage')">‹ Tilbage</button>

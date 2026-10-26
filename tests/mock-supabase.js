@@ -310,12 +310,14 @@ const RPC = {
     if (m?.status === 'aktiv') return 'aktiv';
     if (m) m.status = 'afventer'; else db.padel_group_members.push({ group_id: g, player_id: uid(), role: 'bruger', status: 'afventer', elo: 1000 });
     const admins = db.padel_group_members.filter((x) => x.group_id === g && x.status === 'aktiv' && x.role === 'admin').map((x) => x.player_id).concat(db.padel_profiles.filter((p) => p.is_superadmin).map((p) => p.id));
-    notify(admins, 'anmodning', `${me().name} vil gerne være med`, 'Godkend eller afvis.', '/#/fredage');
+    notify(admins, 'anmodning', `${me().name} vil gerne være med`, 'Godkend eller afvis.', '/#/admin');
+    db.padel_notifications.filter((n) => n.kind === 'anmodning' && !n.ref).forEach((n) => (n.ref = `join:${g}:${uid()}`));
     return 'afventer';
   },
   padel_set_member: ({ g, p, p_role, p_status }) => {
     const m = GM(g, p);
     if (m) Object.assign(m, { role: p_role, status: p_status }); else db.padel_group_members.push({ group_id: g, player_id: p, role: p_role, status: p_status, elo: 1000 });
+    if (p_status !== 'afventer') db.padel_notifications.filter((n) => n.ref === `join:${g}:${p}` && !n.done_at).forEach((n) => { n.done_at = now(); n.read_at ||= now(); });
   },
   padel_create_group: ({ p_name, p_centers }) => {
     const id = uuid();

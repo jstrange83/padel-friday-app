@@ -457,6 +457,9 @@ try {
   await wait(500);
   ok((await text()).includes('2 spillere'), 'Anne godkendt i Lørdagspadel');
   ok(!(await page.locator('#nav a:has-text("Admin") .navbadge').count()), 'tallet forsvinder, når Anne er godkendt');
+  await page.goto('http://localhost:8765/#/beskeder');
+  await page.waitForSelector('.notices-page');
+  ok(!(await text()).includes('vil gerne være med'), 'beskeden om Anne forsvinder, når hun er godkendt');
 
   // Hjemmeskærm: på en iPhone vises vejledningen efter login, og den kan springes over
   const iphone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
