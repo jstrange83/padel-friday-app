@@ -152,7 +152,8 @@ export async function viewTraining() {
 function trainersCard(teamIds) {
   const rows = teamIds.map((t) => ({ t: team(t), ts: trainersOf(t) })).filter((x) => x.t && x.ts.length);
   if (!rows.length) return '';
-  return `<div class="card trainers"><b>👥 Trænere</b>${rows.map((x) => `<div class="lbl">${esc(x.t.name)}</div>${x.ts.map(trainerLinks).join('')}`).join('')}</div>`;
+  return `<div class="card trainers"><b>👥 Trænere</b>${rows.map((x) => `<div class="lbl">${esc(x.t.name)}</div>${x.ts.map(trainerLinks).join('')}`).join('')}
+    ${S.viewAs ? '' : '<a class="btn sm block" href="#/ny-besked?til=traenere">✉️ Skriv til trænerne</a>'}</div>`;
 }
 
 function feeCard(gr, kids) {
@@ -385,6 +386,7 @@ export async function viewPosts() {
     ${(board || []).length || C().trainers.length ? `<details class="card people" ${S.peopleOpen ? 'open' : ''}><summary><b>👥 Bestyrelse og trænere</b><span class="muted">›</span></summary>
       ${(board || []).length ? `<div class="lbl">Bestyrelse</div>${board.map((x) => trainerLinks({ ...x, name: `${x.name}`, role: x.title })).join('')}` : ''}
       ${C().trainers.length ? `<div class="lbl">Trænere</div>${C().trainers.map((x) => trainerLinks({ ...x, role: x.team_ids.map((t) => team(t)?.name).filter(Boolean).join(', ') })).join('')}` : ''}
+      ${S.viewAs ? '' : '<a class="btn sm block" href="#/ny-besked">✉️ Skriv til klubben</a>'}
     </details>` : ''}
     ${trainer ? `<details class="card postnew" ${S.postOpen ? 'open' : ''}><summary><b>✏️ Skriv et opslag</b><span class="muted">›</span></summary>
       <form id="postForm">
@@ -625,6 +627,7 @@ export function clubKidsTab() {
           ${infoOf(k.id) ? `<div class="infobox">⚠️ ${esc(infoOf(k.id))}</div>` : ''}
           ${k.photo_ok === false ? '<div class="infobox">🚫📷 Må ikke være på billeder</div>' : ''}
           ${k.trial ? `<div class="mact"><button type="button" class="btn sm primary" data-kdo="${k.id}|aktiv">✓ Meld ind som medlem</button></div>` : ''}
+          ${canRun() && !S.viewAs ? `<a class="btn sm block" href="#/ny-besked?barn=${k.id}">✉️ Skriv til forældrene</a>` : ''}
           ${kidFormFields({ ...k, info: infoOf(k.id) }, 200 + i, collect || !!k.address)}
           <label>Hold${teamSel(k, 'name="team"')}</label>
           <div class="mact"><button type="button" class="btn sm ghost danger" data-kout="${k.id}">Meld ud</button><button class="btn sm primary">Gem</button></div>
@@ -725,7 +728,7 @@ export function clubStaffCard() {
   const teamsOf = (id) => C().teamTrainers.filter((x) => x.user_id === id).map((x) => team(x.team_id)).filter((t) => t && !t.archived).map((t) => t.name);
   const board = people.filter((id) => st(id).board_title);
   return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍💼 Bestyrelse og rettigheder</b><small class="muted">${board.length ? board.map((id) => `${esc(st(id).board_title)}: ${esc(nameOf(id).split(' ')[0])}`).join(' · ') : 'Ingen bestyrelse endnu'}</small></summary>
-    <p class="muted small">Vælg post i bestyrelsen, og hvad hver person må i appen. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Bestyrelsen vises med kontaktinfo under Opslag.</p>
+    <p class="muted small">Vælg post i bestyrelsen, og hvad hver person må i appen. Formanden bliver automatisk admin. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Bestyrelsen vises med kontaktinfo under Opslag.</p>
     ${people.map((id) => `<form class="staffrow" data-staff="${id}">
       <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin · alle rettigheder' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
       <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option ${st(id).board_title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
@@ -747,7 +750,10 @@ export function bindClubStaff(refresh) {
     const v = (k) => !!f.elements[k]?.checked;
     try {
       await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('treasurer'), p_post: v('can_post'), p_events: v('can_events'), p_approve: v('can_approve'), p_cert_date: f.cert.value || null }));
-      S.staffAdd = null; toast('Gemt'); await loadClub(S.groupId); await refresh();
+      const chair = f.title.value === 'Formand';
+      S.staffAdd = null; toast(chair ? 'Gemt. Formanden er nu klubbens admin med alle rettigheder' : 'Gemt');
+      if (chair) await hooks.loadBase();
+      await loadClub(S.groupId); await refresh();
     } catch { busy(btn, false); }
   }));
   app.querySelectorAll('[data-staffrm]').forEach((b) => (b.onclick = async () => {

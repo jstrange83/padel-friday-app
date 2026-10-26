@@ -945,7 +945,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
 
   // Nyt i appen: popup én gang efter en større opdatering; spillere ser ikke admin-nyheder
   await loginAs('jimmy@test');
-  await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = null; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = null; window.__mock.save(); });
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = '2026-10-24'; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = '2026-10-24'; window.__mock.save(); });
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
@@ -1385,6 +1385,50 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await shot('klub-barn');
   await noOverflow('klub barn');
 
+  // Beskeder: barnet skriver til trænerne, og begge forældre er automatisk med
+  await page.goto('http://localhost:8765/#/ny-besked');
+  await page.waitForSelector('#cmp');
+  ok((await text()).includes('dine forældre kan også læse'), 'barnet får at vide, at forældrene kan læse med');
+  ok(await page.locator('#cmp label:has-text("Bestyrelsen")').count() && await page.locator('#cmp label:has-text("Kassereren")').count(), 'man kan skrive til trænere, bestyrelse og kasserer');
+  await page.fill('#cmp input[name=subject]', 'Ny bat');
+  await page.fill('#cmp textarea[name=body]', 'Hvilken bat skal jeg købe?');
+  await shot('besked-ny');
+  await noOverflow('ny besked');
+  await page.click('#cmp button.primary');
+  await page.waitForSelector('.thread .msg');
+  ok((await page.locator('.thpeople').textContent()).includes('Brian'), 'træneren er med i samtalen');
+  ok((await page.evaluate(() => { const ns = window.__mock.db().padel_notifications.filter((n) => n.kind === 'besked'); return ['u-nyforaelder', 'u-nyfar', 'u-brian'].every((u) => ns.some((n) => n.user_id === u)) && !ns.some((n) => n.user_id === 'u-nyoscar'); })), 'begge forældre og træneren får besked, ikke afsenderen');
+  await shot('besked-samtale');
+  await noOverflow('samtale');
+
+  // Træneren svarer, markerer løst og skriver selv til forældrene om Ida
+  await freshLogin('brian@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/profil');
+  await page.waitForSelector('#msgRow .badge.new');
+  ok((await page.locator('#msgRow').innerText()).includes('Samtaler med medlemmer'), 'træneren har Samtaler med medlemmer i Profil med mærke');
+  await page.click('#msgRow');
+  await page.waitForSelector('.throw.unread');
+  await page.click('.throw');
+  await page.waitForSelector('#rep');
+  await page.fill('#rep textarea', 'Kom forbi til træning, så finder vi en');
+  await page.click('#rep button.primary');
+  await wait(500);
+  ok((await page.locator('.msg').count()) === 2 && (await page.locator('.msg.mine').count()) === 1, 'træneren har svaret');
+  await page.click('#solve');
+  await wait(500);
+  ok((await text()).includes('markeret som løst'), 'samtalen er markeret som løst');
+  const idaId = await page.evaluate(() => window.__mock.db().padel_club_kids.find((k) => k.name === 'Ida Test').id);
+  await page.goto('about:blank');
+  await page.goto(`http://localhost:8765/#/ny-besked?barn=${idaId}`);
+  await page.waitForSelector('#cmp');
+  ok(await page.locator('#cmp input[name=mode][value=foraeldre]').isChecked(), 'træneren skriver til forældrene om et barn');
+  await page.fill('#cmp textarea[name=body]', 'Ida var super i dag');
+  await page.click('#cmp button.primary');
+  await page.waitForSelector('.thread .msg');
+  ok((await page.evaluate(() => { const t = window.__mock.db().padel_threads.at(-1); const ns = window.__mock.db().padel_notifications.filter((n) => n.url === '/#/samtale/' + t.id); return t.from_staff && ns.some((n) => n.user_id === 'u-nyforaelder') && !ns.some((n) => n.user_id === 'u-nyfar'); })), 'beskeden om Ida går til Idas forælder');
+
   // "Se som" en spiller uden børn: linjen om klubben vises som for spilleren selv
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
@@ -1395,6 +1439,24 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#discRow');
   ok((await page.locator('#discRow').innerText()).includes('Meld et barn ind'), 'Se som: linjen vises som for spilleren');
   await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
+
+  // Fredagspadel: en spiller skriver til admin
+  await freshLogin('test5@fredagspadel.test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate(() => localStorage.setItem('fp-group', 'g-fre'));
+  await page.goto('http://localhost:8765/#/profil');
+  await page.reload();
+  await page.waitForSelector('#msgRow');
+  ok((await page.locator('#msgRow').innerText()).includes('Skriv til admin'), 'i Fredagspadel hedder det Skriv til admin');
+  await page.click('#msgRow');
+  await page.click('#newMsg');
+  await page.waitForSelector('#cmp');
+  ok(!(await page.locator('#cmp input[name=role][type=radio]').count()), 'i en gruppe skal man ikke vælge modtager');
+  await page.fill('#cmp textarea[name=body]', 'Kan vi spille kl. 18 i stedet?');
+  await page.click('#cmp button.primary');
+  await page.waitForSelector('.thread .msg');
+  ok((await page.evaluate(() => window.__mock.db().padel_notifications.some((n) => n.kind === 'besked' && n.user_id === 'u-admin'))), 'admin får beskeden');
 
   // Visning: superadmin kan se appen som almindelig bruger og skifte tilbage
   await freshLogin('jimmy@test');

@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-26', date: '26. oktober 2026', groups: true, title: 'Skriv til admin',
+    items: ['💬 Under <b>Profil → Skriv til admin</b> kan du nu sende en besked til gruppens admin. Svaret kommer samme sted, og du får en notifikation.'],
+  },
+  {
     id: '2026-10-25c', date: '25. oktober 2026', admin: true, title: 'Se appen som almindelig bruger',
     items: ['👁 Under <b>Profil → Visning</b> kan du nu vælge at se appen som en almindelig spiller. Så kan du se, hvordan den ser ud for de andre. En bjælke øverst fører dig tilbage.'],
   },
@@ -33,7 +37,9 @@ export const NEWS = [
 
 const inCenter = (names) => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.find((g) => g.id === m.group_id && g.kind !== 'klub' && !g.archived)
   && S.groupCenters.some((c) => c.group_id === m.group_id && c.enabled && names.includes(S.centers.find((x) => x.id === c.center_id)?.name)));
-const forMe = () => NEWS.filter((n) => (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)));
+// groups: true = kun for voksne i en almindelig gruppe (ikke dem, der kun er med i en juniorklub)
+const inGroup = () => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.some((g) => g.id === m.group_id && g.kind !== 'klub' && !g.archived));
+const forMe = () => NEWS.filter((n) => (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)) && (!n.groups || isSuper() || inGroup()));
 export const latestNewsId = () => NEWS[0]?.id || '';
 
 // Nyheder jeg ikke har set. Har man aldrig set nogen, vises kun den seneste opdatering.

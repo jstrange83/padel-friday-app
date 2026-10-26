@@ -5,6 +5,7 @@ import { latestNewsId } from '../news.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated } from '../core.js';
 import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn, setEditMode } from '../editmode.js';
+import { msgRowLabel, unreadThreads } from './messages.js';
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -60,6 +61,7 @@ export function renderProfile(isNew) {
     <div class="list links">
       ${club ? '' : `<a class="row" href="#/spiller/${p.id}"><span class="grow">📊 ${viewing ? 'Statistik' : 'Min statistik'}</span><span class="muted">›</span></a>`}
       ${group()?.fines_enabled ? '<a class="row" href="#/boeder"><span class="grow">💸 Bødekasse</span><span class="muted">›</span></a>' : ''}
+      ${viewing ? '' : `<a class="row" href="#/samtaler" id="msgRow"><span class="grow">💬 ${msgRowLabel()}</span><span class="muted">›</span></a>`}
       <a class="row" href="#/beskeder" id="notRow"><span class="grow">🔔 Beskeder og notifikationer</span>${S.unread && !viewing ? `<span class="badge new">${S.unread} nye</span>` : '<span class="muted">›</span>'}</a>
     </div>
     <h3>Appen</h3>
@@ -86,6 +88,8 @@ export function renderProfile(isNew) {
   // Diskret linje i listen, hvis der er en klub man kan melde sine børn ind i
   discoverRow().then((h) => { const nr = document.getElementById('notRow'); if (nr && h && !document.getElementById('discRow')) nr.insertAdjacentHTML('afterend', h); });
   myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderProfile(false)); } });
+  // Mærke ved ulæste samtaler
+  if (!viewing) unreadThreads().then((n) => { const r = document.getElementById('msgRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n} ${n === 1 ? 'ny' : 'nye'}</span>`; });
   // Mærke ved nye svar på forslag
   if (hasSuggest()) unseenReplies().then((n) => { const r = document.getElementById('sugRow'); if (n && r) r.querySelector('.muted').outerHTML = `<span class="badge new">${n === 1 ? 'Nyt svar' : `${n} nye svar`}</span>`; });
 }

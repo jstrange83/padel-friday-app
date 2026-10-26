@@ -2,6 +2,7 @@
 import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, viewMode, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
 import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids, hasAnyRight } from './views/club.js';
 import { viewPrivacy } from './views/privacy.js';
+import { viewThreads, viewThread, viewCompose } from './views/messages.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
@@ -152,7 +153,7 @@ function renderNav() {
   if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
@@ -166,7 +167,7 @@ function renderClubNav() {
   if (canRun() || hasAnyRight() || pend) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
-    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
+    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
 }
 
@@ -229,6 +230,9 @@ const ROUTES = {
   traening: () => (isClub() ? viewTraining() : viewEvents()),
   opslag: () => (isClub() ? viewPosts() : viewEvents()),
   'klub-ind': (g) => viewClubJoin(g),
+  samtaler: () => viewThreads(),
+  samtale: (id) => viewThread(id),
+  'ny-besked': () => viewCompose(),
 };
 // Sider der ikke findes i en klub (spilledage, rangliste, bøder) viser Træning
 const NOT_IN_CLUB = ['fredage', 'fredag', 'ny-fredag', 'ret-fredag', 'rangliste', 'spiller', 'boeder'];
@@ -236,9 +240,9 @@ const NOT_IN_CLUB = ['fredage', 'fredag', 'ny-fredag', 'ret-fredag', 'rangliste'
 async function route() {
   leavePage();
   window.scrollTo(0, 0);
-  let [, page, id] = (location.hash || '#/fredage').split('/');
+  let [, page, id] = (location.hash || '#/fredage').split('?')[0].split('/');
   renderNav();
-  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern'].includes(page)) return viewNoGroup();
+  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern', 'samtaler', 'samtale'].includes(page)) return viewNoGroup();
   if (isClub() && (!page || NOT_IN_CLUB.includes(page))) page = 'traening';
   try { await (ROUTES[page] || ROUTES.fredage)(id); } catch (e) { console.error(e); }
   renderNav();

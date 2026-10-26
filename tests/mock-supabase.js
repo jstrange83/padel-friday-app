@@ -21,7 +21,7 @@ function seed() {
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
     padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [], padel_notifications: [], padel_push_subs: [],
-    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [], padel_club_events: [], padel_club_event_signups: [], padel_club_tasks: [], padel_club_task_helpers: [] };
+    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [], padel_club_events: [], padel_club_event_signups: [], padel_club_tasks: [], padel_club_task_helpers: [], padel_threads: [], padel_thread_msgs: [], padel_thread_reads: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -534,6 +534,7 @@ Object.assign(RPC, {
     if (!isAdm(g)) throw new Error('Kun klubbens admin');
     upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer });
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
+    if (p_title === 'Formand') GM(g, p_user).role = 'admin';
   },
   padel_club_set_fee_v2: (a) => { RPC.padel_club_set_fee(a); db.padel_groups.find((x) => x.id === a.g).club_collect_address = !!a.p_collect_address; },
   padel_club_fee_reminder: ({ g }) => {
@@ -642,8 +643,78 @@ Object.assign(RPC, {
     if (!isAdm(g)) throw new Error('Kun klubbens admin (formanden)');
     upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer, can_post: !!p_post, can_events: !!p_events, can_approve: !!p_approve, board_title: p_title || null });
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
+    if (p_title === 'Formand') GM(g, p_user).role = 'admin';
   },
   padel_club_board_contacts: ({ g }) => db.padel_club_staff.filter((x) => x.group_id === g && x.board_title).map((x) => ({ user_id: x.user_id, name: db.padel_profiles.find((p) => p.id === x.user_id)?.name, title: x.board_title, phone: db.padel_contacts.find((c) => c.player_id === x.user_id)?.phone || null })),
+});
+
+// Beskeder (samtaler med trænere, bestyrelse, kasserer, admin). Børn altid med forældre.
+const TH = (id) => db.padel_threads.find((t) => t.id === id);
+const role = (g, u) => (GM(g, u)?.status === 'aktiv' ? GM(g, u).role : null);
+const thStaffIds = (t) => db.padel_group_members.filter((m) => m.group_id === t.group_id && m.status === 'aktiv').map((m) => m.player_id).filter((u) => {
+  const r = role(t.group_id, u), st = db.padel_club_staff.find((x) => x.group_id === t.group_id && x.user_id === u);
+  if (r === 'admin') return true;
+  if (t.to_role === 'traenere' && r === 'superbruger') { const team = KID(t.kid_id)?.team_id; const mine = db.padel_club_team_trainers.filter((x) => x.user_id === u && x.active); return !team || !mine.length || mine.some((x) => x.team_id === team); }
+  if (t.to_role === 'bestyrelse') return !!st?.board_title;
+  if (t.to_role === 'kasserer') return !!st?.treasurer;
+  return false;
+});
+const thPeople = (t) => [...new Set([t.created_by, ...db.padel_club_guardians.filter((x) => x.kid_id === t.kid_id && x.active).map((x) => x.user_id), KID(t.kid_id)?.player_id, ...thStaffIds(t)].filter(Boolean))];
+const thMember = (t) => t && (t.created_by === uid() || (t.kid_id && kidMine(t.kid_id)) || thStaffIds(t).includes(uid()));
+const kidTrainer = (k) => isAdm(k.group_id) || (role(k.group_id, uid()) === 'superbruger' && (() => { const mine = db.padel_club_team_trainers.filter((x) => x.user_id === uid() && x.active); return !k.team_id || !mine.length || mine.some((x) => x.team_id === k.team_id); })());
+const nameOf = (u) => db.padel_profiles.find((p) => p.id === u)?.name;
+Object.assign(RPC, {
+  padel_thread_options: ({ g }) => {
+    const club = db.padel_groups.find((x) => x.id === g)?.kind === 'klub';
+    const kids = db.padel_club_kids.filter((k) => k.group_id === g && ['aktiv', 'ansoegt'].includes(k.status));
+    const staffOk = role(g, uid()) && (isAdm(g) || treasurer(g) || canRun(g));
+    return { club, has_board: db.padel_club_staff.some((x) => x.group_id === g && x.board_title), has_treasurer: db.padel_club_staff.some((x) => x.group_id === g && x.treasurer),
+      my_kids: kids.filter((k) => kidMine(k.id)).map((k) => ({ id: k.id, name: k.name })), own_kid: kids.find((k) => k.player_id === uid())?.id || null,
+      staff_kids: staffOk ? kids.filter((k) => k.status === 'aktiv' && !kidMine(k.id) && (isAdm(g) || treasurer(g) || kidTrainer(k)) && db.padel_club_guardians.some((x) => x.kid_id === k.id && x.active))
+        .map((k) => ({ id: k.id, name: k.name, role: role(g, uid()) === 'admin' ? 'admin' : kidTrainer(k) ? 'traenere' : 'kasserer' })) : [] };
+  },
+  padel_thread_start: ({ g, p_role, p_kid, p_subject, p_body }) => {
+    if (!p_body?.trim()) throw new Error('Skriv en besked');
+    const club = db.padel_groups.find((x) => x.id === g)?.kind === 'klub';
+    if (!club && p_role !== 'admin') throw new Error('I en gruppe skriver man til admin');
+    const own = db.padel_club_kids.find((k) => k.group_id === g && k.player_id === uid() && ['aktiv', 'ansoegt'].includes(k.status));
+    if (own) p_kid = own.id;
+    let staff = false;
+    if (p_kid) {
+      const k = KID(p_kid);
+      if (!db.padel_club_guardians.some((x) => x.kid_id === p_kid && x.active)) throw new Error('Barnet har ingen forældre i appen');
+      if (!kidMine(p_kid)) { if (!(isAdm(g) || treasurer(g) || kidTrainer(k))) throw new Error('Du kan kun skrive om dine egne børn'); staff = true; }
+    }
+    const t = { id: uuid(), group_id: g, to_role: p_role, kid_id: p_kid || null, subject: (p_subject?.trim() || p_body.trim().slice(0, 60)).slice(0, 100), created_by: uid(), from_staff: staff, status: 'aaben', created_at: now(), last_at: now() };
+    if (staff && !thStaffIds(t).includes(uid())) throw new Error('Vælg din egen rolle som afsender');
+    db.padel_threads.push(t);
+    db.padel_thread_msgs.push({ id: uuid(), thread_id: t.id, author: uid(), body: p_body.trim(), created_at: now() });
+    upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t.id, user_id: uid(), read_at: now() });
+    notify(thPeople(t).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + t.subject, p_body.slice(0, 140), '/#/samtale/' + t.id);
+    return t.id;
+  },
+  padel_thread_reply: ({ t, p_body }) => {
+    const x = TH(t); if (!thMember(x)) throw new Error('Det har du ikke adgang til');
+    if (!p_body?.trim()) throw new Error('Skriv en besked');
+    db.padel_thread_msgs.push({ id: uuid(), thread_id: t, author: uid(), body: p_body.trim(), created_at: now() });
+    Object.assign(x, { last_at: now(), status: 'aaben' });
+    upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
+    notify(thPeople(x).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + x.subject, p_body.slice(0, 140), '/#/samtale/' + t);
+  },
+  padel_thread_status: ({ t, p_status }) => { const x = TH(t); if (!thMember(x)) throw new Error('Det har du ikke adgang til'); x.status = p_status; },
+  padel_thread_list: () => db.padel_threads.filter(thMember).sort((a, b) => (a.last_at < b.last_at ? 1 : -1)).map((t) => {
+    const ms = db.padel_thread_msgs.filter((m) => m.thread_id === t.id), last = ms[ms.length - 1];
+    const rd = db.padel_thread_reads.find((r) => r.thread_id === t.id && r.user_id === uid())?.read_at || '';
+    return { ...t, kid: KID(t.kid_id)?.name || null, creator: nameOf(t.created_by), staff: thStaffIds(t).includes(uid()),
+      last: last && { body: last.body.slice(0, 120), author: nameOf(last.author), mine: last.author === uid() }, unread: ms.filter((m) => m.author !== uid() && m.created_at > rd).length };
+  }),
+  padel_thread_get: ({ t }) => {
+    const x = TH(t); if (!thMember(x)) throw new Error('Det har du ikke adgang til');
+    upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
+    db.padel_notifications.filter((n) => n.user_id === uid() && n.url === '/#/samtale/' + t && !n.read_at).forEach((n) => (n.read_at = now()));
+    return { ...x, kid: KID(x.kid_id)?.name || null, creator: nameOf(x.created_by), staff: thStaffIds(x).includes(uid()), people: thPeople(x).map(nameOf).sort(),
+      msgs: db.padel_thread_msgs.filter((m) => m.thread_id === t).map((m) => ({ id: m.id, body: m.body, author: nameOf(m.author), mine: m.author === uid(), at: m.created_at })) };
+  },
 });
 
 export function createClient() {

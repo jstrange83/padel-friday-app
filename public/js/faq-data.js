@@ -422,7 +422,33 @@ export const FAQ = [
     a: `<p>Klubbens admin (typisk formanden) går til <b>Admin → Medlemmer → Bestyrelse og rettigheder</b>. For hver person vælger man:</p>
 <ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem eller suppleant.</li>
 <li><b>Rettigheder</b>: 💳 kontingent, 📣 opslag til alle, 📅 arrangementer og ✅ godkende børn.</li></ul>
-<p>Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
+<p>Vælger man posten <b>Formand</b>, bliver personen automatisk klubbens admin med alle rettigheder. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvordan skriver jeg til trænerne eller bestyrelsen?',
+    a: `<p>Gå til <b>Profil → Skriv til klubben</b> (eller tryk <b>✉️ Skriv til trænerne</b> på Træning). Vælg om beskeden er til <b>trænerne</b>, <b>bestyrelsen</b>, <b>kassereren</b> eller <b>klubbens admin</b>, og hvilket barn det drejer sig om.</p>
+<p>Svarene kommer samme sted, og du får en notifikation. Barnets anden forælder kan også læse med.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Kan en træner skrive privat til mit barn?',
+    a: `<p>Nej. Et barn er aldrig alene i en samtale med en voksen i appen:</p>
+<ul><li>Skriver barnet selv (med eget login), er barnets forældre automatisk med i samtalen.</li>
+<li>Skriver en træner om et barn, går beskeden til forældrene. Har barnet eget login, kan barnet læse med, men kun sammen med forældrene.</li></ul>
+<p>Det sikres i selve databasen, så det kan ikke slås fra.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvordan svarer jeg som træner eller bestyrelse på beskeder?',
+    a: `<p>Beskeder til dig står under <b>Profil → Samtaler med medlemmer</b>, og du får en notifikation. Trænere får kun beskeder om børn på deres egne hold.</p>
+<p>Når sagen er klaret, kan du trykke <b>✓ Markér som løst</b>. Skriver nogen igen, åbner samtalen igen. Under <b>Admin → Børn</b> kan du også trykke <b>✉️ Skriv til forældrene</b> ud for et barn.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Hvordan skriver jeg til gruppens admin?',
+    a: `<p>Gå til <b>Profil → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
+<p>Beskederne kan kun læses af dem, der er med i samtalen.</p>`,
   },
   {
     cat: 'Roller og adgang',
