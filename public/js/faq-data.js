@@ -420,7 +420,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
     a: `<p>Klubbens admin (typisk formanden) går til <b>Admin → Medlemmer → Bestyrelse og rettigheder</b>. For hver person vælger man:</p>
-<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem eller suppleant.</li>
+<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor.</li>
 <li><b>Rettigheder</b>: 💳 kontingent, 📣 opslag til alle, 📅 arrangementer og ✅ godkende børn.</li></ul>
 <p>Vælger man posten <b>Formand</b>, bliver personen automatisk klubbens admin med alle rettigheder. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
   },
@@ -429,6 +429,12 @@ export const FAQ = [
     q: 'Hvordan skriver jeg til trænerne eller bestyrelsen?',
     a: `<p>Gå til <b>Profil → Skriv til klubben</b> (eller tryk <b>✉️ Skriv til trænerne</b> på Træning). Vælg om beskeden er til <b>trænerne</b>, <b>bestyrelsen</b>, <b>kassereren</b> eller <b>klubbens admin</b>, og hvilket barn det drejer sig om.</p>
 <p>Svarene kommer samme sted, og du får en notifikation. Barnets anden forælder kan også læse med.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Hvordan kommer en ny træner eller et bestyrelsesmedlem med i klubben?',
+    a: `<p>Send klubbens invitationslink (Admin → Medlemmer → Inviter). Personen opretter sig og trykker <b>🙋 Bed om adgang</b> nederst på siden, hvor man ellers melder et barn ind.</p>
+<p>Klubbens admin får en besked og godkender under <b>Admin → Medlemmer → Venter på godkendelse</b>, enten som <b>Træner</b> eller <b>Medlem</b>. En post i bestyrelsen vælges bagefter under Bestyrelse og rettigheder.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,

@@ -448,6 +448,7 @@ const readKid = (root, i) => ({
   trial: !!root.querySelector('[name=ktrial]')?.checked,
 });
 
+const myGroupsIds = () => S.members.filter((m) => m.player_id === S.me?.id && m.status === 'aktiv').map((m) => m.group_id);
 export async function viewClubJoin(g) {
   // Uden klub i adressen: vælg blandt de klubber, der kan findes i appen
   const pick = !g;
@@ -481,7 +482,18 @@ export async function viewClubJoin(g) {
       <p class="muted small">Oplysningerne bruges kun af klubben. Læs mere i <a href="#/privatliv">privatlivspolitikken</a>. Større børn kan senere få deres eget login.</p>
       <button class="btn primary">Send indmeldelse</button>
     </form>
+    ${fixed && !myGroupsIds().includes(g) ? `<div class="card adultjoin"><b>Træner eller i bestyrelsen?</b>
+      <p class="muted small">Skal du ikke melde et barn ind, men selv være med som træner, hjælper eller i bestyrelsen, så bed om adgang. Klubbens admin får besked og godkender dig.</p>
+      <button class="btn" id="adultJoin">🙋 Bed om adgang</button></div>` : ''}
   </div>`;
+  document.getElementById('adultJoin')?.addEventListener('click', async (e) => {
+    busy(e.currentTarget, true);
+    try {
+      await q(sb.rpc('padel_request_join', { g }));
+      toast('Du har bedt om adgang. Klubbens admin godkender dig');
+      await hooks.loadBase(); location.hash = '#/profil';
+    } catch { busy(e.currentTarget, false); }
+  });
   const f = document.getElementById('joinForm');
   // Skift klub: tegn felterne igen (adresse kan være krævet i den ene klub)
   if (f.club) f.club.onchange = () => { S.joinClub = f.club.value; viewClubJoin(null); };
@@ -716,7 +728,7 @@ export function bindClubFees(refresh) {
 }
 
 // ---------- Admin: bestyrelse, rettigheder og børneattest (formanden / admin) ----------
-export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant'];
+export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor'];
 const RIGHTS = [['treasurer', '💳 Kontingent'], ['can_post', '📣 Opslag til alle'], ['can_events', '📅 Arrangementer'], ['can_approve', '✅ Godkende børn']];
 export function clubStaffCard() {
   if (!isAdmin()) return '';

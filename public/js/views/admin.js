@@ -110,8 +110,13 @@ function playersTab() {
   const club = isClub();
   return `
     ${playersBar()}
+    ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
+      const p = S.profiles[m.player_id];
+      return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}${phoneOf(p.id) ? ` · ${fmtPhone(phoneOf(p.id))}` : ''}</small></span>
+        ${club ? `<div class="mact"><button class="btn sm ghost" data-decline="${p.id}">Afvis</button><button class="btn sm" data-approve="${p.id}">Medlem</button><button class="btn sm primary" data-approve="${p.id}" data-arole="superbruger">Træner</button></div>` : `<button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button>`}</div>`;
+    }).join('')}</div>` : ''}
     <div class="card invitebar"><div><b>${esc(group()?.name || '')}</b> <small class="muted">· ${club ? `${players.length} voksne og juniorer med login` : players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
-      ${club ? '<p class="muted small">Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn.</p>' : ''}
+      ${club ? '<p class="muted small">Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn. Trænere og bestyrelse bruger samme link og trykker <b>Bed om adgang</b>, så godkender I dem her.</p>' : ''}
       <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button>${club ? '' : '<button class="btn sm" id="newPlayerBtn">➕ Opret</button>'}<button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
     ${club ? clubSettingsCard() + clubStaffCard() : `${createPlayerBox()}
     <details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Gruppens indstillinger</b><small class="muted">Rangliste: ${{ alle: 'alle', gruppe: 'kun gruppen', ingen: 'ingen' }[group()?.ranking_mode || 'alle']} · Bøder: ${group()?.fines_enabled ? 'til' : 'fra'}</small></summary>
@@ -122,11 +127,7 @@ function playersTab() {
       <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
     </details>`}
 
-    ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
-      const p = S.profiles[m.player_id];
-      return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}${phoneOf(p.id) ? ` · ${fmtPhone(phoneOf(p.id))}` : ''}</small></span>
-        <button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button></div>`;
-    }).join('')}</div>` : ''}
+
 
     <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 ${club ? 'Medlemmer' : 'Spillere'} (${players.length})</b></summary>
     ${club ? '<p class="muted small">Gør trænerne til <b>Træner</b>. Trænere kan godkende børn, sætte hold og tider, krydse fremmøde af og skrive opslag.</p>' : ''}
@@ -236,7 +237,7 @@ function bind() {
     app.querySelectorAll('.prow').forEach((r) => (r.hidden = t && !r.dataset.name.includes(t)));
   };
 
-  on('[data-approve]', async (b) => { busy(b, true); try { await setMember(b.dataset.approve, 'bruger', 'aktiv'); toast(`${nameOf(b.dataset.approve)} er godkendt`); refresh(); } catch { busy(b, false); } });
+  on('[data-approve]', async (b) => { busy(b, true); try { await setMember(b.dataset.approve, b.dataset.arole || 'bruger', 'aktiv'); toast(`${nameOf(b.dataset.approve)} er godkendt`); refresh(); } catch { busy(b, false); } });
   on('[data-decline]', async (b) => { if (!confirm(`Afvis ${nameOf(b.dataset.decline)}?`)) return; await setMember(b.dataset.decline, 'bruger', 'fjernet'); refresh(); });
   on('[data-delplayer]', async (b) => {
     const pid = b.dataset.delplayer;

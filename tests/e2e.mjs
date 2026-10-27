@@ -1447,6 +1447,44 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('#discRow').innerText()).includes('Meld et barn ind'), 'Se som: linjen vises som for spilleren');
   await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
 
+  // En træner uden børn bruger klubbens link og beder om adgang; admin godkender som træner
+  const klubId = await page.evaluate(() => window.__mock.db().padel_groups.find((x) => x.kind === 'klub').id);
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('about:blank');
+  await page.goto(`http://localhost:8765/#/velkommen/${klubId}`);
+  await page.waitForSelector('#authForm');
+  await wait(500);
+  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
+  await page.fill('input[name=email]', 'nytraener@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  await page.fill('#pf input[name=name]', 'Dan Træner');
+  await page.fill('#pf input[name=phone]', '55667788');
+  await page.click('#pf label:has-text("Mand")');
+  await page.click('#pf button.primary');
+  await pastGates();
+  await page.waitForSelector('#adultJoin');
+  await shot('klub-adgang-uden-barn');
+  await noOverflow('adgang uden barn');
+  await page.click('#adultJoin');
+  await wait(600);
+  ok((await page.evaluate(() => window.__mock.db().padel_group_members.find((m) => m.player_id === 'u-nytraener')?.status)) === 'afventer', 'træneren har bedt om adgang til klubben');
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate((g) => localStorage.setItem('fp-group', g), klubId);
+  await page.goto('http://localhost:8765/#/admin');
+  await page.reload();
+  await page.waitForSelector('.tabbar');
+  await page.click('[data-tab="spillere"]');
+  await page.waitForSelector('.pendingbox');
+  ok((await page.locator('.pendingbox').innerText()).includes('Dan Træner'), 'admin ser træneren under Venter på godkendelse');
+  await shot('klub-godkend-traener');
+  await page.click('.pendingbox [data-arole="superbruger"]');
+  await wait(600);
+  ok((await page.evaluate(() => window.__mock.db().padel_group_members.find((m) => m.player_id === 'u-nytraener'))).role === 'superbruger', 'godkendt som træner');
+
   // Admin ser, hvem der har oprettet arrangementet
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
