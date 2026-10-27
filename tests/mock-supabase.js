@@ -454,6 +454,7 @@ Object.assign(RPC, {
     if (GM(g, uid())?.role === 'superbruger') db.padel_club_team_trainers.push({ team_id: t.id, user_id: uid(), active: true });
     return t.id;
   },
+  padel_club_save_session_v2: (a) => { const id = RPC.padel_club_save_session(a); Object.assign(db.padel_club_sessions.find((x) => x.id === id), { valid_from: a.p_from || null, valid_to: a.p_to || null }); return id; },
   padel_club_save_session: ({ p_id, p_team, p_weekday, p_start, p_end, p_place, p_active }) => {
     needTrainer(teamGroup(p_team));
     if (p_end <= p_start) throw new Error('Sluttid skal være efter starttid');

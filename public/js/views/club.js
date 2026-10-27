@@ -2,6 +2,7 @@
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
 import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode } from '../core.js';
 import { showQR } from '../qr.js';
+import { parseSession, SR, listen } from '../sessionvoice.js';
 
 // ---------- Datoer (altid dansk tid) ----------
 export const todayISO = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date());
@@ -99,7 +100,8 @@ const trainerLinks = (x) => `<div class="coachrow"><span class="grow"><b>${esc(x
 function occurrences(teamIds, from, to) {
   const out = [];
   const ss = C().sessions.filter((s) => s.active && teamIds.includes(s.team_id) && !team(s.team_id)?.archived);
-  for (let d = from; d <= to; d = addDays(d, 1)) for (const s of ss) if (s.weekday === isoDow(d)) out.push({ s, day: d });
+  const inRange = (s, d) => (!s.valid_from || d >= s.valid_from) && (!s.valid_to || d <= s.valid_to);
+  for (let d = from; d <= to; d = addDays(d, 1)) for (const s of ss) if (s.weekday === isoDow(d) && inRange(s, d)) out.push({ s, day: d });
   return out.sort((a, b) => a.day.localeCompare(b.day) || t5(a.s.start_time).localeCompare(t5(b.s.start_time)));
 }
 
@@ -799,7 +801,79 @@ const sessForm = (s, teamId) => `<form class="sform" data-sform="${s?.id || ''}"
   <div class="frow"><label class="grow">Dag<select name="wd">${Object.entries(WEEKDAY).map(([k, v]) => `<option value="${k}" ${+k === (s?.weekday || 2) ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     <label>Fra<input name="st" type="time" value="${t5(s?.start_time) || '16:00'}" required></label><label>Til<input name="en" type="time" value="${t5(s?.end_time) || '17:00'}" required></label></div>
   <label>Sted <small class="muted">(valgfrit)</small><input name="place" value="${esc(s?.place || '')}" maxlength="80" placeholder="Fx Padelhuset Gilleleje, bane 1-2"></label>
+  <div class="frow"><label class="grow">Første gang <small class="muted">(valgfri)</small><input name="vfrom" type="date" value="${s?.valid_from || ''}"></label><label class="grow">Sidste gang <small class="muted">(valgfri)</small><input name="vto" type="date" value="${s?.valid_to || ''}"></label></div>
+  <small class="muted">Uden datoer gentages træningen hver uge, indtil den fjernes.</small>
   <div class="mact">${s ? '<button type="button" class="btn sm ghost danger" data-sdel>Fjern tiden</button>' : ''}<button class="btn sm primary">${s ? 'Gem' : 'Tilføj tid'}</button></div></form>`;
+
+const shortDate = (d) => new Intl.DateTimeFormat('da-DK', { day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z'));
+const periodText = (s) => (s.valid_from || s.valid_to ? `${s.valid_from ? shortDate(s.valid_from) : 'nu'} – ${s.valid_to ? shortDate(s.valid_to) : 'fremover'}` : '');
+const sessionOver = (s) => s.valid_to && s.valid_to < todayISO();
+
+// Ny træning med tale eller fritekst: appen udfylder formularen, træneren tjekker og trykker Opret
+function quickSessionCard(teams) {
+  const opt = (v, l) => `<option value="${v}">${l}</option>`;
+  return `<div class="card quickses"><b>🎤 Ny træning med tale</b>
+    <p class="muted small">Sig eller skriv fx: <i>"Begyndere tirsdag fra 16 til 17.30 de næste 6 uger"</i></p>
+    <form id="qsAsk" class="qsask"><input id="qsText" placeholder="Hold, dag, tid og evt. antal uger" autocomplete="off">${SR ? '<button type="button" class="btn sm" id="qsMic">🎤 Sig det</button>' : ''}<button class="btn sm primary">Udfyld</button></form>
+    ${SR ? '' : '<p class="muted small">Tip: brug mikrofonen på telefonens tastatur.</p>'}
+    <form id="qsForm" class="sform" hidden>
+      <label>Hold<select name="team">${teams.map((t) => opt(t.id, esc(t.name))).join('')}${opt('__new', '➕ Nyt hold…')}</select></label>
+      <label id="qsNewWrap" hidden>Navn på nyt hold<input name="newteam" maxlength="60"></label>
+      <div class="frow"><label class="grow">Dag<select name="wd">${Object.entries(WEEKDAY).map(([k, v]) => opt(k, v)).join('')}</select></label>
+        <label>Fra<input name="st" type="time" required></label><label>Til<input name="en" type="time" required></label></div>
+      <label>Sted <small class="muted">(valgfrit)</small><input name="place" maxlength="80"></label>
+      <div class="frow"><label class="grow">Første gang<input name="vfrom" type="date"></label><label class="grow">Sidste gang <small class="muted">(valgfri)</small><input name="vto" type="date"></label></div>
+      <p class="muted small" id="qsSum"></p>
+      <div class="mact"><button type="button" class="btn sm ghost" id="qsCancel">Annuller</button><button class="btn sm primary">Opret træning</button></div>
+    </form></div>`;
+}
+
+function bindQuickSession(refresh) {
+  const ask = document.getElementById('qsAsk'), f = document.getElementById('qsForm');
+  if (!ask || !f) return;
+  const g = S.groupId;
+  const sum = () => {
+    const a = f.vfrom.value, b = f.vto.value;
+    const n = a && b && b >= a ? Math.floor((Date.parse(b) - Date.parse(a)) / (7 * 864e5)) + 1 : 0;
+    document.getElementById('qsSum').textContent = !f.st.value || !f.en.value ? 'Udfyld tidspunktet.'
+      : `${WEEKDAY[f.wd.value]} kl. ${f.st.value.replace(':', '.')}–${f.en.value.replace(':', '.')}${n ? `, ${n} ${n === 1 ? 'gang' : 'gange'} (${shortDate(a)} – ${shortDate(b)})` : a ? `, hver uge fra ${shortDate(a)}` : ', hver uge'}`;
+  };
+  const newTeam = () => { const on = f.team.value === '__new'; document.getElementById('qsNewWrap').hidden = !on; if (on) f.newteam.required = true; else f.newteam.required = false; };
+  f.team.onchange = newTeam;
+  ['wd', 'st', 'en', 'vfrom', 'vto'].forEach((k) => f[k].addEventListener('change', sum));
+  const fill = (text) => {
+    const now = new Date(), nowMin = +new Intl.DateTimeFormat('da-DK', { hour: 'numeric', hour12: false, timeZone: 'Europe/Copenhagen' }).format(now) * 60 + now.getMinutes();
+    const r = parseSession(text, { teams: myTeams(), centers: S.centers.map((c) => c.name), today: todayISO(), nowMinutes: nowMin });
+    if (!r.weekday && !r.start && !r.team && !r.newTeam) return toast('Jeg kunne ikke forstå det. Prøv fx "Begyndere tirsdag fra 16 til 17.30 i 6 uger"', true);
+    f.hidden = false;
+    if (r.team) f.team.value = r.team;
+    else if (r.newTeam) { f.team.value = '__new'; f.newteam.value = r.newTeam; }
+    newTeam();
+    if (r.weekday) f.wd.value = String(r.weekday);
+    f.st.value = r.start || ''; f.en.value = r.end || '';
+    const last = C().sessions.filter((x) => x.team_id === f.team.value && x.active && x.place).slice(-1)[0];
+    f.place.value = r.place || last?.place || '';
+    f.vfrom.value = r.from || ''; f.vto.value = r.to || '';
+    sum();
+    const miss = [!r.weekday && 'dag', !r.start && 'starttid', !r.end && 'sluttid', !(r.team || r.newTeam) && 'hold'].filter(Boolean);
+    toast(miss.length ? `Tjek formularen. Jeg mangler: ${miss.join(', ')}` : 'Tjek, og tryk Opret træning');
+    f.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  ask.onsubmit = (e) => { e.preventDefault(); const v = document.getElementById('qsText').value.trim(); if (v) fill(v); };
+  document.getElementById('qsMic')?.addEventListener('click', (e) => listen(e.currentTarget, (txt) => { document.getElementById('qsText').value = txt; fill(txt); },
+    (err) => toast(err === 'not-allowed' ? 'Giv appen lov til at bruge mikrofonen, eller skriv i feltet' : 'Jeg hørte ikke noget. Prøv igen', true)));
+  document.getElementById('qsCancel').onclick = () => { f.hidden = true; f.reset(); };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button.primary'); busy(btn, true);
+    try {
+      let team = f.team.value;
+      if (team === '__new') team = await q(sb.rpc('padel_club_save_team', { p_id: null, g, p_name: f.newteam.value, p_archived: false }));
+      await q(sb.rpc('padel_club_save_session_v2', { p_id: null, p_team: team, p_weekday: +f.wd.value, p_start: f.st.value, p_end: f.en.value, p_place: f.place.value, p_active: true, p_from: f.vfrom.value || null, p_to: f.vto.value || null }));
+      S.teamOpen = team; toast('Træningen er oprettet. Forældrene kan se den under Træning'); await refresh();
+    } catch { busy(btn, false); }
+  };
+}
 
 export function clubTeamsTab() {
   const teams = myTeams(), admin = isAdmin();
@@ -807,13 +881,14 @@ export function clubTeamsTab() {
   const onTeam = (t, u) => C().teamTrainers.some((x) => x.team_id === t && x.user_id === u);
   const count = (t) => C().kids.filter((k) => k.status === 'aktiv' && k.team_id === t).length;
   return `
+    ${quickSessionCard(teams)}
     ${teams.map((t) => {
-      const ss = C().sessions.filter((s) => s.team_id === t.id && s.active).sort((a, b) => a.weekday - b.weekday || t5(a.start_time).localeCompare(t5(b.start_time)));
+      const ss = C().sessions.filter((s) => s.team_id === t.id && s.active && !sessionOver(s)).sort((a, b) => a.weekday - b.weekday || t5(a.start_time).localeCompare(t5(b.start_time)));
       return `<details class="card teamcard" data-team="${t.id}" ${S.teamOpen === t.id ? 'open' : ''}><summary><span class="grow"><b>${esc(t.name)}</b><small class="muted">${count(t.id)}${t.max_kids ? `/${t.max_kids}` : ''} børn · ${ss.length ? ss.map((s) => `${WEEKDAY[s.weekday].slice(0, 3).toLowerCase()} ${t5(s.start_time)}`).join(', ') : 'ingen tider'}${trainersOf(t.id).length ? ` · ${trainersOf(t.id).map((x) => esc(x.name.split(' ')[0])).join(', ')}` : ''}</small></span><span class="muted">›</span></summary>
         ${admin ? `<div class="lbl">Trænere på holdet</div>${coaches.length ? `<div class="checks coach">${coaches.map((u) => `<label><input type="checkbox" data-coach="${t.id}" value="${u}" ${onTeam(t.id, u) ? 'checked' : ''}><span>${esc(nameOf(u).split(' ')[0])}</span></label>`).join('')}</div>` : '<p class="muted small">Gør først nogen til Træner under Medlemmer.</p>'}` : ''}
         ${admin ? `<form class="frow tmax" data-tmax="${t.id}"><label class="grow">Maks. antal børn <small class="muted">(tom = ingen grænse)</small><input name="max" type="number" min="0" value="${t.max_kids || ''}"></label><button class="btn sm">Gem</button></form>` : ''}
         <div class="lbl">Træningstider</div>
-        ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place ? `<small class="muted">${esc(s.place)}</small>` : ''}${byLine(s.created_by, s.created_at)}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
+        ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place || periodText(s) ? `<small class="muted">${esc([s.place, periodText(s)].filter(Boolean).join(' · '))}</small>` : ''}${byLine(s.created_by, s.created_at)}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
         <details class="srow new"><summary><span class="grow">➕ Tilføj træningstid</span></summary>${sessForm(null, t.id)}</details>
         <div class="mact"><button class="link sm" data-trename="${t.id}">Omdøb holdet</button>${admin ? `<button class="link sm dn" data-tarch="${t.id}">Slet holdet</button>` : ''}</div>
       </details>`;
@@ -824,6 +899,7 @@ export function clubTeamsTab() {
 
 export function bindClubTeams(refresh) {
   const g = S.groupId;
+  bindQuickSession(refresh);
   app.querySelectorAll('details[data-team]').forEach((d) => d.querySelector('summary').addEventListener('click', () => { S.teamOpen = d.open ? null : d.dataset.team; }));
   const nt = document.getElementById('newTeam');
   if (nt) nt.onsubmit = async (e) => {
@@ -852,13 +928,13 @@ export function bindClubTeams(refresh) {
       e.preventDefault();
       const btn = f.querySelector('button.primary'); busy(btn, true);
       try {
-        await q(sb.rpc('padel_club_save_session', { p_id: f.dataset.sform || null, p_team: f.dataset.steam, p_weekday: +f.wd.value, p_start: f.st.value, p_end: f.en.value, p_place: f.place.value, p_active: true }));
+        await q(sb.rpc('padel_club_save_session_v2', { p_id: f.dataset.sform || null, p_team: f.dataset.steam, p_weekday: +f.wd.value, p_start: f.st.value, p_end: f.en.value, p_place: f.place.value, p_active: true, p_from: f.vfrom.value || null, p_to: f.vto.value || null }));
         S.teamOpen = f.dataset.steam; toast('Træningstiden er gemt'); await refresh();
       } catch { busy(btn, false); }
     };
     f.querySelector('[data-sdel]')?.addEventListener('click', async () => {
       if (!confirm('Fjern træningstiden?')) return;
-      try { await q(sb.rpc('padel_club_save_session', { p_id: f.dataset.sform, p_team: f.dataset.steam, p_weekday: +f.wd.value, p_start: f.st.value, p_end: f.en.value, p_place: f.place.value, p_active: false })); S.teamOpen = f.dataset.steam; await refresh(); } catch {}
+      try { await q(sb.rpc('padel_club_save_session_v2', { p_id: f.dataset.sform, p_team: f.dataset.steam, p_weekday: +f.wd.value, p_start: f.st.value, p_end: f.en.value, p_place: f.place.value, p_active: false, p_from: f.vfrom.value || null, p_to: f.vto.value || null })); S.teamOpen = f.dataset.steam; await refresh(); } catch {}
     });
   });
 }

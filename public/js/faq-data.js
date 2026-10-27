@@ -432,6 +432,12 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Kan jeg oprette træninger med tale?',
+    a: `<p>Ja. Under <b>Admin → Hold og tider</b> står <b>🎤 Ny træning med tale</b>. Tryk <b>Sig det</b> og sig fx <i>"Begyndere tirsdag fra 16 til 17.30 de næste 6 uger"</i>, eller skriv det i feltet og tryk <b>Udfyld</b>.</p>
+<p>Appen udfylder hold, dag, tid, sted og datoer. Tjek det, og tryk <b>Opret træning</b>. Siger du et hold, der ikke findes, bliver det oprettet. Uden antal uger eller slutdato gentages træningen hver uge.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Hvordan kommer en ny træner eller et bestyrelsesmedlem med i klubben?',
     a: `<p>Send klubbens invitationslink (Admin → Medlemmer → Inviter). Personen opretter sig og trykker <b>🙋 Bed om adgang</b> nederst på siden, hvor man ellers melder et barn ind.</p>
 <p>Klubbens admin får en besked og godkender under <b>Admin → Medlemmer → Venter på godkendelse</b>, enten som <b>Træner</b> eller <b>Medlem</b>. En post i bestyrelsen vælges bagefter under Bestyrelse og rettigheder.</p>`,

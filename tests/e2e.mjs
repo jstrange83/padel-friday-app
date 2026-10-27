@@ -1510,6 +1510,18 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.evaluate(() => { const db = window.__mock.db(); const t = db.padel_club_teams.find((x) => x.name === 'Begyndere'); return t && db.padel_club_team_trainers.some((x) => x.team_id === t.id && x.user_id === 'u-brian' && x.active); })), 'træneren opretter et hold og bliver selv træner på det');
   await noOverflow('træner opretter hold');
 
+  // Ny træning med tale (fritekst): appen udfylder formularen
+  await page.fill('#qsText', 'Begyndere tirsdag fra 16 til 17.30 de næste 6 tirsdage');
+  await page.click('#qsAsk button.primary');
+  await page.waitForSelector('#qsForm:not([hidden])');
+  ok((await page.inputValue('#qsForm input[name=st]')) === '16:00' && (await page.inputValue('#qsForm input[name=en]')) === '17:30' && (await page.inputValue('#qsForm select[name=wd]')) === '2', 'tale/tekst udfylder dag og tid');
+  ok((await page.locator('#qsSum').innerText()).includes('6 gange'), 'opsummering: 6 gange');
+  await shot('traening-med-tale');
+  await noOverflow('træning med tale');
+  await page.click('#qsForm button.primary');
+  await wait(600);
+  ok((await page.evaluate(() => { const db = window.__mock.db(); const t = db.padel_club_teams.find((x) => x.name === 'Begyndere'); const s = db.padel_club_sessions.find((x) => x.team_id === t.id); return s && s.weekday === 2 && s.valid_from && s.valid_to && (Date.parse(s.valid_to) - Date.parse(s.valid_from)) / 864e5 === 35; })), 'træningen er oprettet med 6 tirsdage');
+
   // Spørgsmål og svar passer til der, hvor man er
   await freshLogin('nyforaelder@test');
   await page.waitForSelector('#nav a');
