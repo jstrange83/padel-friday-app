@@ -117,23 +117,23 @@ export const FAQ = [
 <p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvordan tilmelder jeg mig en fredag?',
     a: `<p>Alle fredage er åbne for tilmelding. Gå til <b>Fredage</b>, åbn dagen og tryk <b>Tilmeld mig</b>. Du kan afmelde dig igen, indtil dagen er gået i gang. Derefter skal en admin gøre det.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvorfor står jeg på venteliste?',
     a: `<p>Der spilles 4 på hver bane, og det er først til mølle. Hver gang der er 4 tilmeldte, er en bane klar. Er I fx 6, er 4 klar til bane 1, og 2 står på venteliste, indtil der kommer 2 mere.</p>
 <p>Er alle dagens baner fyldt, kommer resten også på venteliste. Melder nogen fra, rykker ventelisten automatisk op. Du kan se dit nummer på ventelisten på fredagen.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvordan inviterer jeg en ven?',
     a: `<p>Det er kun gruppens admin, der kan invitere. Spørg en admin, så sender de et link. Din ven opretter en profil (eller logger ind), og når admin har godkendt, kan de tilmelde sig.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvad er grupper, og kan jeg være med i flere?',
     a: `<p>Hver gruppe, fx Fredagspadel og Lørdagspadel, har sine egne spilledage og spillere. Du ser kun de grupper, du er med i.</p>
 <p>Du kan godt være med i flere grupper, hvis gruppens admin har godkendt dig. Har du flere grupper, skifter du mellem dem med knapperne øverst på Spilledage og Rangliste. Der er <b>én fælles rangliste</b>, så du har de samme point, uanset hvilken gruppe du spiller i.</p>`,
@@ -149,7 +149,7 @@ export const FAQ = [
     a: `<p>Log ud, skriv din e‑mail på loginsiden og tryk <b>Glemt adgangskode?</b>. Du får en mail med et link til at vælge en ny.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvad kan en superbruger og en admin?',
     a: `<p>Roller gælder pr. gruppe.</p>
 <p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
@@ -176,7 +176,7 @@ export const FAQ = [
 <p>Admin kan også slette en spiller. En gruppeadmin kan kun slette spillere, der ikke er med i andre grupper; ellers fjerner han dem fra sin egen gruppe.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvordan ser admin, at nogen vil være med i gruppen?',
     a: `<p>Når en spiller har brugt invitationslinket, står der et rødt tal ved <b>Admin</b> i menuen, og øverst på <b>Spilledage</b> kommer kortet <b>✋ Vil gerne være med</b>. Tryk <b>Godkend</b> eller <b>Afvis</b> direkte der. Der sendes ingen mails.</p>`,
   },
@@ -187,7 +187,7 @@ export const FAQ = [
 <p>Når du har spillet et vist antal kampe, spørger appen også én gang, om du har et forslag.</p>`,
   },
   {
-    cat: 'Tilmelding og konto',
+    cat: 'Tilmelding og konto', group: true,
     q: 'Kan admin oprette en spiller, der ikke selv har oprettet sig?',
     a: `<p>Ja. Under <b>Admin → Spillere</b> kan gruppens admin trykke <b>Opret spiller</b> og skrive navn, telefonnummer, køn og side. Spilleren er med i gruppen med det samme, kan tilmeldes spilledage, sættes på hold og få point. Der står "Uden login" ved navnet.</p>
 <p>Når spilleren senere selv opretter sig med <b>samme telefonnummer</b>, overtager de profilen med alle kampe, point, grupper og bøder.</p>`,
@@ -463,7 +463,7 @@ export const FAQ = [
 <p>Kan du ikke huske adgangskoden, så skriv din e-mail og tryk <b>Glemt adgangskode?</b>, så får du en mail med et link.</p>`,
   },
   {
-    cat: 'Roller og adgang',
+    cat: 'Roller og adgang', group: true,
     q: 'Hvordan skriver jeg til gruppens admin?',
     a: `<p>Gå til <b>Profil → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
 <p>Beskederne kan kun læses af dem, der er med i samtalen.</p>`,

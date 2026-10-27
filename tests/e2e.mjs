@@ -1510,6 +1510,20 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.evaluate(() => { const db = window.__mock.db(); const t = db.padel_club_teams.find((x) => x.name === 'Begyndere'); return t && db.padel_club_team_trainers.some((x) => x.team_id === t.id && x.user_id === 'u-brian' && x.active); })), 'træneren opretter et hold og bliver selv træner på det');
   await noOverflow('træner opretter hold');
 
+  // Spørgsmål og svar passer til der, hvor man er
+  await freshLogin('nyforaelder@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/faq');
+  await page.waitForSelector('#faqList h3');
+  { const cats = await page.locator('#faqList h3').allInnerTexts(); ok(cats.some((c) => /juniorklub/i.test(c)) && cats.some((c) => /padelregler/i.test(c)) && !cats.some((c) => /bødekasse|formater/i.test(c)), 'forælder i klubben: klub og fælles, ikke bøder og formater: ' + cats.join(', ')); }
+  await freshLogin('test5@fredagspadel.test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/faq');
+  await page.waitForSelector('#faqList h3');
+  { const cats = await page.locator('#faqList h3').allInnerTexts(); ok(cats.some((c) => /bødekasse/i.test(c)) && !cats.some((c) => /juniorklub/i.test(c)), 'spiller i gruppe: bøder, ikke juniorklub: ' + cats.join(', ')); }
+
   // Opret konto med en mail, der allerede findes (fx fra TaskHero): skift til Log ind
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
   await page.goto('about:blank');
