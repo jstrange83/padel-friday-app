@@ -901,7 +901,7 @@ export function bindClubSettings(refresh) {
 export async function showCalendar(renew = false) {
   let token;
   try { token = await q(sb.rpc('padel_ical_token', { p_new: renew === true })); } catch { return; }
-  const https = `https://mxdgspfhakomblprhvto.supabase.co/functions/v1/padel-ical?t=${token}`;
+  const https = `https://jlstsyvhlzsbqymwiyzx.supabase.co/functions/v1/padel-ical?t=${token}`;
   const webcal = https.replace(/^https:/, 'webcal:');
   const google = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal)}`;
   document.getElementById('calModal')?.remove();

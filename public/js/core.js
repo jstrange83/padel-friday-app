@@ -1,7 +1,7 @@
 // Fælles kerne: databaseforbindelse, tilstand, tekster og små hjælpere.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-export const sb = createClient('https://mxdgspfhakomblprhvto.supabase.co', 'sb_publishable_0ZKQoqCX5a6okJl_Lh0Leg_URrexVdI', {
+export const sb = createClient('https://jlstsyvhlzsbqymwiyzx.supabase.co', 'sb_publishable_rvPBZIkE1qhyrsq2o4EVYw_-afl7UyZ', {
   auth: { persistSession: true, storageKey: 'fredagspadel-auth' },
 });
 
