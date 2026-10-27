@@ -818,7 +818,8 @@ export function clubTeamsTab() {
         <div class="mact"><button class="link sm" data-trename="${t.id}">Omdøb holdet</button>${admin ? `<button class="link sm dn" data-tarch="${t.id}">Slet holdet</button>` : ''}</div>
       </details>`;
     }).join('') || '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>'}
-    ${admin ? '<form class="card frow" id="newTeam"><input name="name" class="grow" placeholder="Nyt hold, fx U12 eller Begyndere" maxlength="60" required><button class="btn sm primary">Opret hold</button></form>' : ''}`;
+    <form class="card frow" id="newTeam"><input name="name" class="grow" placeholder="Nyt hold, fx U12 eller Begyndere" maxlength="60" required><button class="btn sm primary">Opret hold</button></form>
+    ${admin ? '' : '<p class="muted small">Opretter du et hold, bliver du selv træner på det. Admin kan tilføje flere trænere.</p>'}`;
 }
 
 export function bindClubTeams(refresh) {

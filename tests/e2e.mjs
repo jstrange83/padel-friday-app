@@ -1494,6 +1494,22 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('details.tr.event');
   ok((await page.locator('details.tr.event .byline').textContent()).includes('Oprettet af Brian'), 'admin ser, at Brian oprettede arrangementet');
 
+  // En træner opretter selv et hold og bliver træner på det
+  await freshLogin('brian@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.evaluate((g) => localStorage.setItem('fp-group', g), klubId);
+  await page.goto('http://localhost:8765/#/admin');
+  await page.reload();
+  await page.waitForSelector('.tabbar');
+  await page.click('[data-tab="hold"]');
+  await page.waitForSelector('#newTeam');
+  await page.fill('#newTeam input[name=name]', 'Begyndere');
+  await page.click('#newTeam button');
+  await page.waitForSelector('details.teamcard[open]');
+  ok((await page.evaluate(() => { const db = window.__mock.db(); const t = db.padel_club_teams.find((x) => x.name === 'Begyndere'); return t && db.padel_club_team_trainers.some((x) => x.team_id === t.id && x.user_id === 'u-brian' && x.active); })), 'træneren opretter et hold og bliver selv træner på det');
+  await noOverflow('træner opretter hold');
+
   // Opret konto med en mail, der allerede findes (fx fra TaskHero): skift til Log ind
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
   await page.goto('about:blank');

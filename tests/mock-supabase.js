@@ -450,7 +450,9 @@ Object.assign(RPC, {
   padel_club_save_team: ({ p_id, g, p_name, p_archived }) => {
     if (p_id) { const t = db.padel_club_teams.find((x) => x.id === p_id); needTrainer(t.group_id); Object.assign(t, { name: p_name.trim(), archived: !!p_archived }); return p_id; }
     needTrainer(g); if (!p_name?.trim()) throw new Error('Skriv holdets navn');
-    const t = { id: uuid(), group_id: g, name: p_name.trim(), sort: db.padel_club_teams.filter((x) => x.group_id === g).length + 1, archived: false }; db.padel_club_teams.push(t); return t.id;
+    const t = { id: uuid(), group_id: g, name: p_name.trim(), sort: db.padel_club_teams.filter((x) => x.group_id === g).length + 1, archived: false }; db.padel_club_teams.push(t);
+    if (GM(g, uid())?.role === 'superbruger') db.padel_club_team_trainers.push({ team_id: t.id, user_id: uid(), active: true });
+    return t.id;
   },
   padel_club_save_session: ({ p_id, p_team, p_weekday, p_start, p_end, p_place, p_active }) => {
     needTrainer(teamGroup(p_team));

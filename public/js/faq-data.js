@@ -371,7 +371,7 @@ export const FAQ = [
     q: 'Jeg er træner. Hvad kan jeg?',
     a: `<p>Klubbens admin gør dig til <b>Træner</b> og sætter dig på dine hold under Admin → Hold og tider. Som træner kan du på dine egne hold:</p>
 <ul><li>godkende nye børn og sætte dem på hold (Admin → Børn)</li>
-<li>rette træningstider (Admin → Hold og tider)</li>
+<li>oprette nye hold og rette træningstider (Admin → Hold og tider). Opretter du et hold, bliver du selv træner på det</li>
 <li>se hvem der kommer, krydse fremmøde af og aflyse en træning (Træning)</li>
 <li>skrive opslag til hele klubben eller dine hold (Opslag)</li></ul>
 <p>🚫📷 betyder, at barnet ikke må være på billeder, og ⚠️ at forældrene har skrevet noget vigtigt til træneren.</p>`,
