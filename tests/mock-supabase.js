@@ -742,7 +742,7 @@ export function createClient() {
         setTimeout(() => cb('SIGNED_IN', session()), 0);
         return { data: { session: session() }, error: null };
       },
-      async signUp() { return { data: { session: null }, error: null }; },
+      async signUp({ email }) { if (db.padel_profiles.some((p) => p.email === email)) return { data: null, error: { message: 'User already registered' } }; return { data: { session: null }, error: null }; },
       async signOut() { sessionStorage.removeItem(SKEY); setTimeout(() => cb('SIGNED_OUT', null), 0); return { error: null }; },
       async resetPasswordForEmail() { return { data: {}, error: null }; },
       async updateUser() { return { data: {}, error: null }; },

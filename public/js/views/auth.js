@@ -71,7 +71,15 @@ export function renderAuth(mode = 'login') {
     try {
       const creds = { email: f.email.value.trim(), password: f.password.value };
       if (!signup) return await q(sb.auth.signInWithPassword(creds));
-      const data = await q(sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin } }));
+      const res = await sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin } });
+      // Mailen har allerede en konto (fx fra TaskHero, der bruger samme login): skift til Log ind med mailen udfyldt
+      if (res.error && /already (been )?registered|already exists/i.test(res.error.message || '')) {
+        renderAuth('login');
+        const nf = document.getElementById('authForm'); nf.email.value = creds.email; nf.password.focus();
+        toast('Du har allerede en konto med den e-mail. Log ind med din adgangskode, eller tryk Glemt adgangskode');
+        return;
+      }
+      const data = await q(Promise.resolve(res));
       if (!data.session) {
         app.innerHTML = `<div class="auth"><div class="logo">📬</div><h1>Tjek din mail</h1>
           <p class="muted">Vi har sendt et link til ${esc(creds.email)}. Klik på det for at bekræfte din konto, og log så ind her.</p>

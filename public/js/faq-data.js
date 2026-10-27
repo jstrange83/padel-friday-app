@@ -458,6 +458,12 @@ export const FAQ = [
   },
   {
     cat: 'Roller og adgang',
+    q: 'Der står, at min e-mail allerede er brugt. Hvad gør jeg?',
+    a: `<p>Så har du allerede en konto med den e-mail, fx fra TaskHero, som bruger samme login. Tryk <b>Log ind</b> og brug den adgangskode, du har i forvejen. Bagefter udfylder du din profil her i appen.</p>
+<p>Kan du ikke huske adgangskoden, så skriv din e-mail og tryk <b>Glemt adgangskode?</b>, så får du en mail med et link.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
     q: 'Hvordan skriver jeg til gruppens admin?',
     a: `<p>Gå til <b>Profil → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
 <p>Beskederne kan kun læses af dem, der er med i samtalen.</p>`,

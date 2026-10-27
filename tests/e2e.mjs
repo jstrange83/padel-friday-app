@@ -1494,6 +1494,18 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('details.tr.event');
   ok((await page.locator('details.tr.event .byline').textContent()).includes('Oprettet af Brian'), 'admin ser, at Brian oprettede arrangementet');
 
+  // Opret konto med en mail, der allerede findes (fx fra TaskHero): skift til Log ind
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('about:blank');
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  if (!(await page.locator('button[type=submit]:has-text("Opret konto")').count())) await page.click('#switch');
+  await page.fill('input[name=email]', 'test5@fredagspadel.test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await wait(500);
+  ok((await page.locator('button[type=submit]').innerText()) === 'Log ind' && (await page.inputValue('input[name=email]')) === 'test5@fredagspadel.test', 'eksisterende mail: skifter til Log ind med mailen udfyldt');
+
   // Fredagspadel: en spiller skriver til admin
   await freshLogin('test5@fredagspadel.test');
   await page.waitForSelector('#nav a');
