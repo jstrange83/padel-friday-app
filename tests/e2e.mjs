@@ -1266,10 +1266,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('form[data-staff="u-nyforaelder"]');
   const pf = page.locator('form[data-staff="u-nyforaelder"]');
   await pf.locator('select[name=title]').selectOption('Kasserer');
-  await pf.locator('label:has(input[name=treasurer])').click();
+  ok(await pf.locator('input[name=treasurer]').isChecked() && await pf.locator('input[name=can_post]').isDisabled() && !(await pf.locator('input[name=can_post]').isChecked()), 'kasserer får automatisk kun adgang til kontingent');
   await pf.locator('button.primary').click();
   await wait(500);
-  ok((await page.evaluate(() => window.__mock.db().padel_club_staff.find((x) => x.user_id === 'u-nyforaelder')?.board_title)) === 'Kasserer', 'Pia sat som kasserer i bestyrelsen med ret til kontingent');
+  ok((await page.evaluate(() => { const x = window.__mock.db().padel_club_staff.find((y) => y.user_id === 'u-nyforaelder'); return x?.board_title === 'Kasserer' && x.treasurer && !x.can_post && !x.can_events && !x.can_approve; })), 'Pia sat som kasserer i bestyrelsen med ret til kontingent (og kun det)');
   await shot('klub-bestyrelse');
   // Fjern og sæt igen (Pia skal være kasserer i resten af testen)
   await page.locator('form[data-staff="u-nyforaelder"] [data-staffrm]').click();
@@ -1279,7 +1279,6 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#addStaff button');
   await page.waitForSelector('form[data-staff="u-nyforaelder"]');
   await page.locator('form[data-staff="u-nyforaelder"] select[name=title]').selectOption('Kasserer');
-  await page.locator('form[data-staff="u-nyforaelder"] label:has(input[name=treasurer])').click();
   await page.locator('form[data-staff="u-nyforaelder"] button.primary').click();
   await wait(500);
   await noOverflow('klub bestyrelse');

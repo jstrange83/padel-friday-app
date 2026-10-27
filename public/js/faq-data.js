@@ -420,7 +420,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
     a: `<p>Klubbens admin (typisk formanden) går til <b>Admin → Medlemmer → Bestyrelse og rettigheder</b>. For hver person vælger man:</p>
-<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor.</li>
+<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk kun adgang til kontingent.</li>
 <li><b>Rettigheder</b>: 💳 kontingent, 📣 opslag til alle, 📅 arrangementer og ✅ godkende børn.</li></ul>
 <p>Vælger man posten <b>Formand</b>, bliver personen automatisk klubbens admin med alle rettigheder. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
   },

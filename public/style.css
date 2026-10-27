@@ -771,3 +771,4 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 #superHits:not(:empty) ~ .mlist .nomem { display: none; }
 .byline { display: block; margin: 6px 0 2px; font-size: 12px; } .trcancel .byline { font-weight: 400; }
 .pendingbox .hitrow > .mact { flex-basis: 100%; }
+.rightsnote { display: block; margin-top: 4px; } .rightsnote[hidden] { display: none; } .checks input:disabled + span { opacity: .6; cursor: default; }

@@ -729,6 +729,8 @@ export function bindClubFees(refresh) {
 
 // ---------- Admin: bestyrelse, rettigheder og børneattest (formanden / admin) ----------
 export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor'];
+// Kasserer og revisor får kun adgang til kontingent
+const MONEY_TITLES = ['Kasserer', 'Revisor'];
 const RIGHTS = [['treasurer', '💳 Kontingent'], ['can_post', '📣 Opslag til alle'], ['can_events', '📅 Arrangementer'], ['can_approve', '✅ Godkende børn']];
 export function clubStaffCard() {
   if (!isAdmin()) return '';
@@ -749,7 +751,8 @@ export function clubStaffCard() {
     ${people.map((id) => `<form class="staffrow" data-staff="${id}">
       <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin · alle rettigheder' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
       <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option ${st(id).board_title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      ${role(id) === 'admin' ? '' : `<div class="checks rights">${RIGHTS.map(([k, l]) => `<label><input type="checkbox" name="${k}" ${st(id)[k] ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>`}
+      ${role(id) === 'admin' ? '' : `<div class="checks rights">${RIGHTS.map(([k, l]) => { const fixed = MONEY_TITLES.includes(st(id).board_title); return `<label><input type="checkbox" name="${k}" ${(fixed ? k === 'treasurer' : st(id)[k]) ? 'checked' : ''} ${fixed ? 'disabled' : ''}><span>${l}</span></label>`; }).join('')}</div>
+      <small class="muted rightsnote" ${MONEY_TITLES.includes(st(id).board_title) ? '' : 'hidden'}>Kasserer og revisor får automatisk adgang til kontingent, og kun det.</small>`}
       <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
       <div class="mact">${st(id).board_title || RIGHTS.some(([k]) => st(id)[k]) ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
@@ -761,6 +764,11 @@ export function bindClubStaff(refresh) {
   const d = app.querySelector('details.staff');
   if (!d) return;
   d.ontoggle = () => (S.staffOpen = d.open);
+  app.querySelectorAll('form[data-staff]').forEach((f) => (f.title.onchange = () => {
+    const fixed = MONEY_TITLES.includes(f.title.value);
+    f.querySelectorAll('.rights input').forEach((x) => { x.disabled = fixed; if (fixed) x.checked = x.name === 'treasurer'; });
+    const n = f.querySelector('.rightsnote'); if (n) n.hidden = !fixed;
+  }));
   app.querySelectorAll('form[data-staff]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);

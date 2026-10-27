@@ -650,6 +650,7 @@ Object.assign(RPC, {
   padel_club_my_rights: () => db.padel_club_staff.filter((x) => x.user_id === uid()),
   padel_club_set_rights: ({ g, p_user, p_title, p_treasurer, p_post, p_events, p_approve, p_cert_date }) => {
     if (!isAdm(g)) throw new Error('Kun klubbens admin (formanden)');
+    if (['Kasserer', 'Revisor'].includes(p_title)) { p_treasurer = true; p_post = p_events = p_approve = false; }
     upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer, can_post: !!p_post, can_events: !!p_events, can_approve: !!p_approve, board_title: p_title || null });
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
     if (p_title === 'Formand') GM(g, p_user).role = 'admin';
@@ -665,7 +666,7 @@ const thStaffIds = (t) => db.padel_group_members.filter((m) => m.group_id === t.
   if (r === 'admin') return true;
   if (t.to_role === 'traenere' && r === 'superbruger') { const team = KID(t.kid_id)?.team_id; const mine = db.padel_club_team_trainers.filter((x) => x.user_id === u && x.active); return !team || !mine.length || mine.some((x) => x.team_id === team); }
   if (t.to_role === 'bestyrelse') return !!st?.board_title;
-  if (t.to_role === 'kasserer') return !!st?.treasurer;
+  if (t.to_role === 'kasserer') return !!st?.treasurer && st.board_title !== 'Revisor';
   return false;
 });
 const thPeople = (t) => [...new Set([t.created_by, ...db.padel_club_guardians.filter((x) => x.kid_id === t.kid_id && x.active).map((x) => x.user_id), KID(t.kid_id)?.player_id, ...thStaffIds(t)].filter(Boolean))];
