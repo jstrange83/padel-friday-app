@@ -1,8 +1,10 @@
 // Fælles kerne: databaseforbindelse, tilstand, tekster og små hjælpere.
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
+// Login fra den gamle database (før flytningen) virker ikke længere: glem det, så man bare logger ind igen
+try { localStorage.removeItem('fredagspadel-auth'); } catch {}
 export const sb = createClient('https://jlstsyvhlzsbqymwiyzx.supabase.co', 'sb_publishable_rvPBZIkE1qhyrsq2o4EVYw_-afl7UyZ', {
-  auth: { persistSession: true, storageKey: 'fredagspadel-auth' },
+  auth: { persistSession: true, storageKey: 'padel-auth' },
 });
 
 // S.me er den man ser appen som (kan være en anden spiller i "se som"), S.realMe er den der er logget ind.
