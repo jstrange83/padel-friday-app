@@ -27,7 +27,7 @@ export function viewPrivacy() {
       <ul>
         <li>Barnets navn, fødselsdato og køn, og hvilket hold barnet er på.</li>
         <li>Om barnet må være på billeder fra klubben.</li>
-        <li>"Vigtigt for træneren", hvis forælderen skriver noget. Det kan kun barnets egne trænere og forældrene se. Skriv kun det, træneren har brug for at vide.</li>
+        <li>"Godt at vide om barnet", hvis forælderen skriver noget (fx allergi eller særlige behov). Det kan kun barnets egne trænere og forældrene se. Skriv kun det, træneren har brug for at vide.</li>
         <li>Adresse, hvis klubben har slået det til (fx til kommunens tilskud).</li>
         <li>Afbud, fremmøde og om kontingentet er betalt.</li>
         <li>Hvem der er barnets forældre i appen.</li>

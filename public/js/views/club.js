@@ -93,7 +93,7 @@ const GENDER_KID = { pige: 'Pige', dreng: 'Dreng' };
 const age = (k) => { if (!k.birth_date) return k.birth_year ? `født ${k.birth_year}` : ''; const b = new Date(k.birth_date), n = new Date(); let a = n.getFullYear() - b.getFullYear(); if (n < new Date(n.getFullYear(), b.getMonth(), b.getDate())) a--; return `${a} år`; };
 const fmtDay = (d) => (d ? new Intl.DateTimeFormat('da-DK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z')) : '');
 // Små mærker til trænerne: må ikke fotograferes, og noget vigtigt at vide
-const kidFlags = (k) => `${k.photo_ok === false ? ' <span class="badge nophoto" title="Må ikke være på billeder">🚫📷</span>' : ''}${infoOf(k.id) ? ' <span class="badge warn" title="Vigtigt for træneren">⚠️</span>' : ''}`;
+const kidFlags = (k) => `${k.photo_ok === false ? ' <span class="badge nophoto" title="Må ikke være på billeder">🚫📷</span>' : ''}${infoOf(k.id) ? ' <span class="badge warn" title="Godt at vide om barnet">⚠️</span>' : ''}`;
 const trainerLinks = (x) => `<div class="coachrow"><span class="grow"><b>${esc(x.name)}</b>${x.role ? `<small class="muted">${esc(x.role)}</small>` : ''}${x.phone ? `<small class="muted">${fmtPhone(x.phone)}</small>` : ''}</span>${x.phone ? `<a class="btn sm" href="tel:${esc(x.phone)}">📞</a><a class="btn sm" href="sms:${esc(x.phone)}">💬</a>` : ''}</div>`;
 
 // Alle træninger i perioden for de valgte hold
@@ -437,11 +437,11 @@ export const kidFormFields = (k = {}, i = 0, collect = false) => `
   <div class="frow"><label class="grow">Fødselsdato<input name="kbirth" type="date" required value="${k.birth_date || ''}" max="${todayISO()}"></label></div>
   <div class="lbl">Køn</div>${radios(`kgender${i}`, GENDER_KID, k.gender || '')}
   <div class="lbl">Må barnet være på billeder fra klubben?</div>${radios(`kphoto${i}`, { ja: 'Ja', nej: 'Nej' }, k.photo_ok === true ? 'ja' : k.photo_ok === false ? 'nej' : '')}
-  <label>Vigtigt for træneren <small class="muted">(valgfri, kun barnets trænere kan se det)</small><textarea name="kinfo" rows="2" maxlength="1000" placeholder="Fx noget træneren skal vide for barnets skyld">${esc(k.info || '')}</textarea></label>
+  <label>Godt at vide om barnet <small class="muted">(valgfri, fx allergi eller særlige behov. Gemmes, og kun barnets trænere kan se det)</small><textarea name="kinfo" class="kta" rows="2" maxlength="1000" placeholder="Fx astma, har inhalator med">${esc(k.info || '')}</textarea></label>
   ${collect ? `<label>Adresse <small class="muted">(bruges til kommunens tilskud)</small><input name="kaddr" required maxlength="200" autocomplete="street-address" value="${esc(k.address || '')}" placeholder="Vej og nr., postnr. og by"></label>` : ''}`;
 const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + 1}</legend>${kidFormFields({}, i, collect)}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Vi vil gerne prøve 1-2 træninger først</span></label>
-  <label>Besked til træneren <small class="muted">(valgfri)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
+  <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
 const readKid = (root, i) => ({
   name: root.querySelector('[name=kname]').value, birth_date: root.querySelector('[name=kbirth]').value || null,
   gender: root.querySelector(`[name=kgender${i}]:checked`)?.value || null,

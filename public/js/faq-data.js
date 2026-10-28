@@ -374,7 +374,7 @@ export const FAQ = [
 <li>oprette nye hold og rette træningstider (Admin → Hold og tider). Opretter du et hold, bliver du selv træner på det</li>
 <li>se hvem der kommer, krydse fremmøde af og aflyse en træning (Træning)</li>
 <li>skrive opslag til hele klubben eller dine hold (Opslag)</li></ul>
-<p>🚫📷 betyder, at barnet ikke må være på billeder, og ⚠️ at forældrene har skrevet noget vigtigt til træneren.</p>`,
+<p>🚫📷 betyder, at barnet ikke må være på billeder, og ⚠️ at forældrene har skrevet noget, som er godt at vide om barnet (tryk på barnet for at læse det).</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
