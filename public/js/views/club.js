@@ -131,7 +131,7 @@ export async function viewTraining() {
     ${mine.filter((k) => k.status === 'ansoegt' && !k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
     ${active.filter((k) => !k.team_id).map((k) => `<div class="card warnbox">👋 <b>${esc(k.name)}</b> er optaget. Træneren sætter snart ${k.player_id === S.me?.id ? 'dig' : 'barnet'} på et hold.</div>`).join('')}
     ${unpaid.length ? feeCard(gr, unpaid) : ''}
-    ${trainer && liveTeams.length > 1 ? `<div class="chips"><button class="chip ${S.trTeam ? '' : 'on'}" data-trteam="">Alle hold</button>${liveTeams.map((t) => `<button class="chip ${S.trTeam === t.id ? 'on' : ''}" data-trteam="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : ''}
+    ${trainer && liveTeams.length > 1 ? `<label class="teamsel"><span>Hold</span><select id="trTeamSel"><option value="">Alle hold (${liveTeams.length})</option>${liveTeams.map((t) => `<option value="${t.id}" ${S.trTeam === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
     ${trainer ? `<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button><button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Sidste 2 uger'}</button></div>` : ''}
     ${!trainer && myRight('arrangementer') ? '<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button></div>' : ''}
     ${(trainer || myRight('arrangementer')) && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
@@ -215,7 +215,7 @@ function trainerCard(o, today) {
 
 function bindTraining() {
   bindEvents(viewTraining);
-  app.querySelectorAll('[data-trteam]').forEach((b) => (b.onclick = () => { S.trTeam = b.dataset.trteam || null; viewTraining(); }));
+  const ts = document.getElementById('trTeamSel'); if (ts) ts.onchange = () => { S.trTeam = ts.value || null; viewTraining(); };
   document.getElementById('trPast')?.addEventListener('click', () => { S.trPast = !S.trPast; viewTraining(); });
   document.getElementById('trMore')?.addEventListener('click', () => { S.trWeeks += 2; viewTraining(); });
   document.getElementById('calLink')?.addEventListener('click', showCalendar);
@@ -1024,7 +1024,7 @@ export function clubAttendanceTab() {
   }).sort((a, b) => (a.pct ?? 101) - (b.pct ?? 101) || a.k.name.localeCompare(b.k.name));
   const avg = rows.length && held.length ? Math.round(rows.reduce((s2, x) => s2 + x.met, 0) / (rows.length * held.length) * 100) : null;
   return `
-    ${teams.length > 1 ? `<div class="chips">${teams.map((t) => `<button class="chip ${t.id === tId ? 'on' : ''}" data-attteam="${t.id}">${esc(t.name)}</button>`).join('')}</div>` : ''}
+    ${teams.length > 1 ? `<label class="teamsel"><span>Hold</span><select id="attTeamSel">${teams.map((t) => `<option value="${t.id}" ${t.id === tId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
     <div class="chips static">${[4, 8, 16].map((w) => `<button class="chip ${w === weeks ? 'on' : ''}" data-attweeks="${w}">${w} uger</button>`).join('')}</div>
     <div class="card feesum"><b>📊 ${esc(team(tId).name)} · de sidste ${weeks} uger</b>
       <div class="ftiles"><div><b>${held.length}</b><small>træninger</small></div><div><b>${avg ?? '–'}${avg != null ? '%' : ''}</b><small>fremmøde</small></div><div><b>${kids.length}</b><small>børn</small></div></div>
@@ -1034,7 +1034,7 @@ export function clubAttendanceTab() {
 }
 
 export function bindClubAttendance(refresh) {
-  app.querySelectorAll('[data-attteam]').forEach((b) => (b.onclick = () => { S.attTeam = b.dataset.attteam; refresh(); }));
+  const as = document.getElementById('attTeamSel'); if (as) as.onchange = () => { S.attTeam = as.value; refresh(); };
   app.querySelectorAll('[data-attweeks]').forEach((b) => (b.onclick = () => { S.attWeeks = +b.dataset.attweeks; refresh(); }));
 }
 
