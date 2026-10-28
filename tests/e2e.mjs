@@ -1535,6 +1535,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#todoModal [data-todo]');
   await page.waitForSelector('.plist.noteam');
   ok((await page.locator('.plist.noteam').innerText()).includes('Uden Hold'), '"Tag stilling nu" viser børn uden hold');
+  await freshLogin('jimmy@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  ok(!lastTodo, 'admin får ikke popuppen, kun trænerne');
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_club_kids.find((k) => k.id === 'k-noteam').status = 'udmeldt'; window.__mock.save(); });
 
   // Spørgsmål og svar passer til der, hvor man er

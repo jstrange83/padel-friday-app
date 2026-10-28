@@ -1057,10 +1057,11 @@ export async function loadClubPending() {
   } catch {}
 }
 
-// Når appen åbnes: vis trænere/admin, hvis der er nye børn eller børn uden hold
+// Når appen åbnes: vis trænerne, hvis der er nye børn eller børn uden hold
 export function showClubTodo() {
   if (S.viewAs || document.getElementById('todoModal')) return false;
-  const ids = [...new Set([...Object.keys(S.clubNewBy || {}), ...Object.keys(S.clubNoTeamBy || {})])].filter((g) => group(g));
+  // Kun trænere (ikke admin/formand) får popuppen; admin ser stadig tallet ved Admin i menuen
+  const ids = [...new Set([...Object.keys(S.clubNewBy || {}), ...Object.keys(S.clubNoTeamBy || {})])].filter((g) => group(g) && roleIn(S.me?.id, g) === 'superbruger');
   if (!ids.length) return false;
   const line = (g) => {
     const n = S.clubNewBy?.[g] || 0, m = S.clubNoTeamBy?.[g] || 0;

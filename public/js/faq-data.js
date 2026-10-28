@@ -433,7 +433,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvorfor får jeg en besked om nye børn, når jeg åbner appen?',
-    a: `<p>Er du træner eller admin, viser appen en lille besked, når du åbner den, hvis der er <b>nye børn, der venter på godkendelse</b>, eller <b>optagne børn, der mangler et hold</b>. Tryk <b>Tag stilling nu</b>, så kommer du direkte til Admin → Børn. Trykker du <b>Senere</b>, kommer beskeden igen næste gang, du åbner appen, indtil det er klaret.</p>`,
+    a: `<p>Er du træner, viser appen en lille besked, når du åbner den, hvis der er <b>nye børn, der venter på godkendelse</b>, eller <b>optagne børn, der mangler et hold</b>. Tryk <b>Tag stilling nu</b>, så kommer du direkte til Admin → Børn. Trykker du <b>Senere</b>, kommer beskeden igen næste gang, du åbner appen, indtil det er klaret. Admin får ikke beskeden, men ser tallet ved Admin i menuen.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
