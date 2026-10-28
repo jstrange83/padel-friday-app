@@ -640,7 +640,7 @@ export function clubKidsTab() {
       <div class="kpend"><div><b>${i + 1}. ${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}<small class="muted">Venter på ${esc(team(k.team_id)?.name || 'et hold')}${fullT(k.team_id) ? ' (fuldt)' : ' · der er plads nu'} · ${esc(guardianNames(k.id))}</small></div>
         <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|proeve">Prøve</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Optag</button></div></div>`).join('')}</div>` : ''}
     ${!isAdmin() && myAssigned().length ? `<p class="muted small">Du ser dine egne hold: ${teams.map((t) => esc(t.name)).join(', ')}.</p>` : ''}
-    ${byTeam.map(({ t, ks }) => `<details class="card plist" ${S.kidsOpen?.[t?.id || 'none'] ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : 'Uden hold'} (${ks.length})</b></summary>
+    ${byTeam.map(({ t, ks }) => `<details class="card plist ${t ? '' : 'noteam'}" ${S.kidsOpen?.[t?.id || 'none'] ?? !t ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : '⚠️ Mangler hold'} (${ks.length})</b>${t ? '' : '<small class="muted">Tryk på barnet, vælg hold og tryk Gem</small>'}</summary>
       <div class="list compact">${ks.map((k, i) => `<details class="prow"><summary><span class="grow"><b>${esc(k.name)}</b>${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${k.trial ? '' : feeBadge(k)}<small>${kidMeta(k)}</small></span><span class="muted">›</span></summary>
         <form class="ppanel kedit" data-kedit="${k.id}">
           ${infoOf(k.id) ? `<div class="infobox">⚠️ ${esc(infoOf(k.id))}</div>` : ''}
@@ -662,6 +662,7 @@ export function bindClubKids(refresh) {
     const tm = team(teamId), n = C().kids.filter((x) => x.status === 'aktiv' && x.team_id === teamId && x.id !== id).length;
     if (act === 'afvist' && !confirm(`Afvis ${k.name}?`)) return;
     if (act === 'venteliste' && !teamId) return toast('Vælg hvilket hold barnet skal vente på', true);
+    if (['aktiv', 'proeve'].includes(act) && !teamId && C().teams.some((t) => !t.archived)) { app.querySelector(`[data-pteam="${id}"]`)?.focus(); return toast('Vælg et hold til barnet først', true); }
     const joining = k.status !== 'aktiv' || k.team_id !== teamId;
     if (['aktiv', 'proeve'].includes(act) && joining && tm?.max_kids && n >= tm.max_kids && !confirm(`${tm.name} er fuldt (${n}/${tm.max_kids}). Optag alligevel?`)) return;
     busy(b, true);

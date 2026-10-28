@@ -786,3 +786,4 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .sform .frow > label { margin: 8px 0; min-width: 0; }
 .sform .frow input, .sform .frow select { min-width: 0; width: 100%; padding-left: 8px; padding-right: 8px; }
 .kta, .club textarea, .kidcard textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 6px; }
+.plist.noteam { border: 1px solid var(--warn); }

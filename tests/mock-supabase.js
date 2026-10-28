@@ -597,6 +597,7 @@ Object.assign(RPC, {
   _decide_v2: ({ p_kid, p_action, p_team }) => {
     const k = KID(p_kid); needTrainer(k.group_id);
     if (p_action === 'venteliste') { Object.assign(k, { status: 'ansoegt', waitlist: true, team_id: p_team || k.team_id }); return; }
+    if (['aktiv', 'proeve'].includes(p_action) && !(p_team || k.team_id) && db.padel_club_teams.some((t) => t.group_id === k.group_id && !t.archived)) throw new Error('Vælg et hold til barnet først');
     if (p_action === 'afvist') { Object.assign(k, { status: 'afvist', waitlist: false }); return; }
     RPC.padel_club_decide({ p_kid, p_status: 'aktiv', p_team });
     Object.assign(k, { waitlist: false, trial: p_action === 'proeve' });
