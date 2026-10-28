@@ -983,13 +983,16 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await page.fill('input[name=password]', 'whatever');
     await page.click('button[type=submit]');
   };
+  let lastTodo = '';
   const pastGates = async () => {
+    lastTodo = '';
     for (let i = 0; i < 4; i++) {
       await wait(400);
       if (await page.locator('#skipInstall').count()) { await page.click('#skipInstall'); continue; }
       if (await page.locator('#newsOk').count()) { await page.click('#newsOk'); continue; }
       if (await page.locator('#fgOk').count()) { await page.click('#fgOk'); continue; }
       if (await page.locator('#fbLater').count()) { await page.click('#fbLater'); continue; }
+      if (await page.locator('#todoLater').count()) { lastTodo = await page.locator('#todoModal').innerText(); await page.click('#todoLater'); continue; }
     }
   };
   // Superadmin opretter klubben og gør Brian til træner
@@ -1130,6 +1133,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const nav = await page.locator('#nav').innerText();
   ok(nav.includes('Træning') && nav.includes('Opslag') && !nav.includes('Rangliste') && !nav.includes('Spilledage'), 'klubbens menu: Træning, Opslag, Profil, Admin');
   ok((await page.locator('#nav a[href="#/admin"] .navbadge').innerText()) === '2', 'træneren ser tal for nye indmeldelser');
+  ok(lastTodo.includes('2 nye børn venter'), 'træneren får en popup om nye børn, når appen åbnes: ' + lastTodo);
   await page.click('#nav a[href="#/admin"]');
   await page.waitForSelector('.kpend');
   await shot('klub-godkend');
@@ -1521,6 +1525,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#qsForm button.primary');
   await wait(600);
   ok((await page.evaluate(() => { const db = window.__mock.db(); const t = db.padel_club_teams.find((x) => x.name === 'Begyndere'); const s = db.padel_club_sessions.find((x) => x.team_id === t.id); return s && s.weekday === 2 && s.valid_from && s.valid_to && (Date.parse(s.valid_to) - Date.parse(s.valid_from)) / 864e5 === 35; })), 'træningen er oprettet med 6 tirsdage');
+
+  // Popup til træneren: et optaget barn uden hold, "Tag stilling nu" fører til Børn
+  await page.evaluate((g) => { const db = window.__mock.db(); db.padel_club_kids.push({ id: 'k-noteam', group_id: g, name: 'Uden Hold', status: 'aktiv', team_id: null, waitlist: false, trial: false, created_at: '2026-10-20T10:00:00Z' }); window.__mock.save(); }, klubId);
+  await freshLogin('brian@test');
+  await page.waitForSelector('#todoModal');
+  ok((await page.locator('#todoModal').innerText()).includes('mangler et hold'), 'popup: barn mangler et hold');
+  await shot('popup-traener');
+  await page.click('#todoModal [data-todo]');
+  await page.waitForSelector('.plist.noteam');
+  ok((await page.locator('.plist.noteam').innerText()).includes('Uden Hold'), '"Tag stilling nu" viser børn uden hold');
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_club_kids.find((k) => k.id === 'k-noteam').status = 'udmeldt'; window.__mock.save(); });
 
   // Spørgsmål og svar passer til der, hvor man er
   await freshLogin('nyforaelder@test');

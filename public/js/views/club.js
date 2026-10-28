@@ -1045,10 +1045,42 @@ export async function loadClubPending() {
   const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (canRun(x.id) || myRight('godkende', x.id)));
   if (!clubs.length) return;
   try {
-    const rows = (await q(sb.from('padel_club_kids').select('id,group_id,waitlist').in('group_id', clubs.map((x) => x.id)).eq('status', 'ansoegt'))).filter((r) => !r.waitlist);
+    const all = await q(sb.from('padel_club_kids').select('id,group_id,waitlist,status,team_id').in('group_id', clubs.map((x) => x.id)).in('status', ['ansoegt', 'aktiv']));
+    const rows = all.filter((r) => r.status === 'ansoegt' && !r.waitlist);
+    // Optagne børn uden hold tæller også med: der er noget, træneren skal tage stilling til
+    S.clubNoTeamBy = {};
+    for (const r of all.filter((x) => x.status === 'aktiv' && !x.team_id)) S.clubNoTeamBy[r.group_id] = (S.clubNoTeamBy[r.group_id] || 0) + 1;
     for (const r of rows) S.clubPendingBy[r.group_id] = (S.clubPendingBy[r.group_id] || 0) + 1;
-    S.clubPending = rows.length;
+    for (const [g, n] of Object.entries(S.clubNoTeamBy)) S.clubPendingBy[g] = (S.clubPendingBy[g] || 0) + n;
+    S.clubPending = Object.values(S.clubPendingBy).reduce((a, b) => a + b, 0);
+    S.clubNewBy = {}; for (const r of rows) S.clubNewBy[r.group_id] = (S.clubNewBy[r.group_id] || 0) + 1;
   } catch {}
+}
+
+// Når appen åbnes: vis trænere/admin, hvis der er nye børn eller børn uden hold
+export function showClubTodo() {
+  if (S.viewAs || document.getElementById('todoModal')) return false;
+  const ids = [...new Set([...Object.keys(S.clubNewBy || {}), ...Object.keys(S.clubNoTeamBy || {})])].filter((g) => group(g));
+  if (!ids.length) return false;
+  const line = (g) => {
+    const n = S.clubNewBy?.[g] || 0, m = S.clubNoTeamBy?.[g] || 0;
+    return `<div class="todorow"><b>${esc(group(g).name)}</b><ul>${n ? `<li>👋 ${n === 1 ? '1 nyt barn venter' : `${n} nye børn venter`} på godkendelse</li>` : ''}${m ? `<li>⚠️ ${m === 1 ? '1 barn mangler' : `${m} børn mangler`} et hold</li>` : ''}</ul>
+      <button class="btn primary block" data-todo="${g}">Tag stilling nu</button></div>`;
+  };
+  const wrap = document.createElement('div');
+  wrap.id = 'todoModal';
+  wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="todoTitle">
+    <div class="fgicon">🧒</div><h2 id="todoTitle">Der venter noget i klubben</h2>
+    ${ids.map(line).join('')}
+    <div class="mact"><button class="btn ghost" id="todoLater">Senere</button></div></div>`;
+  document.body.appendChild(wrap);
+  wrap.querySelector('#todoLater').onclick = () => wrap.remove();
+  wrap.querySelectorAll('[data-todo]').forEach((b) => (b.onclick = () => {
+    wrap.remove(); setGroup(b.dataset.todo); S.adminTab = 'boern'; S.kidsOpen = { none: true };
+    if (location.hash === '#/admin') hooks.route?.(); else location.hash = '#/admin';
+  }));
+  return true;
 }
 
 // Invitationslink til klubben

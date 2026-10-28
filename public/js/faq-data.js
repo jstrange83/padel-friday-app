@@ -432,6 +432,11 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Hvorfor får jeg en besked om nye børn, når jeg åbner appen?',
+    a: `<p>Er du træner eller admin, viser appen en lille besked, når du åbner den, hvis der er <b>nye børn, der venter på godkendelse</b>, eller <b>optagne børn, der mangler et hold</b>. Tryk <b>Tag stilling nu</b>, så kommer du direkte til Admin → Børn. Trykker du <b>Senere</b>, kommer beskeden igen næste gang, du åbner appen, indtil det er klaret.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Kan jeg oprette træninger med tale?',
     a: `<p>Ja. Under <b>Admin → Hold og tider</b> står <b>🎤 Ny træning med tale</b>. Tryk <b>Sig det</b> og sig fx <i>"Begyndere tirsdag fra 16 til 17.30 de næste 6 uger"</i>, eller skriv det i feltet og tryk <b>Udfyld</b>.</p>
 <p>Appen udfylder hold, dag, tid, sted og datoer. Tjek det, og tryk <b>Opret træning</b>. Siger du et hold, der ikke findes, bliver det oprettet. Uden antal uger eller slutdato gentages træningen hver uge.</p>`,

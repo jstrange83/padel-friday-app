@@ -791,3 +791,4 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .teamsel { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
 .teamsel > span { font-weight: 600; color: var(--muted); flex: none; }
 .teamsel select { margin: 0; flex: 1; min-width: 0; font-weight: 600; color: var(--text); text-overflow: ellipsis; }
+.todorow { text-align: left; margin: 14px 0; } .todorow ul { margin: 6px 0 10px; padding-left: 4px; list-style: none; } .todorow li { margin: 4px 0; }
