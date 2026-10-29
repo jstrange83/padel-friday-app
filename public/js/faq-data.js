@@ -123,6 +123,12 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto', group: true,
+    q: 'Hvorfor spørger appen, om jeg vil være med?',
+    a: `<p>Er der ledige pladser på en spilledag inden for de næste 3 dage, og er du ikke tilmeldt, spørger appen, når du åbner den: <b>Der er 3 ledige pladser. Vil du være med?</b></p>
+<p>Tryk <b>Meld mig til</b>, så er du med. Trykker du <b>Ikke denne gang</b>, spørger appen ikke igen om den dag, og det giver aldrig bøde.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvorfor står jeg på venteliste?',
     a: `<p>Der spilles 4 på hver bane, og det er først til mølle. Hver gang der er 4 tilmeldte, er en bane klar. Er I fx 6, er 4 klar til bane 1, og 2 står på venteliste, indtil der kommer 2 mere.</p>
 <p>Er alle dagens baner fyldt, kommer resten også på venteliste. Melder nogen fra, rykker ventelisten automatisk op. Du kan se dit nummer på ventelisten på fredagen.</p>`,

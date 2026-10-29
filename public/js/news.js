@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-29', date: '29. oktober 2026', groups: true, title: 'Ledige pladser',
+    items: ['🎾 Er der ledige pladser på en spilledag de næste 3 dage, spørger appen, om du vil være med. Ét tryk, så er du tilmeldt. "Ikke denne gang" giver aldrig bøde.'],
+  },
+  {
     id: '2026-10-26', date: '26. oktober 2026', groups: true, title: 'Skriv til admin',
     items: ['💬 Under <b>Profil → Skriv til admin</b> kan du nu sende en besked til gruppens admin. Svaret kommer samme sted, og du får en notifikation.'],
   },

@@ -6,7 +6,7 @@ import { viewThreads, viewThread, viewCompose } from './views/messages.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
 import { renderProfile } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
-import { viewEvents, viewEventForm } from './views/events.js';
+import { viewEvents, viewEventForm, askOpenSpots } from './views/events.js';
 import { viewEvent } from './views/event.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
@@ -137,6 +137,8 @@ async function gates() {
   if (!S.viewAs && !S.todoChecked) { S.todoChecked = true; if (showClubTodo()) return; }
   // Forældre og børn: kommer man til den næste træning? (kun hvis man ikke har svaret)
   if (!S.viewAs && !S.askChecked) { S.askChecked = true; if (await askNextTraining()) return; }
+  // Spillegrupper: ledige pladser på en spilledag inden for 3 dage
+  if (!S.viewAs && !S.spotChecked) { S.spotChecked = true; if (await askOpenSpots()) return; }
   if (!S.viewAs && !S.feedbackChecked && S.groupId && hasSuggest()) { S.feedbackChecked = true; maybeAskFeedback(); }
 }
 

@@ -23,6 +23,9 @@ await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.fulfill({ contentT
 await page.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'tests', 'mock-supabase.js'), 'utf8') }));
 
 let step = 0;
+// Popuppen om ledige pladser lukkes automatisk i alle andre test (den testes for sig selv)
+const spotHandler = page.locator('#spotModal');
+await page.addLocatorHandler(spotHandler, async () => { await page.click('#spotNo'); });
 // Knapper der står sammen skal være på én linje, lige store og uden ombrudt tekst
 const btnAudit = async (where) => {
   const bad = await page.evaluate(() => {
@@ -952,7 +955,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Nyt i appen') && nm.includes('Nyt for admins'), 'admin får popup med nyheder (også admin-nyheder)');
+  ok(nm.includes('Ledige pladser') && nm.includes('Se appen som almindelig bruger'), 'admin får popup med nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -968,7 +971,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a, .finegate');
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
-  ok(!(await page.locator('#newsModal').innerText()).includes('Nyt for admins'), 'spillere ser ikke admin-nyheder');
+  ok(!(await page.locator('#newsModal').innerText()).includes('Se appen som almindelig bruger'), 'spillere ser ikke admin-nyheder');
   await page.click('#newsOk');
   await page.goto('http://localhost:8765/#/nyt');
   await page.waitForSelector('.news-entry');
@@ -983,7 +986,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await page.fill('input[name=password]', 'whatever');
     await page.click('button[type=submit]');
   };
-  let lastTodo = '', lastAsk = '';
+  let lastTodo = '', lastAsk = '', lastSpot = '';
   const pastGates = async () => {
     lastTodo = '';
     for (let i = 0; i < 4; i++) {
@@ -992,6 +995,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
       if (await page.locator('#newsOk').count()) { await page.click('#newsOk'); continue; }
       if (await page.locator('#fgOk').count()) { await page.click('#fgOk'); continue; }
       if (await page.locator('#fbLater').count()) { await page.click('#fbLater'); continue; }
+      if (await page.locator('#spotNo').count()) { lastSpot = await page.locator('#spotModal').innerText(); await page.click('#spotNo'); continue; }
       if (await page.locator('#askLater').count()) { lastAsk = await page.locator('#askModal').innerText(); await page.click('#askLater'); continue; }
       if (await page.locator('#todoLater').count()) { lastTodo = await page.locator('#todoModal').innerText(); await page.click('#todoLater'); continue; }
     }
@@ -1557,6 +1561,29 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('#askModal [data-ask$="|kommer"]').first().click();
   await wait(1500);
   ok((await page.evaluate(() => window.__mock.db().padel_club_absence.some((a) => a.status === 'kommer' && a.set_by === 'u-nyfar'))) && !(await page.locator('#askModal').count()), 'svar i popuppen gemmes, og popuppen lukker');
+
+  // Fredagspadel: popup om ledige pladser de sidste 3 dage før, kun hvis man ikke er tilmeldt
+  await page.removeLocatorHandler(spotHandler);
+  const spotEv = await page.evaluate(() => { const db = window.__mock.db(); const id = 'ev-spot';
+    db.padel_events.push({ id, group_id: 'g-fre', center_id: 'c-gil', starts_at: new Date(Date.now() + 864e5).toISOString(), status: 'planlagt', format: 'rotation', team_mode: 'aaben', court_ids: ['gil-0', 'gil-1'], round_minutes: 30, duration_minutes: 120, current_round: 0, ranked: true, created_at: new Date().toISOString() });
+    db.padel_signups.push({ event_id: id, player_id: 'u-1', created_at: new Date().toISOString() }); window.__mock.save(); return id; });
+  await freshLogin('test7@fredagspadel.test');
+  await page.waitForSelector('#spotModal');
+  ok((await page.locator('#spotModal').innerText()).includes('7 ledige pladser'), 'popup: 7 ledige pladser');
+  await shot('popup-ledige-pladser');
+  await noOverflow('popup ledige pladser');
+  await page.click('#spotYes');
+  await wait(800);
+  ok((await page.evaluate((id) => window.__mock.db().padel_signups.some((x) => x.event_id === id && x.player_id === 'u-7'), spotEv)), 'Meld mig til tilmelder spilleren');
+  await freshLogin('test8@fredagspadel.test');
+  await page.waitForSelector('#spotModal');
+  await page.click('#spotNo');
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await freshLogin('test8@fredagspadel.test');
+  await page.waitForSelector('#nav a');
+  await wait(1200);
+  ok(!(await page.locator('#spotModal').count()), '"Ikke denne gang": spørger ikke igen om samme dag');
+  await page.addLocatorHandler(spotHandler, async () => { await page.click('#spotNo'); });
 
   // Spørgsmål og svar passer til der, hvor man er
   await freshLogin('nyforaelder@test');

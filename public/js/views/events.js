@@ -221,3 +221,47 @@ export async function viewEventForm(ev) {
     } catch {} finally { busy(btn, false); }
   };
 }
+
+// ---------- Popup: ledige pladser på en spilledag ----------
+// Kun når der er ledige pladser, kun til dem der ikke er tilmeldt, og kun de sidste 3 dage før.
+// "Ikke denne gang" huskes på telefonen og giver aldrig bøde.
+const SKIP = 'fp-skipday';
+const skipped = () => { try { return JSON.parse(localStorage.getItem(SKIP) || '[]'); } catch { return []; } };
+const skip = (id) => { try { localStorage.setItem(SKIP, JSON.stringify([...skipped(), id].slice(-30))); } catch {} };
+
+export async function askOpenSpots() {
+  if (S.viewAs || !S.me || document.querySelector('.modal')) return false;
+  const gids = S.members.filter((m) => m.player_id === S.me.id && m.status === 'aktiv').map((m) => m.group_id)
+    .filter((g) => { const x = group(g); return x && !x.archived && x.kind !== 'klub'; });
+  if (!gids.length) return false;
+  try {
+    const now = new Date(), soon = new Date(now.getTime() + 3 * 864e5);
+    const evs = await q(sb.from('padel_events').select('*, padel_signups(player_id)').in('group_id', gids).eq('status', 'planlagt')
+      .gte('starts_at', now.toISOString()).lte('starts_at', soon.toISOString()).order('starts_at', { ascending: true }));
+    const e = evs.find((x) => {
+      const ids = x.padel_signups.map((s) => s.player_id).filter((p) => !S.profiles[p]?.deleted_at);
+      return !ids.includes(S.me.id) && !skipped().includes(x.id) && canJoin(x) && x.court_ids.length * 4 - ids.length > 0;
+    });
+    if (!e || document.querySelector('.modal')) return false;
+    const n = e.padel_signups.filter((s) => !S.profiles[s.player_id]?.deleted_at).length, free = e.court_ids.length * 4 - n;
+    const when = `${fmtDate(e.starts_at, { weekday: 'long' })} kl. ${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}`;
+    const wrap = document.createElement('div');
+    wrap.id = 'spotModal';
+    wrap.className = 'modal';
+    wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="spotTitle">
+      <div class="fgicon">🎾</div><h2 id="spotTitle">${free === 1 ? 'Der er 1 ledig plads' : `Der er ${free} ledige pladser`}</h2>
+      <p>${esc(group(e.group_id)?.name || '')} spiller <b>${esc(when)}</b> i ${esc(centerById(e.center_id)?.name || '')}. Vil du være med?</p>
+      <p class="muted small">${n} er tilmeldt. Svarer du "Ikke denne gang", spørger vi ikke igen om denne dag.</p>
+      <div class="mact"><button class="btn" id="spotNo">Ikke denne gang</button><button class="btn primary" id="spotYes">Meld mig til</button></div></div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('#spotNo').onclick = () => { skip(e.id); wrap.remove(); };
+    wrap.querySelector('#spotYes').onclick = async (ev) => {
+      busy(ev.currentTarget, true);
+      try {
+        await q(sb.from('padel_signups').insert({ event_id: e.id, player_id: S.me.id }));
+        wrap.remove(); toast('Du er tilmeldt 🎾'); location.hash = '#/fredag/' + e.id; hooks.route?.();
+      } catch { busy(ev.currentTarget, false); }
+    };
+    return true;
+  } catch { return false; }
+}
