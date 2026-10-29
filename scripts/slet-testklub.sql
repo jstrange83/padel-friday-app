@@ -1,5 +1,5 @@
 -- Slet TEST Padelklub Junior og alle testpersoner (mærket padel_test).
--- Kør hele scriptet i Supabase → SQL Editor (projektet "taskhero"). Vælg "Run without RLS", hvis den spørger.
+-- Kør hele scriptet i Supabase → SQL Editor (projektet "padel"). Vælg "Run without RLS", hvis den spørger.
 begin;
 create temp table x_g on commit drop as select id from padel_groups where name = 'TEST Padelklub Junior' and kind = 'klub';
 create temp table x_u on commit drop as select id from auth.users where raw_app_meta_data->>'padel_test' = 'true';
