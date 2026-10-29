@@ -715,19 +715,31 @@ Object.assign(RPC, {
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     notify(thPeople(x).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + x.subject, p_body.slice(0, 140), '/#/samtale/' + t);
   },
+  padel_thread_reply_v2: ({ t, p_body, p_image }) => {
+    if (!p_body?.trim() && !p_image) throw new Error('Skriv en besked');
+    if (p_image && !p_image.startsWith(uid() + '/')) throw new Error('Billedet kunne ikke gemmes');
+    RPC.padel_thread_reply({ t, p_body: p_body?.trim() || '📷 Billede' });
+    Object.assign(db.padel_thread_msgs.at(-1), { body: p_body?.trim() || '', image: p_image || null });
+  },
+  padel_thread_start_v2: ({ p_body, p_image, p_subject, ...a }) => {
+    if (!p_body?.trim() && !p_image) throw new Error('Skriv en besked');
+    const t = RPC.padel_thread_start({ ...a, p_subject: p_subject?.trim() || (p_body?.trim() ? '' : 'Billede'), p_body: p_body?.trim() || '📷 Billede' });
+    Object.assign(db.padel_thread_msgs.at(-1), { body: p_body?.trim() || '', image: p_image || null });
+    return t;
+  },
   padel_thread_status: ({ t, p_status }) => { const x = TH(t); if (!thMember(x)) throw new Error('Det har du ikke adgang til'); x.status = p_status; },
   padel_thread_list: () => db.padel_threads.filter(thMember).sort((a, b) => (a.last_at < b.last_at ? 1 : -1)).map((t) => {
     const ms = db.padel_thread_msgs.filter((m) => m.thread_id === t.id), last = ms[ms.length - 1];
     const rd = db.padel_thread_reads.find((r) => r.thread_id === t.id && r.user_id === uid())?.read_at || '';
     return { ...t, kid: KID(t.kid_id)?.name || null, creator: nameOf(t.created_by), staff: thStaffIds(t).includes(uid()),
-      last: last && { body: last.body.slice(0, 120), author: nameOf(last.author), mine: last.author === uid() }, unread: ms.filter((m) => m.author !== uid() && m.created_at > rd).length };
+      last: last && { body: (last.body || (last.image ? '📷 Billede' : '')).slice(0, 120), author: nameOf(last.author), mine: last.author === uid() }, unread: ms.filter((m) => m.author !== uid() && m.created_at > rd).length };
   }),
   padel_thread_get: ({ t }) => {
     const x = TH(t); if (!thMember(x)) throw new Error('Det har du ikke adgang til');
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     db.padel_notifications.filter((n) => n.user_id === uid() && n.url === '/#/samtale/' + t && !n.read_at).forEach((n) => (n.read_at = now()));
     return { ...x, kid: KID(x.kid_id)?.name || null, creator: nameOf(x.created_by), staff: thStaffIds(x).includes(uid()), people: thPeople(x).map(nameOf).sort(),
-      msgs: db.padel_thread_msgs.filter((m) => m.thread_id === t).map((m) => ({ id: m.id, body: m.body, author: nameOf(m.author), mine: m.author === uid(), at: m.created_at })) };
+      msgs: db.padel_thread_msgs.filter((m) => m.thread_id === t).map((m) => ({ id: m.id, body: m.body, image: m.image || null, author: nameOf(m.author), mine: m.author === uid(), at: m.created_at })) };
   },
 });
 
@@ -752,6 +764,11 @@ export function createClient() {
       async updateUser() { return { data: {}, error: null }; },
     },
     from: (t) => new Query(t),
+    // Billeder: gemmes kun i hukommelsen; stierne skal ligge i brugerens egen mappe
+    storage: { from: () => ({
+      async upload(path, blob) { if (!path.startsWith(uid() + '/')) return { data: null, error: { message: 'new row violates row-level security policy' } }; (window.__imgs ||= {})[path] = URL.createObjectURL(blob); return { data: { path }, error: null }; },
+      async createSignedUrls(paths) { return { data: paths.map((p) => ({ path: p, signedUrl: window.__imgs?.[p] || null })), error: null }; },
+    }) },
     async rpc(name, args) {
       try { const data = await RPC[name](args); save(); return { data: data ?? null, error: null }; }
       catch (e) { return { data: null, error: { message: e.message } }; }

@@ -955,7 +955,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Ledige pladser') && nm.includes('Se appen som almindelig bruger'), 'admin får popup med nyheder (også admin-nyheder)');
+  ok(nm.includes('Billeder i beskeder') && nm.includes('Ledige pladser'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1436,6 +1436,25 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#rep button.primary');
   await wait(500);
   ok((await page.locator('.msg').count()) === 2 && (await page.locator('.msg.mine').count()) === 1, 'træneren har svaret');
+  // Billede i samtalen: kun billede, ingen tekst
+  const png = await page.screenshot({ clip: { x: 0, y: 0, width: 120, height: 90 } });
+  await page.setInputFiles('#rep input[name=img]', { name: 'bat.png', mimeType: 'image/png', buffer: png });
+  await page.waitForSelector('#rep .imgprev:not([hidden]) img');
+  await shot('besked-billede-valgt');
+  await noOverflow('billede valgt');
+  await page.click('#rep button.primary');
+  await page.waitForFunction(() => document.querySelectorAll('.msg').length === 3, null, { timeout: 5000 });
+  await page.waitForFunction(() => document.querySelector('.msg:last-child img.msgimg')?.src?.startsWith('blob:'));
+  ok(await page.evaluate(() => { const m = window.__mock.db().padel_thread_msgs.at(-1); return m.image?.startsWith('u-brian/') && m.body === ''; }), 'træneren kan sende et billede i samtalen');
+  ok(await page.evaluate(() => window.__mock.db().padel_notifications.some((n) => n.body === '📷 Billede')), 'notifikationen siger Billede');
+  await page.click('.msg:last-child img.msgimg');
+  await page.waitForSelector('.imgview img');
+  await shot('besked-billede-stort');
+  await page.click('.imgview');
+  ok(!(await page.locator('.imgview').count()), 'billedet kan åbnes stort og lukkes igen');
+  await page.click('#rep button.primary');
+  await wait(300);
+  ok((await page.locator('.msg').count()) === 3, 'tomt svar uden billede sendes ikke');
   await page.click('#solve');
   await wait(500);
   ok((await text()).includes('markeret som løst'), 'samtalen er markeret som løst');

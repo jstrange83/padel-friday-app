@@ -7,6 +7,61 @@ import { loadUnread } from './notify.js';
 const ROLE = { traenere: 'Trænerne', bestyrelse: 'Bestyrelsen', kasserer: 'Kassereren', admin: 'Admin' };
 const roleLabel = (r, club) => (r === 'admin' && !club ? 'Gruppens admin' : r === 'admin' ? 'Klubbens admin' : ROLE[r]);
 const when = (d) => fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+// Billeder: gøres mindre på telefonen før upload og ligger privat, så kun dem i samtalen kan se dem
+async function shrink(file) {
+  const img = await createImageBitmap(file).catch(() => null);
+  // Kan browseren ikke læse billedet, sendes det, som det er (hvis det er et almindeligt format)
+  if (!img) { if (/^image\/(jpeg|png|webp)$/.test(file.type) && file.size < 5e6) return file; throw new Error('Billedet kunne ikke læses'); }
+  const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.82));
+}
+async function uploadImage(file) {
+  const blob = await shrink(file);
+  const type = blob.type || 'image/jpeg';
+  const path = `${S.realMe.id}/${crypto.randomUUID()}.${type.split('/')[1].replace('jpeg', 'jpg')}`;
+  const { error } = await sb.storage.from('padel-msg').upload(path, blob, { contentType: type, upsert: false });
+  if (error) throw error;
+  return path;
+}
+const picker = () => `<div class="imgpick"><label class="btn sm ghost">📷 Billede<input type="file" name="img" accept="image/*" hidden></label><span class="imgprev" hidden><img alt=""><button type="button" class="imgx" aria-label="Fjern billedet">✕</button></span></div>`;
+function bindPicker(f) {
+  const inp = f.img, prev = f.querySelector('.imgprev');
+  inp.onchange = () => {
+    const file = inp.files[0];
+    prev.hidden = !file;
+    if (file) prev.querySelector('img').src = URL.createObjectURL(file);
+  };
+  prev.querySelector('.imgx').onclick = () => { inp.value = ''; prev.hidden = true; };
+}
+// Send: upload billedet først (hvis der er et), og tjek at der er tekst eller billede
+async function withImage(f, btn, send) {
+  const file = f.img.files[0];
+  if (!f.body.value.trim() && !file) { toast('Skriv en besked eller vælg et billede', true); return; }
+  busy(btn, true);
+  let image = null;
+  try { if (file) image = await uploadImage(file); }
+  catch (e) { busy(btn, false); toast(e?.message === 'Billedet kunne ikke læses' ? e.message : 'Billedet kunne ikke sendes. Prøv igen.', true); return; }
+  try { await send(image); } catch { busy(btn, false); }
+}
+function showImages(root) {
+  const imgs = [...root.querySelectorAll('img.msgimg[data-path]')];
+  if (!imgs.length) return;
+  sb.storage.from('padel-msg').createSignedUrls(imgs.map((i) => i.dataset.path), 3600).then(({ data }) => {
+    imgs.forEach((i) => { const u = data?.find((d) => d.path === i.dataset.path)?.signedUrl; if (u) i.src = u; else i.alt = 'Billedet kunne ikke hentes'; });
+  });
+  imgs.forEach((i) => (i.onclick = () => {
+    if (!i.src) return;
+    const v = document.createElement('div');
+    v.className = 'imgview';
+    v.innerHTML = `<img src="${i.src}" alt=""><button type="button" class="imgx" aria-label="Luk">✕</button>`;
+    v.onclick = () => v.remove();
+    document.body.append(v);
+  }));
+}
+
 const back = (to) => `<button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '${to}')">‹ Tilbage</button>`;
 
 export const msgLabel = () => (isClub() ? 'Skriv til klubben' : 'Skriv til admin');
@@ -80,7 +135,8 @@ export async function viewCompose() {
         <label>Hvilket barn?<select name="skid">${staffKids.map((k) => `<option value="${k.id}" data-role="${k.role}" ${k.id === preKid ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
           <small class="muted">Beskeden går til barnets forældre. Har barnet eget login, kan barnet også læse med, men aldrig uden forældrene.</small></label></div>` : ''}
       <label>Emne<input name="subject" maxlength="100" placeholder="Fx Afbud resten af måneden"></label>
-      <label>Besked<textarea name="body" rows="5" maxlength="4000" required></textarea></label>
+      <label>Besked<textarea name="body" rows="5" maxlength="4000"></textarea></label>
+      ${picker()}
       <button class="btn primary">Send</button>
     </form>
   </div>`;
@@ -92,18 +148,18 @@ export async function viewCompose() {
   };
   f.querySelectorAll('input[name=mode]').forEach((r) => (r.onchange = sync));
   sync();
+  bindPicker(f);
   f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button.primary');
     const p = f.mode.value === 'foraeldre';
     const opt = p ? f.skid.selectedOptions[0] : null;
-    busy(btn, true);
-    try {
-      const id = await q(sb.rpc('padel_thread_start', { g, p_role: p ? opt.dataset.role : f.role.value, p_kid: p ? opt.value : (f.kid?.value || null),
-        p_subject: f.subject.value, p_body: f.body.value }));
+    await withImage(f, btn, async (image) => {
+      const id = await q(sb.rpc('padel_thread_start_v2', { g, p_role: p ? opt.dataset.role : f.role.value, p_kid: p ? opt.value : (f.kid?.value || null),
+        p_subject: f.subject.value, p_body: f.body.value, p_image: image }));
       toast('Beskeden er sendt');
       location.replace('#/samtale/' + id);
-    } catch { busy(btn, false); }
+    });
   };
 }
 
@@ -119,18 +175,19 @@ export async function viewThread(id) {
     <h1>${esc(t.subject)}</h1>
     <p class="muted small thmeta">${t.from_staff ? `Fra ${esc(t.creator)} til forældrene` : `Til ${esc(roleLabel(t.to_role, club).toLowerCase())}`}${t.kid ? ` · om ${esc(t.kid)}` : ''} · ${esc(gname)}</p>
     <details class="thpeople"><summary class="muted small">👥 Med i samtalen (${(t.people || []).length})</summary><p class="small">${(t.people || []).map(esc).join(', ')}</p></details>
-    <div class="msgs">${(t.msgs || []).map((m) => `<div class="msg ${m.mine ? 'mine' : ''}"><small>${m.mine ? 'Dig' : esc(m.author || 'Tidligere bruger')} · ${when(m.at)}</small><p>${esc(m.body).replace(/\n/g, '<br>')}</p></div>`).join('')}</div>
-    <form class="card replybox" id="rep"><textarea name="body" rows="3" maxlength="4000" required placeholder="Skriv et svar"></textarea>
-      <div class="mact">${t.status === 'aaben' ? (t.staff ? '<button type="button" class="btn sm ghost" id="solve">✓ Markér som løst</button>' : '') : '<button type="button" class="btn sm ghost" id="reopen">↺ Genåbn</button>'}<button class="btn sm primary">Svar</button></div></form>
+    <div class="msgs">${(t.msgs || []).map((m) => `<div class="msg ${m.mine ? 'mine' : ''}"><small>${m.mine ? 'Dig' : esc(m.author || 'Tidligere bruger')} · ${when(m.at)}</small>${m.image ? `<img class="msgimg" data-path="${esc(m.image)}" alt="Billede">` : ''}${m.body ? `<p>${esc(m.body).replace(/\n/g, '<br>')}</p>` : ''}</div>`).join('')}</div>
+    <form class="card replybox" id="rep"><textarea name="body" rows="3" maxlength="4000" placeholder="Skriv et svar"></textarea>
+      ${picker()}<div class="mact">${t.status === 'aaben' ? (t.staff ? '<button type="button" class="btn sm ghost" id="solve">✓ Løst</button>' : '') : '<button type="button" class="btn sm ghost" id="reopen">↺ Genåbn</button>'}<button class="btn sm primary">Svar</button></div></form>
     ${t.status !== 'aaben' ? '<p class="muted small center">✓ Samtalen er markeret som løst. Skriver nogen igen, åbner den igen.</p>' : ''}
   </div>`;
   app.querySelector('.msgs .msg:last-child')?.scrollIntoView({ block: 'nearest' });
+  showImages(app);
   const f = document.getElementById('rep');
+  bindPicker(f);
   f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button.primary');
-    busy(btn, true);
-    try { await q(sb.rpc('padel_thread_reply', { t: id, p_body: f.body.value })); viewThread(id); } catch { busy(btn, false); }
+    await withImage(f, btn, async (image) => { await q(sb.rpc('padel_thread_reply_v2', { t: id, p_body: f.body.value, p_image: image })); viewThread(id); });
   };
   const st = async (s) => { try { await q(sb.rpc('padel_thread_status', { t: id, p_status: s })); toast(s === 'loest' ? 'Markeret som løst' : 'Samtalen er åbnet igen'); viewThread(id); } catch {} };
   document.getElementById('solve')?.addEventListener('click', () => st('loest'));

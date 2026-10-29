@@ -472,12 +472,12 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan svarer jeg som træner eller bestyrelse på beskeder?',
     a: `<p>Beskeder til dig står under <b>Profil → Samtaler med medlemmer</b>, og du får en notifikation. Trænere får kun beskeder om børn på deres egne hold.</p>
-<p>Når sagen er klaret, kan du trykke <b>✓ Markér som løst</b>. Skriver nogen igen, åbner samtalen igen. Under <b>Admin → Børn</b> kan du også trykke <b>✉️ Skriv til forældrene</b> ud for et barn.</p>`,
+<p>Når sagen er klaret, kan du trykke <b>✓ Løst</b>. Skriver nogen igen, åbner samtalen igen. Under <b>Admin → Børn</b> kan du også trykke <b>✉️ Skriv til forældrene</b> ud for et barn.</p>`,
   },
   {
     cat: 'Roller og adgang',
     q: 'Der står, at min e-mail allerede er brugt. Hvad gør jeg?',
-    a: `<p>Så har du allerede en konto med den e-mail, fx fra TaskHero, som bruger samme login. Tryk <b>Log ind</b> og brug den adgangskode, du har i forvejen. Bagefter udfylder du din profil her i appen.</p>
+    a: `<p>Så har du allerede en konto i appen med den e-mail. Tryk <b>Log ind</b> og brug den adgangskode, du har i forvejen. Bagefter udfylder du din profil her i appen.</p>
 <p>Kan du ikke huske adgangskoden, så skriv din e-mail og tryk <b>Glemt adgangskode?</b>, så får du en mail med et link.</p>`,
   },
   {
@@ -485,6 +485,12 @@ export const FAQ = [
     q: 'Hvordan skriver jeg til gruppens admin?',
     a: `<p>Gå til <b>Profil → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
 <p>Beskederne kan kun læses af dem, der er med i samtalen.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Kan jeg sende et billede i en samtale?',
+    a: `<p>Ja. Tryk <b>📷 Billede</b> under beskeden eller svaret, og vælg et billede eller tag et med kameraet. Du kan skrive tekst til, eller bare sende billedet alene. Tryk på et billede i samtalen for at se det stort.</p>
+<p>Billederne gøres mindre, før de sendes, og kan kun ses af dem, der er med i samtalen.</p>`,
   },
   {
     cat: 'Roller og adgang',
