@@ -352,6 +352,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan melder jeg mit barn til eller fra træning?',
     a: `<p>Under <b>Træning</b> står de næste træninger. Ingen er meldt til automatisk: tryk <b>✓ Kommer</b> eller <b>Afbud</b> ud for barnet ved hver træning. Har du ikke svaret, står der <b>Ikke svaret</b>, og træneren kan se det. Du kan altid skifte dit svar.</p>
+<p>Har du ikke svaret på den næste træning, spørger appen, når du åbner den: <b>Kommer Frederik?</b> Tryk Kommer eller Afbud direkte i beskeden. Den spørger kun om dine egne børn og kun om den næste træning.</p>
 <p>Aflyser træneren en træning, står den som aflyst, og du får en notifikation.</p>`,
   },
   {

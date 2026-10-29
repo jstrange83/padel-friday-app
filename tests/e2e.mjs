@@ -983,7 +983,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await page.fill('input[name=password]', 'whatever');
     await page.click('button[type=submit]');
   };
-  let lastTodo = '';
+  let lastTodo = '', lastAsk = '';
   const pastGates = async () => {
     lastTodo = '';
     for (let i = 0; i < 4; i++) {
@@ -992,6 +992,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
       if (await page.locator('#newsOk').count()) { await page.click('#newsOk'); continue; }
       if (await page.locator('#fgOk').count()) { await page.click('#fgOk'); continue; }
       if (await page.locator('#fbLater').count()) { await page.click('#fbLater'); continue; }
+      if (await page.locator('#askLater').count()) { lastAsk = await page.locator('#askModal').innerText(); await page.click('#askLater'); continue; }
       if (await page.locator('#todoLater').count()) { lastTodo = await page.locator('#todoModal').innerText(); await page.click('#todoLater'); continue; }
     }
   };
@@ -1162,6 +1163,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/traening');
   await page.waitForSelector('.tr');
   ok((await page.locator('.tr').first().locator('.krow').count()) === 2, 'træningen viser begge børn');
+  ok(/Kommer Ida/.test(lastAsk) && /Kommer Oscar/.test(lastAsk), 'popup spørger om næste træning for begge egne børn: ' + lastAsk.replace(/\n/g, ' '));
   ok((await page.locator('.tr').first().locator('small.unans').count()) === 2 && !(await page.locator('.tr').first().locator('.btn.on').count()), 'ingen er meldt til automatisk: begge står som Ikke svaret');
   await page.locator('.tr').first().locator('.krow').first().locator('[data-abs$="|kommer"]').click();
   await wait(500);
@@ -1544,6 +1546,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await pastGates();
   ok(!lastTodo, 'admin får ikke popuppen, kun trænerne');
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_club_kids.find((k) => k.id === 'k-noteam').status = 'udmeldt'; window.__mock.save(); });
+
+  // Popup om næste træning: den anden forælder svarer Kommer for sit barn direkte i popuppen
+  await page.evaluate(() => { const db = window.__mock.db(); const o = db.padel_club_kids.find((k) => k.name === 'Oscar Test'); db.padel_club_absence = db.padel_club_absence.filter((a) => a.kid_id !== o.id); window.__mock.save(); });
+  await freshLogin('nyfar@test');
+  await page.waitForSelector('#askModal');
+  ok(!(await page.locator('#askModal').innerText()).includes('Ida'), 'popuppen viser kun ens egne børn');
+  await shot('popup-naeste-traening');
+  await noOverflow('popup næste træning');
+  await page.locator('#askModal [data-ask$="|kommer"]').first().click();
+  await wait(1500);
+  ok((await page.evaluate(() => window.__mock.db().padel_club_absence.some((a) => a.status === 'kommer' && a.set_by === 'u-nyfar'))) && !(await page.locator('#askModal').count()), 'svar i popuppen gemmes, og popuppen lukker');
 
   // Spørgsmål og svar passer til der, hvor man er
   await freshLogin('nyforaelder@test');

@@ -1097,3 +1097,67 @@ export const clubInvite = (g) => ({
   qr: () => showQR(`${location.origin}/#/velkommen/${g}`, `Meld ind i ${group(g)?.name}`, 'Scan med telefonens kamera. Forældre opretter sig og melder deres barn ind.'),
   share: () => share(`${location.origin}/#/velkommen/${g}`, `Meld dit barn ind i ${group(g)?.name}! Opret dig (eller log ind) her, og udfyld indmeldelsen:`),
 });
+
+// ---------- Popup: "Kommer X til næste træning?" ----------
+// Når appen åbnes: for hvert af ens egne børn (og én selv med eget login) spørges kun om den allernæste træning,
+// hvis man ikke har svaret. Ingen påvirker andres børn.
+export async function askNextTraining() {
+  if (S.viewAs || !S.me || document.querySelector('.modal')) return false;
+  try {
+    const me = S.me.id, today = todayISO();
+    const gd = await q(sb.from('padel_club_guardians').select('kid_id').eq('user_id', me).eq('active', true));
+    const own = await q(sb.from('padel_club_kids').select('id').eq('player_id', me));
+    const ids = [...new Set([...gd.map((x) => x.kid_id), ...own.map((x) => x.id)])];
+    if (!ids.length) return false;
+    const kids = (await q(sb.from('padel_club_kids').select('id,name,team_id,group_id,player_id').in('id', ids).eq('status', 'aktiv'))).filter((k) => k.team_id && group(k.group_id));
+    if (!kids.length) return false;
+    const teamIds = [...new Set(kids.map((k) => k.team_id))];
+    const [sessions, teams] = await Promise.all([
+      q(sb.from('padel_club_sessions').select('*').in('team_id', teamIds).eq('active', true)),
+      q(sb.from('padel_club_teams').select('id,name,archived').in('id', teamIds)),
+    ]);
+    if (!sessions.length) return false;
+    const until = addDays(today, 14), sids = sessions.map((s) => s.id);
+    const [cancels, answers] = await Promise.all([
+      q(sb.from('padel_club_cancellations').select('session_id,day').in('session_id', sids).eq('cancelled', true).gte('day', today).lte('day', until)),
+      q(sb.from('padel_club_absence').select('session_id,day,kid_id,status').in('kid_id', kids.map((k) => k.id)).gte('day', today).lte('day', until)),
+    ]);
+    const now = Date.now();
+    // Den næste træning for et barn (ikke aflyst, ikke begyndt)
+    const nextFor = (k) => {
+      const ss = sessions.filter((s) => s.team_id === k.team_id && !teams.find((t) => t.id === s.team_id)?.archived);
+      for (let d = today; d <= until; d = addDays(d, 1)) {
+        const hits = ss.filter((s) => s.weekday === isoDow(d) && (!s.valid_from || d >= s.valid_from) && (!s.valid_to || d <= s.valid_to)
+          && startMs(d, s.start_time) > now && !cancels.some((c) => c.session_id === s.id && c.day === d))
+          .sort((a, b) => t5(a.start_time).localeCompare(t5(b.start_time)));
+        if (hits.length) return { s: hits[0], day: d };
+      }
+      return null;
+    };
+    const ask = kids.map((k) => ({ k, o: nextFor(k) })).filter((x) => x.o && !answers.some((a) => a.kid_id === x.k.id && a.session_id === x.o.s.id && a.day === x.o.day));
+    if (!ask.length || document.querySelector('.modal')) return false;
+    const tname = (id) => teams.find((t) => t.id === id)?.name || '';
+    const who = (k) => (k.player_id === me ? 'du' : esc(k.name.split(' ')[0]));
+    const wrap = document.createElement('div');
+    wrap.id = 'askModal';
+    wrap.className = 'modal';
+    wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="askTitle">
+      <div class="fgicon">🎾</div><h2 id="askTitle">Næste træning</h2>
+      ${ask.map(({ k, o }) => `<div class="askrow" data-askrow="${k.id}"><p><b>Kommer ${who(k)}?</b><br><span class="muted">${cap(dayLabel(o.day))} kl. ${t5(o.s.start_time).replace(':', '.')}–${t5(o.s.end_time).replace(':', '.')}<br>${esc(tname(k.team_id))}${o.s.place ? ` · ${esc(o.s.place)}` : ''}</span></p>
+        <div class="yesno"><button class="btn" data-ask="${o.s.id}|${o.day}|${k.id}|afbud">Afbud</button><button class="btn primary" data-ask="${o.s.id}|${o.day}|${k.id}|kommer">✓ Kommer</button></div></div>`).join('')}
+      <div class="mact"><button class="btn ghost" id="askLater">Senere</button></div></div>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector('#askLater').onclick = () => wrap.remove();
+    wrap.querySelectorAll('[data-ask]').forEach((b) => (b.onclick = async () => {
+      const [sid, day, kid, st] = b.dataset.ask.split('|');
+      busy(b, true);
+      try {
+        await q(sb.rpc('padel_club_set_absence', { p_session: sid, p_day: day, p_kid: kid, p_status: st, p_reason: null }));
+        const row = wrap.querySelector(`[data-askrow="${kid}"]`);
+        row.innerHTML = `<p>${st === 'kommer' ? '✓ Tak! Træneren ved, at ' + who(kids.find((k) => k.id === kid)) + ' kommer.' : 'Afbuddet er sendt til træneren.'}</p>`;
+        if (!wrap.querySelector('[data-ask]')) setTimeout(() => { wrap.remove(); hooks.route?.(); }, 900);
+      } catch { busy(b, false); }
+    }));
+    return true;
+  } catch { return false; }
+}

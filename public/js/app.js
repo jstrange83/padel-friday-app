@@ -1,6 +1,6 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
 import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, viewMode, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
-import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids, hasAnyRight, showClubTodo } from './views/club.js';
+import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids, hasAnyRight, showClubTodo, askNextTraining } from './views/club.js';
 import { viewPrivacy } from './views/privacy.js';
 import { viewThreads, viewThread, viewCompose } from './views/messages.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
@@ -135,6 +135,8 @@ async function gates() {
   if (!S.viewAs && !S.newsChecked) { S.newsChecked = true; if (maybeShowNews()) return; }
   // Trænere: nye børn eller børn uden hold, når appen åbnes
   if (!S.viewAs && !S.todoChecked) { S.todoChecked = true; if (showClubTodo()) return; }
+  // Forældre og børn: kommer man til den næste træning? (kun hvis man ikke har svaret)
+  if (!S.viewAs && !S.askChecked) { S.askChecked = true; if (await askNextTraining()) return; }
   if (!S.viewAs && !S.feedbackChecked && S.groupId && hasSuggest()) { S.feedbackChecked = true; maybeAskFeedback(); }
 }
 
