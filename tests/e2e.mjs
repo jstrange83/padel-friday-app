@@ -1162,6 +1162,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/traening');
   await page.waitForSelector('.tr');
   ok((await page.locator('.tr').first().locator('.krow').count()) === 2, 'træningen viser begge børn');
+  ok((await page.locator('.tr').first().locator('small.unans').count()) === 2 && !(await page.locator('.tr').first().locator('.btn.on').count()), 'ingen er meldt til automatisk: begge står som Ikke svaret');
+  await page.locator('.tr').first().locator('.krow').first().locator('[data-abs$="|kommer"]').click();
+  await wait(500);
+  ok(await page.locator('.tr').first().locator('.krow').first().locator('.btn.on.yes').count() && !(await page.locator('.tr').first().locator('.krow').first().locator('small.unans').count()), 'forælderen melder barnet til med Kommer');
   await page.locator('.tr').nth(1).locator('.krow').first().locator('[data-abs$="|afbud"]').click();
   await wait(500);
   ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');

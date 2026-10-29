@@ -793,3 +793,4 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .teamsel select { margin: 0; flex: 1; min-width: 0; font-weight: 600; color: var(--text); text-overflow: ellipsis; }
 .todorow { text-align: left; margin: 14px 0; } .todorow ul { margin: 6px 0 10px; padding-left: 4px; list-style: none; } .todorow li { margin: 4px 0; }
 .trhint { margin: 4px 2px 8px; }
+.unans { color: var(--warn); } small.unans { display: block; font-size: 12px; } .trcount .unans { margin-left: 6px; } .krow small.ok { display: block; color: var(--up); font-size: 12px; }

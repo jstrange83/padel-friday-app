@@ -68,7 +68,8 @@ export const isMine = (k) => k.player_id === S.me?.id || C().guardians.some((x) 
 const myKids = () => C().kids.filter((k) => isMine(k) && ['ansoegt', 'aktiv'].includes(k.status));
 const kidLabel = (k) => (k.player_id === S.me?.id ? `${esc(k.name)} <small class="muted">(dig)</small>` : esc(k.name));
 const absOf = (sid, day, kid) => C().absence.find((a) => a.session_id === sid && a.day === day && a.kid_id === kid);
-const coming = (sid, day, kid) => absOf(sid, day, kid)?.status !== 'afbud';
+// Svar på en træning: 'kommer', 'afbud' eller null (ikke svaret). Ingen er meldt til automatisk.
+const answer = (sid, day, kid) => absOf(sid, day, kid)?.status || null;
 const cancelOf = (sid, day) => C().cancels.find((c) => c.session_id === sid && c.day === day && c.cancelled);
 const present = (sid, day, kid) => C().attendance.find((a) => a.session_id === sid && a.day === day && a.kid_id === kid)?.present;
 const feeOf = (kid) => C().fees.find((f) => f.kid_id === kid)?.status || 'ubetalt';
@@ -137,7 +138,7 @@ export async function viewTraining() {
     ${(trainer || myRight('arrangementer')) && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
     ${active.filter((k) => k.trial).map((k) => `<div class="card infobox">👋 <b>${esc(k.name)}</b> er til prøvetræning${team(k.team_id) ? ` på ${esc(team(k.team_id).name)}` : ''}. Træneren melder ${k.player_id === S.me?.id ? 'dig' : 'barnet'} ind, når I er klar.</div>`).join('')}
-    ${!trainer && items.some((x) => x.o) ? '<p class="muted small trhint">✓ Alle er meldt til træning. Tryk <b>Afbud</b>, hvis nogen ikke kan komme.</p>' : ''}
+    ${!trainer && items.some((x) => x.o) ? '<p class="muted small trhint">Svar ved hver træning: tryk <b>✓ Kommer</b> eller <b>Afbud</b>. Træneren kan se, hvem der har svaret.</p>' : ''}
     ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer || myRight('arrangementer'), active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
@@ -184,11 +185,12 @@ function parentCard(o, active, today) {
   const c = cancelOf(o.s.id, o.day);
   return `<div class="card tr ${c ? 'cancelled' : ''}">${head(o)}${cancelLine(c)}
     ${c ? '' : kids.map((k) => {
-      const yes = coming(o.s.id, o.day, k.id), a = absOf(o.s.id, o.day, k.id);
+      const ans = answer(o.s.id, o.day, k.id), a = absOf(o.s.id, o.day, k.id);
+      const yes = ans === 'kommer', no = ans === 'afbud';
       const key = `${o.s.id}|${o.day}|${k.id}`;
-      return `<div class="krow"><span class="grow">${kidLabel(k)}${!yes && a?.reason ? `<small class="muted">${esc(a.reason)}</small>` : ''}</span>
-        ${o.day < today ? `<span class="badge ${yes ? 'ok' : ''}">${yes ? 'Kom' : 'Afbud'}</span>`
-          : `<div class="yesno"><button class="btn sm ${yes ? 'on yes' : ''}" data-abs="${key}|kommer" aria-pressed="${yes}">✓ Kommer</button><button class="btn sm ${yes ? '' : 'on no'}" data-abs="${key}|afbud" aria-pressed="${!yes}">Afbud</button></div>`}</div>`;
+      return `<div class="krow"><span class="grow">${kidLabel(k)}${no && a?.reason ? `<small class="muted">${esc(a.reason)}</small>` : ''}${!ans && o.day >= today ? '<small class="unans">Ikke svaret</small>' : ''}</span>
+        ${o.day < today ? `<span class="badge ${yes ? 'ok' : ''}">${yes ? 'Kommer' : no ? 'Afbud' : 'Ikke svaret'}</span>`
+          : `<div class="yesno"><button class="btn sm ${yes ? 'on yes' : ''}" data-abs="${key}|kommer" aria-pressed="${yes}">✓ Kommer</button><button class="btn sm ${no ? 'on no' : ''}" data-abs="${key}|afbud" aria-pressed="${no}">Afbud</button></div>`}</div>`;
     }).join('')}
   </div>`;
 }
@@ -196,17 +198,19 @@ function parentCard(o, active, today) {
 function trainerCard(o, today) {
   const kids = C().kids.filter((k) => k.status === 'aktiv' && k.team_id === o.s.team_id);
   const c = cancelOf(o.s.id, o.day);
-  const no = kids.filter((k) => !coming(o.s.id, o.day, k.id));
+  const yesN = kids.filter((k) => answer(o.s.id, o.day, k.id) === 'kommer').length;
+  const no = kids.filter((k) => answer(o.s.id, o.day, k.id) === 'afbud');
+  const unans = kids.length - yesN - no.length;
   const key = `${o.s.id}|${o.day}`;
   const canMark = o.day <= today;
   const met = kids.filter((k) => present(o.s.id, o.day, k.id)).length;
   const open = S.trOpen === key;
   return `<details class="card tr trainer ${c ? 'cancelled' : ''}" data-tr="${key}" ${open ? 'open' : ''}><summary>${head(o)}
-      <div class="trcount">${c ? '' : `<span class="ok">✓ ${kids.length - no.length} kommer</span>${no.length ? `<span class="no">✗ ${no.length} afbud</span>` : ''}${canMark ? `<span class="muted">· ${met} mødt</span>` : ''}`}<span class="muted">›</span></div>
+      <div class="trcount">${c ? '' : `<span class="ok">✓ ${yesN} kommer</span>${no.length ? `<span class="no">✗ ${no.length} afbud</span>` : ''}${unans ? `<span class="unans">? ${unans} ikke svaret</span>` : ''}${canMark ? `<span class="muted">· ${met} mødt</span>` : ''}`}<span class="muted">›</span></div>
     </summary>${cancelLine(c)}
     <div class="trlist">${kids.map((k) => {
-      const a = absOf(o.s.id, o.day, k.id), yes = coming(o.s.id, o.day, k.id);
-      return `<div class="krow"><span class="grow">${esc(k.name)}${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${yes ? '' : `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>`}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
+      const a = absOf(o.s.id, o.day, k.id), ans = answer(o.s.id, o.day, k.id);
+      return `<div class="krow"><span class="grow">${esc(k.name)}${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${ans === 'afbud' ? `<small class="no">${a?.late ? 'Sent afbud' : 'Afbud'}${a?.reason ? `: ${esc(a.reason)}` : ''}</small>` : ans === 'kommer' ? '<small class="ok">Kommer</small>' : '<small class="unans">Ikke svaret</small>'}${infoOf(k.id) ? `<small class="muted">⚠️ ${esc(infoOf(k.id))}</small>` : ''}</span>
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
     ${byLine(o.s.created_by, o.s.created_at)}
@@ -225,7 +229,7 @@ function bindTraining() {
     const [sid, day, kid, st] = b.dataset.abs.split('|');
     if (b.classList.contains('on')) {
       const nm = (C().kids.find((k) => k.id === kid)?.name || '').split(' ')[0];
-      return toast(st === 'kommer' ? `${nm} er allerede meldt til. Tryk Afbud, hvis ${nm} ikke kan komme` : `Der er allerede givet afbud for ${nm}`);
+      return toast(st === 'kommer' ? `${nm} er allerede meldt til` : `Der er allerede givet afbud for ${nm}`);
     }
     // Afbudsfrist: for sent er stadig muligt, men træneren får besked
     let reason = null;
@@ -1022,7 +1026,7 @@ export function clubAttendanceTab() {
   const kids = C().kids.filter((k) => k.status === 'aktiv' && k.team_id === tId);
   const rows = kids.map((k) => {
     const met = held.filter((o) => present(o.s.id, o.day, k.id)).length;
-    const afb = held.filter((o) => !coming(o.s.id, o.day, k.id)).length;
+    const afb = held.filter((o) => answer(o.s.id, o.day, k.id) === 'afbud').length;
     const last = held.filter((o) => present(o.s.id, o.day, k.id)).map((o) => o.day).pop();
     return { k, met, afb, pct: held.length ? Math.round((met / held.length) * 100) : null, last };
   }).sort((a, b) => (a.pct ?? 101) - (b.pct ?? 101) || a.k.name.localeCompare(b.k.name));

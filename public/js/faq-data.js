@@ -350,8 +350,8 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
-    q: 'Hvordan giver jeg afbud til træning?',
-    a: `<p>Under <b>Træning</b> står de næste træninger. Barnet er tilmeldt automatisk. Tryk <b>Afbud</b> ud for barnet, så kan træneren se det med det samme. Fortryder du, trykker du <b>Kommer</b>.</p>
+    q: 'Hvordan melder jeg mit barn til eller fra træning?',
+    a: `<p>Under <b>Træning</b> står de næste træninger. Ingen er meldt til automatisk: tryk <b>✓ Kommer</b> eller <b>Afbud</b> ud for barnet ved hver træning. Har du ikke svaret, står der <b>Ikke svaret</b>, og træneren kan se det. Du kan altid skifte dit svar.</p>
 <p>Aflyser træneren en træning, står den som aflyst, og du får en notifikation.</p>`,
   },
   {
@@ -394,7 +394,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Får jeg en påmindelse før træning? Og hvad er afbudsfristen?',
-    a: `<p>Hvis klubben har slået det til, får du en notifikation om eftermiddagen dagen før træning. Har du allerede givet afbud, får du ingen påmindelse.</p>
+    a: `<p>Hvis klubben har slået det til, får du en notifikation om eftermiddagen dagen før træning. Har du ikke svaret, bliver du bedt om at trykke Kommer eller Afbud. Har du givet afbud, får du ingen påmindelse.</p>
 <p>Klubben kan sætte en <b>afbudsfrist</b>, fx 2 timer før. Du kan stadig give afbud efter fristen, men så får holdets trænere besked, og du kan skrive en kort grund.</p>`,
   },
   {
