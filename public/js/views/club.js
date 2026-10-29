@@ -137,6 +137,7 @@ export async function viewTraining() {
     ${(trainer || myRight('arrangementer')) && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
     ${active.filter((k) => k.trial).map((k) => `<div class="card infobox">👋 <b>${esc(k.name)}</b> er til prøvetræning${team(k.team_id) ? ` på ${esc(team(k.team_id).name)}` : ''}. Træneren melder ${k.player_id === S.me?.id ? 'dig' : 'barnet'} ind, når I er klar.</div>`).join('')}
+    ${!trainer && items.some((x) => x.o) ? '<p class="muted small trhint">✓ Alle er meldt til træning. Tryk <b>Afbud</b>, hvis nogen ikke kan komme.</p>' : ''}
     ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer || myRight('arrangementer'), active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
@@ -222,7 +223,10 @@ function bindTraining() {
   app.querySelectorAll('details[data-tr]').forEach((d) => d.querySelector('summary').addEventListener('click', () => { S.trOpen = d.open ? null : d.dataset.tr; }));
   app.querySelectorAll('[data-abs]').forEach((b) => (b.onclick = async () => {
     const [sid, day, kid, st] = b.dataset.abs.split('|');
-    if (b.classList.contains('on')) return;
+    if (b.classList.contains('on')) {
+      const nm = (C().kids.find((k) => k.id === kid)?.name || '').split(' ')[0];
+      return toast(st === 'kommer' ? `${nm} er allerede meldt til. Tryk Afbud, hvis ${nm} ikke kan komme` : `Der er allerede givet afbud for ${nm}`);
+    }
     // Afbudsfrist: for sent er stadig muligt, men træneren får besked
     let reason = null;
     const hrs = group().club_absence_hours, s = session(sid);
