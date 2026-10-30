@@ -443,6 +443,36 @@ try {
   ok((await page.locator('.gchip').allInnerTexts()).some((t) => t.includes('⏳')), 'profil viser ventende anmodning');
   await page.click('#logout');
 
+  // Ny spiller opretter sig via linket, men bekræfter mailen i en anden browser (linket huskes på kontoen)
+  await page.waitForSelector('#authForm');
+  await page.goto('http://localhost:8765/#/velkommen/' + lordag);
+  await page.waitForSelector('#authForm');
+  await page.fill('input[name=email]', 'nytobias@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('text=Tjek din mail');
+  await page.evaluate(() => { localStorage.removeItem('fp-join'); localStorage.removeItem('fp-claim'); });
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#authForm');
+  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
+  await page.fill('input[name=email]', 'nytobias@test');
+  await page.fill('input[name=password]', 'whatever');
+  await page.click('button[type=submit]');
+  await page.waitForSelector('#pf');
+  await page.fill('#pf input[name=name]', 'Tobias Test');
+  await page.fill('#pf input[name=phone]', '22446688');
+  await page.click('#pf label:has-text("Mand")');
+  if (await page.locator('#pf label:has-text("Højre")').count()) await page.click('#pf label:has-text("Højre")');
+  await page.click('#pf button.primary');
+  await wait(900);
+  ok(await page.evaluate((g) => window.__mock.db().padel_group_members.some((m) => m.group_id === g && m.player_id === 'u-nytobias' && m.status === 'afventer'), lordag), 'invitationen huskes på kontoen, selvom mailen åbnes i en anden browser');
+  ok(await page.evaluate(() => !Object.keys(window.__mock.db().__meta?.['nytobias@test'] || {}).length), 'invitationen fjernes fra kontoen, når den er brugt');
+  // (Tobias fjernes igen, så testen af Anne nedenfor er uændret)
+  await page.evaluate((g) => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === g && m.player_id === 'u-nytobias').status = 'fjernet';
+    db.padel_notifications.filter((n) => (n.ref || '').includes('u-nytobias') || (n.title || '').includes('Tobias')).forEach((n) => { n.done_at = new Date().toISOString(); n.read_at = n.done_at; }); window.__mock.save(); }, lordag);
+  await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+  await page.goto('http://localhost:8765/');
+
   // Brian godkender Anne
   await page.waitForSelector('#authForm');
   await page.fill('input[name=email]', 'brian@test');

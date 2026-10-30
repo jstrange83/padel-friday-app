@@ -71,7 +71,10 @@ export function renderAuth(mode = 'login') {
     try {
       const creds = { email: f.email.value.trim(), password: f.password.value };
       if (!signup) return await q(sb.auth.signInWithPassword(creds));
-      const res = await sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin } });
+      // Invitationen gemmes på kontoen, så den virker, selvom mailen åbnes i en anden browser
+      let join = null, claim = null;
+      try { join = localStorage.getItem('fp-join'); claim = localStorage.getItem('fp-claim'); } catch {}
+      const res = await sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin, data: { ...(join ? { padel_join: join } : {}), ...(claim ? { padel_claim: claim } : {}) } } });
       // Mailen har allerede en konto: skift til Log ind med mailen udfyldt
       if (res.error && /already (been )?registered|already exists/i.test(res.error.message || '')) {
         renderAuth('login');

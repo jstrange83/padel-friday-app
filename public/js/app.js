@@ -60,6 +60,18 @@ function rememberJoin() {
   const c = location.hash.match(/^#\/barn\/([0-9a-f]{12})/i);
   if (c) { try { localStorage.setItem('fp-claim', c[1]); } catch {} }
 }
+// Invitationen gemmes også på kontoen ved oprettelse. Åbnes bekræftelsesmailen i en anden browser
+// (fx Gmail-appens egen), findes linket ikke i den browser, så det hentes fra kontoen i stedet.
+async function restoreJoin() {
+  const md = S.session?.user?.user_metadata || {};
+  if (!md.padel_join && !md.padel_claim) return;
+  try {
+    if (md.padel_claim && !localStorage.getItem('fp-claim')) localStorage.setItem('fp-claim', md.padel_claim);
+    else if (md.padel_join && !localStorage.getItem('fp-join') && !localStorage.getItem('fp-claim')) localStorage.setItem('fp-join', md.padel_join);
+  } catch {}
+  delete md.padel_join; delete md.padel_claim;
+  try { await sb.auth.updateUser({ data: { padel_join: null, padel_claim: null } }); } catch {}
+}
 // Hvad er man inviteret til (vises på login og velkomst)
 async function loadJoinInfo() {
   S.joinInfo = null;
@@ -104,6 +116,7 @@ async function boot() {
     // Husk et delt fredagslink, så man lander der efter login/oprettelse
     if (location.hash.startsWith('#/fredag/')) { try { localStorage.setItem('fp-next', location.hash); } catch {} }
     if (!S.session) { navEl.innerHTML = ''; await loadJoinInfo(); return renderAuth(/^#\/(velkommen|barn)/.test(location.hash) ? 'signup' : 'login'); }
+    await restoreJoin();
     await loadBase();
     if (!S.me) { navEl.innerHTML = ''; await loadJoinInfo(); return renderProfile(true); }
     if (S.realMe?.deleted_at && !S.viewAs) { navEl.innerHTML = ''; return viewDeleted(); }
@@ -209,7 +222,7 @@ async function viewNoGroup() {
     : mine.some((m) => m.status === 'afventer')
       ? `<p>Du har bedt om at komme med i <b>${mine.filter((m) => m.status === 'afventer').map((m) => esc(nameOfGroup(m.group_id))).join(', ')}</b>.</p>
          <p class="muted">Når en admin har godkendt dig, kan du se fredagene og tilmelde dig. Kig forbi igen senere.</p>`
-      : '<p class="muted">Du er ikke med i en gruppe endnu. Bed en admin om et invitationslink til jeres gruppe.</p>'}
+      : '<p class="muted">Du er ikke med i en gruppe endnu. Har du fået et invitationslink, så tryk på det igen. Ellers bed en admin om et link til jeres gruppe.</p>'}
     <button class="btn" id="reload">Tjek igen</button>
     <a class="btn ghost" href="#/profil">Min profil</a>
   </div>`;

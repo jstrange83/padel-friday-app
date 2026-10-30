@@ -760,14 +760,18 @@ export function createClient() {
         // "ny…@test": ny bruger uden profil endnu
         if (!p && /^ny.*@test$/.test(email)) p = { id: 'u-' + email.split('@')[0] };
         if (!p) return { data: null, error: { message: 'Invalid login credentials' } };
-        sessionStorage.setItem(SKEY, JSON.stringify({ user: { id: p.id, email } }));
+        sessionStorage.setItem(SKEY, JSON.stringify({ user: { id: p.id, email, user_metadata: { ...(db.__meta?.[email] || {}) } } }));
         setTimeout(() => cb('SIGNED_IN', session()), 0);
         return { data: { session: session() }, error: null };
       },
-      async signUp({ email }) { if (db.padel_profiles.some((p) => p.email === email)) return { data: null, error: { message: 'User already registered' } }; return { data: { session: null }, error: null }; },
+      async signUp({ email, options }) { if (db.padel_profiles.some((p) => p.email === email)) return { data: null, error: { message: 'User already registered' } }; (db.__meta ||= {})[email] = { ...(options?.data || {}) }; save(); return { data: { session: null }, error: null }; },
       async signOut() { sessionStorage.removeItem(SKEY); setTimeout(() => cb('SIGNED_OUT', null), 0); return { error: null }; },
       async resetPasswordForEmail() { return { data: {}, error: null }; },
-      async updateUser() { return { data: {}, error: null }; },
+      async updateUser({ data } = {}) {
+        const ss = session();
+        if (data && ss?.user?.email) { const m = { ...(db.__meta?.[ss.user.email] || {}) }; for (const [k, v] of Object.entries(data)) { if (v == null) delete m[k]; else m[k] = v; } (db.__meta ||= {})[ss.user.email] = m; save(); }
+        return { data: {}, error: null };
+      },
     },
     from: (t) => new Query(t),
     // Billeder: gemmes kun i hukommelsen; stierne skal ligge i brugerens egen mappe

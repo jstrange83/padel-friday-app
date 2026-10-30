@@ -489,6 +489,12 @@ export const FAQ = [
   },
   {
     cat: 'Roller og adgang',
+    q: 'Jeg har oprettet mig, men står ikke i nogen gruppe. Hvad gør jeg?',
+    a: `<p>Tryk på invitationslinket igen, mens du er logget ind. Så kommer du med i gruppen (eller kan melde dit barn ind i klubben). I en spillegruppe skal en admin måske godkende dig først.</p>
+<p>Har du ikke linket, så bed gruppens admin eller klubbens træner om det.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
     q: 'Kan jeg sende et billede i en samtale?',
     a: `<p>Ja. Tryk <b>📷 Billede</b> under beskeden eller svaret, og vælg et billede eller tag et med kameraet. Du kan skrive tekst til, eller bare sende billedet alene. Tryk på et billede i samtalen for at se det stort.</p>
 <p>Billederne gøres mindre, før de sendes, og kan kun ses af dem, der er med i samtalen.</p>`,
