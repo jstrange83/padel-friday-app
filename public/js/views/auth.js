@@ -30,6 +30,8 @@ export function renderAuth(mode = 'login') {
   const ji = S.joinInfo;
   const intro = ji?.kind === 'barn' ? `Hej ${esc(ji.kid.split(' ')[0])}! Opret din egen konto til <b>${esc(ji.name)}</b>, så kan du selv se dine træninger og give afbud.`
     : ji?.kind === 'foraelder' ? `Du er inviteret som forælder til <b>${esc(ji.kid)}</b> i <b>${esc(ji.name)}</b>. Opret en konto, eller log ind hvis du har en.`
+    : ji?.kind === 'klub' && ji.audience === 'voksne' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld dig bagefter ind.`
+    : ji?.kind === 'klub' && ji.audience === 'begge' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld bagefter dig selv eller dit barn ind.`
     : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
     : invited ? 'Du er inviteret med til padel. Opret en konto, eller log ind hvis du har en, så kommer du med i gruppen.'
     : 'Spilledage, hold og rangliste til jeres padelgruppe.';

@@ -1,7 +1,7 @@
 // Beskeder: skriv til trænerne, bestyrelsen, kassereren eller admin, og svar i samtaler.
 // Børn er aldrig alene i en samtale med en voksen: forældrene er altid med (det sikres i databasen).
 import { sb, S, app, hooks, esc, toast, q, busy, fmtDate, group, isClub, canRun, isAdmin } from '../core.js';
-import { hasAnyRight } from './club.js';
+import { hasAnyRight, hasAdults } from './club.js';
 import { loadUnread } from './notify.js';
 
 const ROLE = { traenere: 'Trænerne', bestyrelse: 'Bestyrelsen', kasserer: 'Kassereren', admin: 'Admin' };
@@ -115,6 +115,8 @@ export async function viewCompose() {
   const preRole = roles.includes(pre.get('til')) ? pre.get('til') : roles[0];
   const preKid = pre.get('barn');
   const toParents = !!(preKid && staffKids.some((k) => k.id === preKid));
+  // Voksent medlem (man er sit eget "barn"): ingen forældre læser med
+  const ownAdult = o.own_kid ? !!(await q(sb.from('padel_club_kids').select('adult').eq('id', o.own_kid).maybeSingle()).catch(() => null))?.adult : false;
 
   app.innerHTML = `
   <div class="page compose">
@@ -123,17 +125,17 @@ export async function viewCompose() {
     <form class="card" id="cmp">
       ${staffKids.length ? `<div class="seg two" role="radiogroup">
           <label><input type="radio" name="mode" value="klub" ${toParents ? '' : 'checked'}><span>${club ? 'Til klubben' : 'Til admin'}</span></label>
-          <label><input type="radio" name="mode" value="foraeldre" ${toParents ? 'checked' : ''}><span>Til forældre</span></label></div>` : '<input type="hidden" name="mode" value="klub">'}
+          <label><input type="radio" name="mode" value="foraeldre" ${toParents ? 'checked' : ''}><span>${hasAdults(g) ? 'Til et medlem' : 'Til forældre'}</span></label></div>` : '<input type="hidden" name="mode" value="klub">'}
       <div id="toKlub">
         ${roles.length > 1 ? `<div class="lbl">Til</div><div class="seg wrap">${roles.map((r) => `<label><input type="radio" name="role" value="${r}" ${r === preRole ? 'checked' : ''}><span>${esc(roleLabel(r, club))}</span></label>`).join('')}</div>`
           : `<input type="hidden" name="role" value="${roles[0]}"><p class="muted small">Beskeden går til ${club ? 'klubbens' : 'gruppens'} admin.</p>`}
-        ${o.own_kid ? '<p class="muted small">👪 Dine forældre kan også læse samtalen.</p>'
+        ${o.own_kid && ownAdult ? '' : o.own_kid ? '<p class="muted small">👪 Dine forældre kan også læse samtalen.</p>'
           : myKids.length ? `<label>Drejer det sig om et barn?<select name="kid"><option value="">Nej, ikke et bestemt barn</option>${myKids.map((k) => `<option value="${k.id}" ${k.id === preKid || (myKids.length === 1 && !preKid) ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
             <small class="muted">Barnets andre forælder og barnet selv (hvis det har eget login) kan også læse med.</small></label>` : ''}
       </div>
       ${staffKids.length ? `<div id="toParents">
-        <label>Hvilket barn?<select name="skid">${staffKids.map((k) => `<option value="${k.id}" data-role="${k.role}" ${k.id === preKid ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
-          <small class="muted">Beskeden går til barnets forældre. Har barnet eget login, kan barnet også læse med, men aldrig uden forældrene.</small></label></div>` : ''}
+        <label>${hasAdults(g) ? 'Hvem?' : 'Hvilket barn?'}<select name="skid">${staffKids.map((k) => `<option value="${k.id}" data-role="${k.role}" ${k.id === preKid ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}</select>
+          <small class="muted">Beskeden går til barnets forældre. Har barnet eget login, kan barnet også læse med, men aldrig uden forældrene.${hasAdults(g) ? ' Er det en voksen spiller, går beskeden til spilleren selv.' : ''}</small></label></div>` : ''}
       <label>Emne<input name="subject" maxlength="100" placeholder="Fx Afbud resten af måneden"></label>
       <label>Besked<textarea name="body" rows="5" maxlength="4000"></textarea></label>
       ${picker()}

@@ -28,7 +28,7 @@ export function renderProfile(isNew) {
   const p = S.me || { name: '', gender: '', side: 'begge' };
   if (isNew) {
     const ji = S.joinInfo;
-    const intro = ji?.kind === 'klub' ? `Først lidt om dig. Bagefter melder du dit barn ind i <b>${esc(ji.name)}</b>.`
+    const intro = ji?.kind === 'klub' ? `Først lidt om dig. Bagefter melder du ${ji.audience === 'voksne' ? 'dig' : ji.audience === 'begge' ? 'dig selv eller dit barn' : 'dit barn'} ind i <b>${esc(ji.name)}</b>.`
       : ji?.kind === 'foraelder' ? `Først lidt om dig. Så får du adgang til <b>${esc(ji.kid)}</b>s træninger i ${esc(ji.name)}.`
       : ji?.kind === 'barn' ? `Fortæl lidt om dig selv. Så kan du se dine træninger i <b>${esc(ji.name)}</b>.`
       : 'Fortæl lidt om dig selv, så appen kan sætte gode hold.';

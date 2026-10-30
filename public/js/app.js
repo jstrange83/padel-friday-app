@@ -53,7 +53,7 @@ async function loadBase() {
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
-// Link til en juniorklub: forælderen melder bagefter sit barn ind. #/barn/<kode>: barnets eget login eller anden forælder.
+// Link til en klub: forælderen melder bagefter sit barn ind (eller man melder sig selv ind i en klub med voksne). #/barn/<kode>: barnets eget login eller anden forælder.
 function rememberJoin() {
   const m = location.hash.match(/^#\/velkommen\/([0-9a-f-]{36})/i);
   if (m) { try { localStorage.setItem('fp-join', m[1]); } catch {} }
@@ -79,7 +79,10 @@ async function loadJoinInfo() {
   try { g = localStorage.getItem('fp-join'); c = localStorage.getItem('fp-claim'); } catch {}
   try {
     if (c) { const i = await q(sb.rpc('padel_club_code_info', { p_code: c })); if (i) S.joinInfo = { kind: i.kind, name: i.club, kid: i.kid }; }
-    else if (g) { const kind = await q(sb.rpc('padel_group_kind', { g })); if (kind) S.joinInfo = { kind, name: await q(sb.rpc('padel_group_name', { g })) }; }
+    else if (g) {
+      const kind = await q(sb.rpc('padel_group_kind', { g }));
+      if (kind) S.joinInfo = { kind, name: await q(sb.rpc('padel_group_name', { g })), audience: kind === 'klub' ? await q(sb.rpc('padel_group_audience', { g })).catch(() => 'boern') : null };
+    }
   } catch {}
 }
 async function handleJoin() {

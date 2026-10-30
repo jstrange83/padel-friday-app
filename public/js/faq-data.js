@@ -357,6 +357,13 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Kan voksne også melde sig ind i en klub?',
+    a: `<p>Ja, hvis klubben også er for voksne. Åbn klubbens link, opret dig, og vælg <b>Mig selv</b> på indmeldelsen. Navnet tages fra din profil, og du udfylder fødselsdato, køn, billeder og evt. hvad trænerne skal vide. I en klub for både børn og voksne kan du også vælge <b>Et barn</b> og melde dine børn ind samme sted.</p>
+<p>En træner godkender dig og sætter dig på et hold. Bagefter svarer du selv <b>✓ Kommer</b> eller <b>Afbud</b> under Træning, ligesom forældre gør for deres børn. Dine oplysninger retter du under <b>Profil → Mit medlemskab</b>.</p>
+<p>Klubbens admin vælger under <b>Admin → Medlemmer → Klubbens indstillinger</b>, om klubben er for børn, voksne eller begge dele.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Hvordan melder jeg mit barn til eller fra træning?',
     a: `<p>Under <b>Træning</b> står de næste træninger. Ingen er meldt til automatisk: tryk <b>✓ Kommer</b> eller <b>Afbud</b> ud for barnet ved hver træning. Har du ikke svaret, står der <b>Ikke svaret</b>, og træneren kan se det. Du kan altid skifte dit svar.</p>
 <p>Har du ikke svaret på den næste træning, spørger appen, når du åbner den: <b>Kommer Frederik?</b> Tryk Kommer eller Afbud direkte i beskeden. Den spørger kun om dine egne børn og kun om den næste træning.</p>

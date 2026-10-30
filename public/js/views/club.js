@@ -91,10 +91,18 @@ export const isTreasurer = (g = S.groupId) => myRight('kontingent', g);
 export const hasAnyRight = (g = S.groupId) => Object.keys(RIGHT_COL).some((r) => myRight(r, g));
 const trainersOf = (t) => C().trainers.filter((x) => x.team_ids.includes(t));
 const GENDER_KID = { pige: 'Pige', dreng: 'Dreng' };
+// Voksne medlemmer: køn gemmes som pige/dreng, men vises som Kvinde/Mand
+const GENDER_ADULT = { pige: 'Kvinde', dreng: 'Mand' };
+const genderOf = (k) => (k.adult ? GENDER_ADULT : GENDER_KID)[k.gender];
+// Hvem klubben er for: 'boern', 'voksne' eller 'begge'
+export const audience = (g = S.groupId) => group(g)?.club_audience || S.groups?.find((x) => x.id === g)?.club_audience || 'boern';
+export const hasAdults = (g = S.groupId) => audience(g) !== 'boern';
+// Overskrift for egne medlemmer: Mine børn, Mit medlemskab eller Min familie
+const mineTitle = (ks) => (ks.length && ks.every((k) => k.adult && k.player_id === S.me?.id) ? '🎾 Mit medlemskab' : ks.some((k) => k.adult && k.player_id === S.me?.id) ? '👪 Min familie' : '👧 Mine børn');
 const age = (k) => { if (!k.birth_date) return k.birth_year ? `født ${k.birth_year}` : ''; const b = new Date(k.birth_date), n = new Date(); let a = n.getFullYear() - b.getFullYear(); if (n < new Date(n.getFullYear(), b.getMonth(), b.getDate())) a--; return `${a} år`; };
 const fmtDay = (d) => (d ? new Intl.DateTimeFormat('da-DK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(d + 'T12:00:00Z')) : '');
 // Små mærker til trænerne: må ikke fotograferes, og noget vigtigt at vide
-const kidFlags = (k) => `${k.photo_ok === false ? ' <span class="badge nophoto" title="Må ikke være på billeder">🚫📷</span>' : ''}${infoOf(k.id) ? ' <span class="badge warn" title="Godt at vide om barnet">⚠️</span>' : ''}`;
+const kidFlags = (k) => `${k.adult ? ' <span class="badge adult">Voksen</span>' : ''}${k.photo_ok === false ? ' <span class="badge nophoto" title="Må ikke være på billeder">🚫📷</span>' : ''}${infoOf(k.id) ? ' <span class="badge warn" title="Godt at vide om barnet">⚠️</span>' : ''}`;
 const trainerLinks = (x) => `<div class="coachrow"><span class="grow"><b>${esc(x.name)}</b>${x.role ? `<small class="muted">${esc(x.role)}</small>` : ''}${x.phone ? `<small class="muted">${fmtPhone(x.phone)}</small>` : ''}</span>${x.phone ? `<a class="btn sm" href="tel:${esc(x.phone)}">📞</a><a class="btn sm" href="sms:${esc(x.phone)}">💬</a>` : ''}</div>`;
 
 // Alle træninger i perioden for de valgte hold
@@ -141,13 +149,13 @@ export async function viewTraining() {
     ${!trainer && items.some((x) => x.o) ? '<p class="muted small trhint">Svar ved hver træning: tryk <b>✓ Kommer</b> eller <b>Afbud</b>. Træneren kan se, hvem der har svaret.</p>' : ''}
     ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer || myRight('arrangementer'), active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
-        : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? 'Træningerne kommer her, når barnet er godkendt og sat på et hold.' : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
+        : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? `Træningerne kommer her, når ${mine.some((k) => k.player_id === S.me?.id) ? 'du' : 'barnet'} er godkendt og sat på et hold.` : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
     ${items.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
     ${!trainer ? trainersCard(teamIds) : ''}
     <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
-    ${!trainer ? `<div class="card mykids"><div class="ftop"><b>👧 Mine børn</b><a class="link sm" href="#/boern">Ret oplysninger ›</a></div>
+    ${!trainer ? `<div class="card mykids"><div class="ftop"><b>${mineTitle(mine)}</b><a class="link sm" href="#/boern">Ret oplysninger ›</a></div>
       ${mine.map((k) => `<div class="krow"><span class="grow">${kidLabel(k)}<small class="muted">${esc([team(k.team_id)?.name, k.status === 'ansoegt' ? (k.waitlist ? 'venteliste' : 'venter på godkendelse') : k.trial ? 'prøvetræning' : ''].filter(Boolean).join(' · '))}</small></span></div>`).join('')}
-      <div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ Meld et barn ind</a></div></div>` : ''}
+      <div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ ${hasAdults(g) ? 'Meld ind' : 'Meld et barn ind'}</a></div></div>` : ''}
   </div>`;
   bindTraining();
 }
@@ -440,13 +448,23 @@ export async function viewPosts() {
 
 // ---------- Indmeldelse ----------
 // Felter om ét barn (bruges både ved indmeldelse og når forældre retter)
-export const kidFormFields = (k = {}, i = 0, collect = false) => `
-  <label>Navn<input name="kname" required maxlength="60" autocomplete="off" value="${esc(k.name || '')}"></label>
+// Voksne (k.adult): Mand/Kvinde, og teksterne handler om personen selv. lockName: navnet kommer fra profilen.
+export const kidFormFields = (k = {}, i = 0, collect = false, lockName = false) => {
+  const self = k.adult && k.player_id === S.me?.id;
+  const gsel = k.adult ? { kvinde: 'Kvinde', mand: 'Mand' } : GENDER_KID;
+  const gval = k.adult ? { pige: 'kvinde', dreng: 'mand' }[k.gender] || '' : k.gender || '';
+  return `
+  <label>Navn<input name="kname" required maxlength="60" autocomplete="off" value="${esc(k.name || '')}" ${lockName ? 'readonly class="locked"' : ''}>${lockName ? '<small class="muted">Navnet fra din profil</small>' : ''}</label>
   <div class="frow"><label class="grow">Fødselsdato<input name="kbirth" type="date" required value="${k.birth_date || ''}" max="${todayISO()}"></label></div>
-  <div class="lbl">Køn</div>${radios(`kgender${i}`, GENDER_KID, k.gender || '')}
-  <div class="lbl">Må barnet være på billeder fra klubben?</div>${radios(`kphoto${i}`, { ja: 'Ja', nej: 'Nej' }, k.photo_ok === true ? 'ja' : k.photo_ok === false ? 'nej' : '')}
-  <label>Godt at vide om barnet <small class="muted">(valgfri, fx allergi eller særlige behov. Gemmes, og kun barnets trænere kan se det)</small><textarea name="kinfo" class="kta" rows="2" maxlength="1000" placeholder="Fx astma, har inhalator med">${esc(k.info || '')}</textarea></label>
+  <div class="lbl">Køn</div>${radios(`kgender${i}`, gsel, gval)}
+  <div class="lbl">${self ? 'Må du være på billeder fra klubben?' : k.adult ? 'Må personen være på billeder fra klubben?' : 'Må barnet være på billeder fra klubben?'}</div>${radios(`kphoto${i}`, { ja: 'Ja', nej: 'Nej' }, k.photo_ok === true ? 'ja' : k.photo_ok === false ? 'nej' : '')}
+  <label>${k.adult ? 'Godt at vide' : 'Godt at vide om barnet'} <small class="muted">(valgfri, fx ${k.adult ? 'skader' : 'allergi'} eller særlige behov. Gemmes, og kun ${k.adult ? '' : 'barnets '}trænere kan se det)</small><textarea name="kinfo" class="kta" rows="2" maxlength="1000" placeholder="${k.adult ? 'Fx dårligt knæ' : 'Fx astma, har inhalator med'}">${esc(k.info || '')}</textarea></label>
   ${collect ? `<label>Adresse <small class="muted">(bruges til kommunens tilskud)</small><input name="kaddr" required maxlength="200" autocomplete="street-address" value="${esc(k.address || '')}" placeholder="Vej og nr., postnr. og by"></label>` : ''}`;
+};
+// Indmeldelse af en selv (voksen)
+const selfFields = (collect) => `<fieldset class="kidf selff"><legend>Dig</legend>${kidFormFields({ adult: true, player_id: S.me?.id, name: S.me?.name }, 0, collect, true)}
+  <label class="switch"><input type="checkbox" name="ktrial"><span>Jeg vil gerne prøve 1-2 træninger først</span></label>
+  <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold, niveau eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne spille om aftenen"></label></fieldset>`;
 const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + 1}</legend>${kidFormFields({}, i, collect)}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Vi vil gerne prøve 1-2 træninger først</span></label>
   <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
@@ -466,6 +484,8 @@ export async function viewClubJoin(g) {
   if (!g) {
     const list = await joinableClubs();
     clubs = await Promise.all(list.map(async (c) => ({ id: c.id, ...(await q(sb.rpc('padel_club_join_info', { g: c.id })).catch(() => ({ name: c.name }))) })));
+    // Klubber, hvor man allerede selv er meldt ind og som kun er for voksne, kan ikke vælges
+    clubs = clubs.filter((c) => !(c.audience === 'voksne' && c.self));
     if (!clubs.length) {
       app.innerHTML = `<div class="page club"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Meld et barn ind</h1>
         <div class="card empty"><p class="muted">Der er ingen klubber at vælge lige nu. Få et link fra klubbens trænere.</p></div></div>`;
@@ -475,25 +495,35 @@ export async function viewClubJoin(g) {
   } else {
     let info = null;
     try { info = await q(sb.rpc('padel_club_join_info', { g })); } catch {}
-    clubs = [{ id: g, name: info?.name || group(g)?.name, collect_address: !!(info?.collect_address ?? group(g)?.club_collect_address) }];
+    clubs = [{ id: g, name: info?.name || group(g)?.name, collect_address: !!(info?.collect_address ?? group(g)?.club_collect_address), audience: info?.audience || audience(g), self: !!info?.self }];
   }
   const fixed = !pick;
   const cur = clubs.find((c) => c.id === g);
   const collect = !!cur?.collect_address;
+  // Voksne: "Mig selv" eller "Et barn" (klubber for begge), kun mig selv (voksenklub). Er man allerede meldt ind, kun børn.
+  const aud = cur?.audience || (clubs.some((c) => c.audience && c.audience !== 'boern') ? 'begge' : 'boern');
+  const canSelf = aud !== 'boern' && !cur?.self, canKid = aud !== 'voksne';
+  if (!canSelf && !canKid) {
+    app.innerHTML = `<div class="page club"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Meld ind i ${esc(cur.name)}</h1>
+      <div class="card empty"><p class="muted">Du er allerede meldt ind. Dine træninger står under Træning.</p><a class="btn primary" href="#/traening">Til Træning</a></div></div>`;
+    return;
+  }
+  const mode = canSelf && canKid ? (S.joinMode || 'self') : canSelf ? 'self' : 'kid';
   app.innerHTML = `
   <div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
-    <h1>${fixed && cur ? `Meld ind i ${esc(cur.name)}` : 'Meld et barn ind'}</h1>
-    <p class="muted">Udfyld for hvert barn. En træner godkender indmeldelsen og sætter barnet på et hold, og du får besked her i appen.</p>
+    <h1>${fixed && cur ? `Meld ind i ${esc(cur.name)}` : aud === 'boern' ? 'Meld et barn ind' : 'Meld ind i en klub'}</h1>
+    <p class="muted">${mode === 'self' ? 'Udfyld oplysningerne om dig. En træner godkender indmeldelsen og sætter dig på et hold, og du får besked her i appen.' : 'Udfyld for hvert barn. En træner godkender indmeldelsen og sætter barnet på et hold, og du får besked her i appen.'}</p>
     <form id="joinForm" class="card">
       ${fixed ? '' : `<label>Klub<select name="club" required><option value="">Vælg klub…</option>${clubs.map((c) => `<option value="${c.id}" ${c.id === g ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>`}
-      <div id="kidList">${kidFields(0, collect)}</div>
-      <div><button type="button" class="btn ghost" id="moreKid">➕ Tilføj et barn mere</button></div>
-      <p class="muted small">Oplysningerne bruges kun af klubben. Læs mere i <a href="#/privatliv">privatlivspolitikken</a>. Større børn kan senere få deres eget login.</p>
+      ${canSelf && canKid ? `<div class="lbl">Hvem skal meldes ind?</div><div class="seg two" role="radiogroup"><label><input type="radio" name="jmode" value="self" ${mode === 'self' ? 'checked' : ''}><span>Mig selv</span></label><label><input type="radio" name="jmode" value="kid" ${mode === 'kid' ? 'checked' : ''}><span>Et barn</span></label></div>` : ''}
+      <div id="kidList">${mode === 'self' ? selfFields(collect) : kidFields(0, collect)}</div>
+      ${mode === 'kid' ? '<div><button type="button" class="btn ghost" id="moreKid">➕ Tilføj et barn mere</button></div>' : ''}
+      <p class="muted small">Oplysningerne bruges kun af klubben. Læs mere i <a href="#/privatliv">privatlivspolitikken</a>.${mode === 'kid' ? ' Større børn kan senere få deres eget login.' : ''}</p>
       <button class="btn primary">Send indmeldelse</button>
     </form>
     ${fixed && !myGroupsIds().includes(g) ? `<div class="card adultjoin"><b>Træner eller i bestyrelsen?</b>
-      <p class="muted small">Skal du ikke melde et barn ind, men selv være med som træner, hjælper eller i bestyrelsen, så bed om adgang. Klubbens admin får besked og godkender dig.</p>
+      <p class="muted small">Skal du ikke ${aud === 'boern' ? 'melde et barn ind' : 'selv spille eller melde et barn ind'}, men være med som træner, hjælper eller i bestyrelsen, så bed om adgang. Klubbens admin får besked og godkender dig.</p>
       <button class="btn" id="adultJoin">🙋 Bed om adgang</button></div>` : ''}
   </div>`;
   document.getElementById('adultJoin')?.addEventListener('click', async (e) => {
@@ -507,7 +537,8 @@ export async function viewClubJoin(g) {
   const f = document.getElementById('joinForm');
   // Skift klub: tegn felterne igen (adresse kan være krævet i den ene klub)
   if (f.club) f.club.onchange = () => { S.joinClub = f.club.value; viewClubJoin(null); };
-  document.getElementById('moreKid').onclick = () => { const list = document.getElementById('kidList'); list.insertAdjacentHTML('beforeend', kidFields(list.children.length, collect)); list.lastElementChild.querySelector('input').focus(); };
+  f.querySelectorAll('input[name=jmode]').forEach((r) => (r.onchange = () => { S.joinMode = r.value; viewClubJoin(pick ? null : g); }));
+  if (document.getElementById('moreKid')) document.getElementById('moreKid').onclick = () => { const list = document.getElementById('kidList'); list.insertAdjacentHTML('beforeend', kidFields(list.children.length, collect)); list.lastElementChild.querySelector('input').focus(); };
   f.onsubmit = async (e) => {
     e.preventDefault();
     const gid = f.club ? f.club.value : g;
@@ -515,9 +546,10 @@ export async function viewClubJoin(g) {
     const kids = [...f.querySelectorAll('.kidf')].map((fs, i) => readKid(fs, i));
     const btn = f.querySelector('button.primary'); busy(btn, true);
     try {
-      await q(sb.rpc('padel_club_apply_v3', { g: gid, p_kids: kids }));
+      if (mode === 'self') { const { name, ...p } = kids[0]; await q(sb.rpc('padel_club_apply_self', { g: gid, p })); }
+      else await q(sb.rpc('padel_club_apply_v3', { g: gid, p_kids: kids }));
       toast('Tak! En træner godkender indmeldelsen');
-      S.joinClub = null;
+      S.joinClub = null; S.joinMode = null;
       await hooks.loadBase();
       if (S.groups.some((x) => x.id === gid) && S.members.some((m) => m.group_id === gid && m.player_id === S.me.id && m.status === 'aktiv')) setGroup(gid);
       location.hash = '#/traening';
@@ -547,7 +579,10 @@ export async function joinableClubs() {
   return [...mine, ...disc.filter((d) => !mine.some((m) => m.id === d.id))];
 }
 export async function discoverRow() {
-  return (await joinableClubs()).length ? '<a class="row" href="#/klub-ind" id="discRow"><span class="grow">🧒 Meld et barn ind i en klub</span><span class="muted">›</span></a>' : '';
+  const list = await joinableClubs();
+  if (!list.length) return '';
+  const auds = await Promise.all(list.map((c) => q(sb.rpc('padel_group_audience', { g: c.id })).catch(() => 'boern')));
+  return `<a class="row" href="#/klub-ind" id="discRow"><span class="grow">${auds.some((a) => a && a !== 'boern') ? '🎾 Meld ind i en klub' : '🧒 Meld et barn ind i en klub'}</span><span class="muted">›</span></a>`;
 }
 
 // ---------- Mine børn (på profilen) ----------
@@ -556,8 +591,8 @@ export async function viewMyKids() {
   const h = await myKidsSection(true);
   app.innerHTML = `<div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/traening')">‹ Tilbage</button>
-    <h1>👧 Mine børn</h1>
-    ${h || '<div class="card empty"><p class="muted">Du har ikke meldt nogen børn ind endnu. Brug klubbens invitationslink for at melde dit barn ind.</p></div>'}
+    <h1>${mineTitle(S.myKids || [])}</h1>
+    ${h || '<div class="card empty"><p class="muted">Du har ikke meldt nogen ind endnu. Brug klubbens invitationslink for at melde dig selv eller dit barn ind.</p></div>'}
   </div>`;
   bindMyKids(viewMyKids);
 }
@@ -570,10 +605,11 @@ export async function myKidsSection(page = false) {
     q(sb.from('padel_club_guardians').select('*').in('kid_id', ids).eq('active', true)),
     q(sb.from('padel_club_kid_info').select('*').in('kid_id', ids)).catch(() => []),
   ]) : [[], []];
-  const mineK = kids.filter((k) => k.player_id !== S.me.id && gds.some((x) => x.kid_id === k.id && x.user_id === S.me.id));
+  // Egne børn og ens eget voksenmedlemskab (et barn med eget login ser ikke sig selv her)
+  const mineK = kids.filter((k) => (k.player_id !== S.me.id || k.adult) && gds.some((x) => x.kid_id === k.id && x.user_id === S.me.id));
   // Kun klubber, man selv er med i eller har børn i (ikke alle klubber, superadmin kan se)
   const clubs = S.groups.filter((x) => x.kind === 'klub' && !x.archived && (S.members.some((m) => m.group_id === x.id && m.player_id === S.me.id && m.status === 'aktiv') || mineK.some((k) => k.group_id === x.id)));
-  if (!mineK.length) return '';
+  if (!mineK.length) { S.myKids = []; return ''; }
   // Hold og trænere pr. klub
   const per = {};
   for (const g of [...new Set(mineK.map((k) => k.group_id))]) {
@@ -581,20 +617,21 @@ export async function myKidsSection(page = false) {
     per[g] = { teams, trainers: trainers || [] };
   }
   S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '' }));
-  return `${page ? '' : '<h3>Mine børn</h3>'}
+  return `${page ? '' : `<h3>${mineTitle(S.myKids).replace(/^\S+ /, '')}</h3>`}
     ${S.myKids.map((k, i) => {
+      const me = k.adult && k.player_id === S.me.id;
       const tm = per[k.group_id]?.teams.find((t) => t.id === k.team_id);
       const ts = (per[k.group_id]?.trainers || []).filter((x) => x.team_ids.includes(k.team_id));
-      return `<details class="card kidcard" ${page && S.myKids.length === 1 ? 'open' : ''}><summary><span class="grow"><b>${esc(k.name)}</b><small class="muted">${esc(group(k.group_id)?.name || 'Klub')}${tm ? ` · ${esc(tm.name)}` : ''}${k.status === 'ansoegt' ? ' · ⏳ venter på godkendelse' : ''}${k.player_id ? ' · har eget login' : ''}</small></span><span class="muted">›</span></summary>
+      return `<details class="card kidcard" ${page && S.myKids.length === 1 ? 'open' : ''}><summary><span class="grow"><b>${esc(k.name)}</b><small class="muted">${esc(group(k.group_id)?.name || 'Klub')}${tm ? ` · ${esc(tm.name)}` : ''}${k.status === 'ansoegt' ? ' · ⏳ venter på godkendelse' : ''}${k.player_id && !me ? ' · har eget login' : ''}</small></span><span class="muted">›</span></summary>
       ${ts.length ? `<div class="lbl">Trænere</div>${ts.map(trainerLinks).join('')}` : ''}
-      <details class="kidedit"><summary><span class="link sm">✏️ Ret ${esc(k.name.split(' ')[0])}s oplysninger</span></summary>
-        <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address)}<button class="btn primary">Gem</button></form></details>
-      <div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Forælder 2</button></div>
-      <p class="muted small">Med eget login kan barnet selv se træninger og give afbud (vis koden, eller <button class="link sm" data-kidshare="${k.id}">send linket</button>). Den anden forælder får samme adgang som dig.</p>
-      <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">Meld ${esc(k.name.split(' ')[0])} ud</button></div>
+      <details class="kidedit"><summary><span class="link sm">✏️ ${me ? 'Ret dine oplysninger' : `Ret ${esc(k.name.split(' ')[0])}s oplysninger`}</span></summary>
+        <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address, me)}<button class="btn primary">Gem</button></form></details>
+      ${me ? '' : `<div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Forælder 2</button></div>
+      <p class="muted small">Med eget login kan barnet selv se træninger og give afbud (vis koden, eller <button class="link sm" data-kidshare="${k.id}">send linket</button>). Den anden forælder får samme adgang som dig.</p>`}
+      <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">${me ? 'Meld dig ud' : `Meld ${esc(k.name.split(' ')[0])} ud`}</button></div>
     </details>`;
     }).join('')}
-    ${page ? `<a class="btn ghost kidjoin" href="#/klub-ind">➕ Meld et barn mere ind</a>` : ''}`;
+    ${page ? `<a class="btn ghost kidjoin" href="#/klub-ind">➕ ${S.myKids.some((k) => k.adult) ? 'Meld et barn ind' : 'Meld et barn mere ind'}</a>` : ''}`;
 }
 
 export function bindMyKids(rerender) {
@@ -617,14 +654,15 @@ export function bindMyKids(rerender) {
   }));
   app.querySelectorAll('[data-kidleave]').forEach((b) => (b.onclick = async () => {
     const k = S.myKids.find((x) => x.id === b.dataset.kidleave);
-    if (!confirm(`Meld ${k.name} ud af klubben?`)) return;
-    try { await q(sb.rpc('padel_club_leave', { p_kid: k.id })); toast(`${k.name} er meldt ud`); rerender(); } catch {}
+    const me = k.adult && k.player_id === S.me.id;
+    if (!confirm(me ? 'Meld dig ud af klubben?' : `Meld ${k.name} ud af klubben?`)) return;
+    try { await q(sb.rpc('padel_club_leave', { p_kid: k.id })); toast(me ? 'Du er meldt ud' : `${k.name} er meldt ud`); rerender(); } catch {}
   }));
 }
 
 // ---------- Admin: børn ----------
 const feeBadge = (k) => (group().club_fee_label ? { betalt: '<span class="badge ok">💳 Betalt</span>', afventer: '<span class="badge warn">💳 Afventer</span>', ubetalt: '<span class="badge">💳 Mangler</span>' }[feeOf(k.id)] : '');
-const kidMeta = (k) => [age(k), GENDER_KID[k.gender], guardianNames(k.id), k.player_id ? 'eget login' : ''].filter(Boolean).map(esc).join(' · ');
+const kidMeta = (k) => (k.adult ? [age(k), genderOf(k)] : [age(k), genderOf(k), guardianNames(k.id), k.player_id ? 'eget login' : '']).filter(Boolean).map(esc).join(' · ');
 
 export function clubKidsTab() {
   if (!canRun() && !myRight('godkende')) return '';
@@ -640,7 +678,7 @@ export function clubKidsTab() {
   const collect = !!group().club_collect_address;
   return `
     ${pend.length ? `<div class="card pendingbox"><b>⏳ Nye indmeldelser (${pend.length})</b>${pend.map((k) => `
-      <div class="kpend"><div><b>${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}${kidFlags(k)}<small class="muted">${esc([age(k), GENDER_KID[k.gender]].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
+      <div class="kpend"><div><b>${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}${kidFlags(k)}<small class="muted">${esc([age(k), genderOf(k)].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}${k.adult ? 'Har meldt sig selv ind' : `Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}`}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
         <label class="kteam">Hold${teamSel(k, `data-pteam="${k.id}"`)}</label>
         <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|venteliste">Venteliste</button></div>
         <div class="mact"><button class="btn sm" data-kdo="${k.id}|proeve">Prøvetræning</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Godkend</button></div></div>`).join('')}</div>` : ''}
@@ -654,11 +692,11 @@ export function clubKidsTab() {
           ${infoOf(k.id) ? `<div class="infobox">⚠️ ${esc(infoOf(k.id))}</div>` : ''}
           ${k.photo_ok === false ? '<div class="infobox">🚫📷 Må ikke være på billeder</div>' : ''}
           ${k.trial ? `<div class="mact"><button type="button" class="btn sm primary" data-kdo="${k.id}|aktiv">✓ Meld ind som medlem</button></div>` : ''}
-          ${canRun() && !S.viewAs ? `<a class="btn sm block" href="#/ny-besked?barn=${k.id}">✉️ Skriv til forældrene</a>` : ''}
+          ${canRun() && !S.viewAs ? `<a class="btn sm block" href="#/ny-besked?barn=${k.id}">✉️ Skriv til ${k.adult ? esc(k.name.split(' ')[0]) : 'forældrene'}</a>` : ''}
           ${kidFormFields({ ...k, info: infoOf(k.id) }, 200 + i, collect || !!k.address)}
           <label>Hold${teamSel(k, 'name="team"')}</label>
           <div class="mact"><button type="button" class="btn sm ghost danger" data-kout="${k.id}">Meld ud</button><button class="btn sm primary">Gem</button></div>
-        </form></details>`).join('')}</div></details>`).join('') || (pend.length ? '' : '<div class="card empty"><p class="muted">Ingen børn endnu. Del invitationslinket under fanen Medlemmer, så forældrene kan melde deres børn ind.</p></div>')}`;
+        </form></details>`).join('')}</div></details>`).join('') || (pend.length ? '' : `<div class="card empty"><p class="muted">${hasAdults() ? 'Ingen spillere endnu. Del invitationslinket under fanen Medlemmer, så spillere og forældre kan melde sig ind.' : 'Ingen børn endnu. Del invitationslinket under fanen Medlemmer, så forældrene kan melde deres børn ind.'}</p></div>`)}`;
 }
 
 export function bindClubKids(refresh) {
@@ -669,14 +707,15 @@ export function bindClubKids(refresh) {
     const teamId = app.querySelector(`[data-pteam="${id}"]`)?.value || k.team_id || null;
     const tm = team(teamId), n = C().kids.filter((x) => x.status === 'aktiv' && x.team_id === teamId && x.id !== id).length;
     if (act === 'afvist' && !confirm(`Afvis ${k.name}?`)) return;
-    if (act === 'venteliste' && !teamId) return toast('Vælg hvilket hold barnet skal vente på', true);
-    if (['aktiv', 'proeve'].includes(act) && !teamId && C().teams.some((t) => !t.archived)) { app.querySelector(`[data-pteam="${id}"]`)?.focus(); return toast('Vælg et hold til barnet først', true); }
+    const who0 = k.adult ? 'spilleren' : 'barnet';
+    if (act === 'venteliste' && !teamId) return toast(`Vælg hvilket hold ${who0} skal vente på`, true);
+    if (['aktiv', 'proeve'].includes(act) && !teamId && C().teams.some((t) => !t.archived)) { app.querySelector(`[data-pteam="${id}"]`)?.focus(); return toast(`Vælg et hold til ${who0} først`, true); }
     const joining = k.status !== 'aktiv' || k.team_id !== teamId;
     if (['aktiv', 'proeve'].includes(act) && joining && tm?.max_kids && n >= tm.max_kids && !confirm(`${tm.name} er fuldt (${n}/${tm.max_kids}). Optag alligevel?`)) return;
     busy(b, true);
     try {
       await q(sb.rpc('padel_club_decide_v2', { p_kid: id, p_action: act, p_team: teamId }));
-      toast({ aktiv: k.trial ? `${k.name} er nu medlem` : `${k.name} er godkendt. Forældrene har fået besked`, proeve: `${k.name} er velkommen til prøvetræning`, venteliste: `${k.name} er sat på venteliste`, afvist: `${k.name} er afvist` }[act]);
+      toast({ aktiv: k.trial ? `${k.name} er nu medlem` : `${k.name} er godkendt. ${k.adult ? 'Spilleren' : 'Forældrene'} har fået besked`, proeve: `${k.name} er velkommen til prøvetræning`, venteliste: `${k.name} er sat på venteliste`, afvist: `${k.name} er afvist` }[act]);
       await refresh();
     } catch { busy(b, false); }
   }));
@@ -954,6 +993,7 @@ export function clubSettingsCard() {
   const gr = group();
   return `<details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Klubbens indstillinger</b><small class="muted">Kontingent: ${gr.club_fee ? `${kr(gr.club_fee)}${gr.club_fee_label ? ` · ${esc(gr.club_fee_label)}` : ''}` : 'ikke sat op'}</small></summary>
     <form id="clubSet">
+      <label>Klubben er for<select name="aud"><option value="boern" ${audience() === 'boern' ? 'selected' : ''}>Børn (forældre melder deres børn ind)</option><option value="voksne" ${audience() === 'voksne' ? 'selected' : ''}>Voksne (man melder sig selv ind)</option><option value="begge" ${audience() === 'begge' ? 'selected' : ''}>Børn og voksne</option></select></label>
       <div class="frow"><label class="grow">Kontingent (kr.)<input name="fee" type="number" min="0" value="${gr.club_fee || ''}" placeholder="Fx 600"></label><label class="grow">Periode<input name="label" maxlength="40" value="${esc(gr.club_fee_label || '')}" placeholder="Fx Efterår 2026"></label></div>
       <p class="muted small">Ny periode = alle skal betale igen. Forældrene ser kontingentet på Træning.</p>
       <label>Link til MobilePay Box <small class="muted">(valgfrit)</small><input name="url" type="url" value="${esc(gr.club_fee_url || '')}" placeholder="https://qr.mobilepay.dk/box/…"></label>
@@ -961,7 +1001,7 @@ export function clubSettingsCard() {
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
  <label class="switch"><input type="checkbox" name="disc" ${gr.club_discoverable ? 'checked' : ''}><span>🔎 Kan findes i appen</span></label>
-      <p class="muted small">Slået til: brugere uden for klubben ser linjen "Meld et barn ind i en klub" under Profil, og klubben kan vælges, når de melder et barn ind. Der sendes ingen beskeder.</p>
+      <p class="muted small">Slået til: brugere uden for klubben ser linjen "Meld ind i en klub" under Profil, og klubben kan vælges, når de melder et barn ind. Der sendes ingen beskeder.</p>
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>
@@ -979,7 +1019,9 @@ export function bindClubSettings(refresh) {
     const btn = f.querySelector('button'); busy(btn, true);
     try { await q(sb.rpc('padel_club_set_fee_v2', { g: S.groupId, p_fee: f.fee.value ? +f.fee.value : null, p_label: f.label.value, p_url: f.url.value, p_info: f.info.value, p_collect_address: f.addr.checked }));
       await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 }));
-      await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked })); toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
+      await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked }));
+      if (f.aud.value !== audience()) await q(sb.rpc('padel_club_set_audience', { g: S.groupId, p_audience: f.aud.value }));
+      toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };
 }
 

@@ -101,6 +101,7 @@ class Query {
   order(c, o = {}) { this.o.push([c, o.ascending !== false]); return this; }
   limit(n) { this.n = n; return this; }
   single() { this.one = true; return this; }
+  maybeSingle() { this.one = true; this.maybe = true; return this; }
   run() {
     const T = (db[this.t] ||= []);
     let data;
@@ -136,7 +137,7 @@ class Query {
     if (this.n) data = data.slice(0, this.n);
     data = embed(this.t, data, this.cols);
     save();
-    if (this.one) return data.length ? { data: data[0], error: null } : { data: null, error: { message: 'Ingen række' } };
+    if (this.one) return data.length ? { data: data[0], error: null } : this.maybe ? { data: null, error: null } : { data: null, error: { message: 'Ingen række' } };
     return { data: this.op === 'select' || this.returning ? data : null, error: null };
   }
   then(res, rej) { return Promise.resolve().then(() => this.run()).then(res, rej); }
@@ -527,7 +528,7 @@ Object.assign(RPC, {
   padel_club_update_kid: ({ p_kid, p_name, p_birth_date, p_gender, p_photo_ok, p_info, p_address }) => {
     const k = KID(p_kid);
     if (!kidMine(p_kid) && !canRun(k.group_id)) throw new Error('Det har du ikke adgang til');
-    Object.assign(k, { name: p_name.trim(), birth_date: p_birth_date, birth_year: p_birth_date ? +p_birth_date.slice(0, 4) : k.birth_year, gender: p_gender, photo_ok: p_photo_ok, address: p_address || null });
+    Object.assign(k, { name: p_name.trim(), birth_date: p_birth_date, birth_year: p_birth_date ? +p_birth_date.slice(0, 4) : k.birth_year, gender: { mand: 'dreng', kvinde: 'pige' }[p_gender] || p_gender, photo_ok: p_photo_ok, address: p_address || null });
     upsert('padel_club_kid_info', ['kid_id'], { kid_id: p_kid, info: p_info?.trim() || null });
   },
   padel_club_set_team_trainers: ({ p_team, p_users }) => {
@@ -642,7 +643,24 @@ Object.assign(RPC, {
 // Find en klub
 Object.assign(RPC, {
   padel_club_set_discoverable: ({ g, p_on }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_discoverable = !!p_on; },
-  padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address } : null; },
+  padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address, audience: x.club_audience || 'boern', self: db.padel_club_kids.some((k) => k.group_id === g && k.player_id === uid() && ['ansoegt', 'aktiv'].includes(k.status)) } : null; },
+  padel_group_audience: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? x.club_audience || 'boern' : null; },
+  padel_club_set_audience: ({ g, p_audience }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_audience = p_audience; },
+  padel_club_apply_self: ({ g, p }) => {
+    const gr = db.padel_groups.find((x) => x.id === g), me0 = me();
+    if (!me0) throw new Error('Opret din profil først');
+    if ((gr.club_audience || 'boern') === 'boern') throw new Error('Klubben er kun for børn');
+    if (db.padel_club_kids.some((k) => k.group_id === g && k.player_id === uid() && ['ansoegt', 'aktiv'].includes(k.status))) throw new Error('Du er allerede meldt ind');
+    if (gr.club_collect_address && !p.address?.trim()) throw new Error('Skriv din adresse');
+    const k = { id: uuid(), group_id: g, name: me0.name, status: 'ansoegt', team_id: null, created_by: uid(), player_id: uid(), adult: true, created_at: now(), birth_date: p.birth_date || null, birth_year: p.birth_date ? +p.birth_date.slice(0, 4) : null,
+      gender: { mand: 'dreng', kvinde: 'pige' }[p.gender] || null, photo_ok: p.photo_ok ?? null, address: p.address || null, note: p.note || null, trial_requested: !!p.trial, waitlist: false, trial: false, login_code: uuid().slice(0, 12), guardian_code: uuid().slice(0, 12) };
+    db.padel_club_kids.push(k);
+    db.padel_club_guardians.push({ kid_id: k.id, user_id: uid(), active: true });
+    if (p.info?.trim()) db.padel_club_kid_info.push({ kid_id: k.id, info: p.info.trim() });
+    notify(trainerIds(g), 'klub_ind', `Ny indmeldelse: ${me0.name} (voksen)`, 'Godkend under Admin.', '/#/admin');
+    db.padel_notifications.filter((x) => x.kind === 'klub_ind' && !x.ref).forEach((x) => (x.ref = `kids:${g}:${uid()}`));
+    return k.id;
+  },
   padel_dismiss_club: ({ g }) => { const p = me(); p.dismissed_clubs = [...new Set([...(p.dismissed_clubs || []), g])]; },
   padel_discover_clubs: () => db.padel_groups.filter((x) => x.kind === 'klub' && x.club_discoverable && !x.archived && !GM(x.id, uid())
     && !db.padel_club_kids.some((k) => k.group_id === x.id && kidMine(k.id)) && !(me()?.dismissed_clubs || []).includes(x.id)).map((x) => ({ id: x.id, name: x.name })),

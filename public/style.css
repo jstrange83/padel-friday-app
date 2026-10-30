@@ -814,3 +814,7 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .people .person { gap: 5px; padding: 7px 8px 7px 10px; }
 .people .person small { min-width: 10px; }
 @media (max-width: 360px) { .people .person { gap: 3px; padding: 6px 6px 6px 8px; } .people .person .x { padding: 0; } }
+/* Voksne i klubben */
+.badge.adult { background: rgba(212, 245, 60, .15); color: var(--accent); }
+input.locked { opacity: .75; }
+.selff legend { font-weight: 600; }

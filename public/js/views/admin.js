@@ -7,13 +7,13 @@ import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
-import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight } from './club.js';
+import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, hasAdults, audience } from './club.js';
 
 export async function viewAdmin() {
   // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin). I en klub: Børn og Hold og tider (trænere)
   const club = isClub() && S.groupId;
   const tabs = [
-    club && (canRun() || myRight('godkende')) ? ['boern', `👧 Børn${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
+    club && (canRun() || myRight('godkende')) ? ['boern', `${hasAdults() ? '🎾 Spillere' : '👧 Børn'}${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
     club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
     club && canRun() ? ['fremmode', '📊 Fremmøde'] : null,
     club && isTreasurer() ? ['kontingent', '💳 Kontingent'] : null,
@@ -116,7 +116,7 @@ function playersTab() {
         ${club ? `<div class="mact"><button class="btn sm ghost" data-decline="${p.id}">Afvis</button><button class="btn sm" data-approve="${p.id}">Medlem</button><button class="btn sm primary" data-approve="${p.id}" data-arole="superbruger">Træner</button></div>` : `<button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button>`}</div>`;
     }).join('')}</div>` : ''}
     <div class="card invitebar"><div><b>${esc(group()?.name || '')}</b> <small class="muted">· ${club ? `${players.length} voksne og juniorer med login` : players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
-      ${club ? '<p class="muted small">Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn. Trænere og bestyrelse bruger samme link og trykker <b>Bed om adgang</b>, så godkender I dem her.</p>' : ''}
+      ${club ? `<p class="muted small">${audience() === 'voksne' ? 'Del linket med spillerne. De opretter sig og melder sig selv ind, og I godkender under Spillere.' : audience() === 'begge' ? 'Del linket med spillere og forældre. Voksne melder sig selv ind, forældre melder deres børn ind, og I godkender under Spillere.' : 'Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn.'} Trænere og bestyrelse bruger samme link og trykker <b>Bed om adgang</b>, så godkender I dem her.</p>` : ''}
       <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button>${club ? '' : '<button class="btn sm" id="newPlayerBtn">➕ Opret</button>'}<button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
     ${club ? clubSettingsCard() + clubStaffCard() : `${createPlayerBox()}
     <details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Gruppens indstillinger</b><small class="muted">Rangliste: ${{ alle: 'alle', gruppe: 'kun gruppen', ingen: 'ingen' }[group()?.ranking_mode || 'alle']} · Bøder: ${group()?.fines_enabled ? 'til' : 'fra'}</small></summary>
