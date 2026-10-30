@@ -163,7 +163,7 @@ function groupsTab() {
     ${live.length > 1 ? `<div class="chips groups">${live.map((x) => `<button class="chip ${x.id === g ? 'on' : ''}" data-group="${x.id}">${esc(x.name)} <small>${count(x.id)}</small></button>`).join('')}</div>` : ''}
     ${g ? `<div class="card gcard">
       <div class="head"><div class="grow"><b class="big">${esc(group()?.name || '')}</b>
-        <small class="muted gsum">${group()?.kind === 'klub' ? '🧒 Juniorklub · ' : ''}${mem.length === 1 ? '1 spiller' : `${mem.length} spillere`} · ${admins.length ? `Admin: ${adminNames}` : '<span class="warn">ingen admin</span>'}</small></div>
+        <small class="muted gsum">${group()?.kind === 'klub' ? `${{ boern: '🧒 Juniorklub', voksne: '🏟 Klub for voksne', begge: '🏟 Klub for børn og voksne' }[audience()] || '🧒 Juniorklub'} · ` : ''}${mem.length === 1 ? '1 spiller' : `${mem.length} spillere`} · ${admins.length ? `Admin: ${adminNames}` : '<span class="warn">ingen admin</span>'}</small></div>
         <button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
       <div class="lbl">Centre</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
@@ -184,9 +184,11 @@ function groupsTab() {
 
     <details class="card newgroup"><summary><b>＋ Ny gruppe</b></summary>
       <form id="newGroup">
-        <input name="name" placeholder="Fx Lørdagspadel" required maxlength="60">
-        <div class="lbl">Type</div>${radios('kind', { gruppe: '🎾 Spillegruppe', klub: '🧒 Juniorklub' }, 'gruppe')}
-        <p class="muted small">En juniorklub har træningstider, afbud, opslag og indmeldelse af børn i stedet for spilledage og rangliste.</p>
+        <input name="name" placeholder="Fx Lørdagspadel eller Gribskov Padelklub" required maxlength="60">
+        <div class="lbl">Type</div>${radios('kind', { gruppe: '🎾 Spillegruppe', klub: '🏟 Klub' }, 'gruppe')}
+        <p class="muted small" id="kindHelp">En spillegruppe har spilledage, hold, rangliste og bødekasse. En klub har hold med trænere, træningstider, afbud, opslag, indmeldelse og kontingent.</p>
+        <div id="audBox" hidden><div class="lbl">Klubben er for</div>${radios('aud', { boern: 'Børn', voksne: 'Voksne', begge: 'Begge' }, 'boern')}
+          <p class="muted small">Børn: forældre melder deres børn ind. Voksne: man melder sig selv ind. Kan ændres senere under klubbens indstillinger.</p></div>
         <div class="lbl">Centre</div>
         <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="nc" value="${c.id}"><span>${esc(c.name)}</span></label>`).join('')}</div>
         <button class="btn primary">Opret gruppe</button>
@@ -382,6 +384,7 @@ function bind() {
   };
 
   const ng = document.getElementById('newGroup');
+  if (ng) ng.querySelectorAll('input[name=kind]').forEach((r) => (r.onchange = () => { ng.querySelector('#audBox').hidden = ng.kind.value !== 'klub'; }));
   if (ng) ng.onsubmit = async (e) => {
     e.preventDefault();
     const f = e.target, ids = [...f.querySelectorAll('[name=nc]:checked')].map((x) => x.value);
@@ -390,6 +393,7 @@ function bind() {
     busy(btn, true);
     try {
       const id = await q(sb.rpc('padel_create_group_v2', { p_name: f.name.value, p_centers: ids, p_kind: f.kind.value }));
+      if (f.kind.value === 'klub' && f.aud.value !== 'boern') await q(sb.rpc('padel_club_set_audience', { g: id, p_audience: f.aud.value }));
       S.groupId = id;
       try { localStorage.setItem('fp-group', id); } catch {}
       toast(`${f.name.value} er oprettet. Tilføj en admin herunder.`);

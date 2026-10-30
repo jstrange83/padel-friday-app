@@ -1040,7 +1040,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('[data-tab="grupper"]');
   await page.click('details.newgroup summary');
   await page.fill('#newGroup input[name=name]', 'Gribskov Padelklub Junior');
-  await page.locator('#newGroup label:has-text("Juniorklub")').click();
+  ok(await page.locator('#audBox').isHidden(), 'valget af børn/voksne er skjult for en spillegruppe');
+  await page.locator('#newGroup label:has-text("Klub")').click();
+  ok(await page.locator('#audBox').isVisible() && await page.locator('#newGroup input[name=aud][value=boern]').isChecked(), 'en ny klub er som udgangspunkt for børn');
+  await shot('ny-klub');
   await page.click('#newGroup button.primary');
   await wait(500);
   ok((await page.locator('.gsum').innerText()).includes('Juniorklub'), 'juniorklub oprettet');
