@@ -715,6 +715,12 @@ Object.assign(RPC, {
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     notify(thPeople(x).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + x.subject, p_body.slice(0, 140), '/#/samtale/' + t);
   },
+  padel_event_plan_notify: ({ e, p_redo }) => {
+    const ev = db.padel_events.find((x) => x.id === e);
+    const us = db.padel_signups.filter((x) => x.event_id === e && x.player_id !== uid()).map((x) => x.player_id);
+    notify(us, 'dagsplan', p_redo ? '🔄 Dagsplanen er lavet om' : '📋 Dagsplanen er klar', 'Se, hvor og med hvem du starter.', '/#/fredag/' + ev.id);
+    return us.length;
+  },
   padel_thread_reply_v2: ({ t, p_body, p_image }) => {
     if (!p_body?.trim() && !p_image) throw new Error('Skriv en besked');
     if (p_image && !p_image.startsWith(uid() + '/')) throw new Error('Billedet kunne ikke gemmes');

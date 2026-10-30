@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-30', date: '30. oktober 2026', groups: true, title: 'Besked når dagsplanen er klar',
+    items: ['📋 Når admin laver dagsplanen, får alle tilmeldte en notifikation om, hvilken bane de starter på, og hvem de spiller med og mod.'],
+  },
+  {
     id: '2026-10-29b', date: '29. oktober 2026', groups: true, title: 'Billeder i beskeder',
     items: ['📷 Når du skriver til admin, kan du nu også sende et billede. Tryk <b>📷 Billede</b> under beskeden.'],
   },

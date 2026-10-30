@@ -100,6 +100,7 @@ try {
   await page.click('#makePlan');
   await wait(500);
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
+  ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 8), 'de 8 andre tilmeldte får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
   ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
   if (await page.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition)) && (await page.locator('.mine-card').innerText()).includes('Indtast resultat'))
@@ -955,7 +956,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Billeder i beskeder') && nm.includes('Ledige pladser'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Billeder i beskeder') && nm.includes('dagsplanen er klar'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

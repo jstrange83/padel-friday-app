@@ -576,14 +576,16 @@ function bind(c) {
     if (!nextPlanned && !lineupOk()) return;
     await startRound(ev.current_round + 1, !nextPlanned);
   });
+  // De tilmeldte får en notifikation om, hvor og med hvem de starter
+  const planNotify = async (redo) => { try { await sb.rpc('padel_event_plan_notify', { e: ev.id, p_redo: redo }); } catch {} };
   act($('makePlan'), async () => {
     if (!lineupOk()) return;
-    if (await buildRounds(c.base + 1, totalRounds)) { toast('Dagsplanen er lavet'); await reload(); }
+    if (await buildRounds(c.base + 1, totalRounds)) { toast('Dagsplanen er lavet, og de tilmeldte har fået besked'); await planNotify(false); await reload(); }
   });
   act($('redoPlan'), async () => {
     if (!confirm('Lav alle kommende runder om med de nuværende tilmeldte?') || !lineupOk()) return;
     await q(sb.from('padel_matches').delete().eq('event_id', ev.id).gt('round_no', c.base).eq('status', 'planlagt'));
-    if (await buildRounds(c.base + 1, Math.max(totalRounds, ...futureRounds))) { toast('Dagsplanen er lavet om'); await reload(); }
+    if (await buildRounds(c.base + 1, Math.max(totalRounds, ...futureRounds))) { toast('Dagsplanen er lavet om, og de tilmeldte har fået besked'); await planNotify(true); await reload(); }
   });
   act($('extraRound'), async () => {
     if (!lineupOk()) return;
