@@ -576,7 +576,7 @@ function bind(c) {
     if (!nextPlanned && !lineupOk()) return;
     await startRound(ev.current_round + 1, !nextPlanned);
   });
-  // De tilmeldte får en notifikation om, hvor og med hvem de starter
+  // Alle tilmeldte (også den, der laver planen) får en notifikation om, hvor og med hvem de starter
   const planNotify = async (redo) => { try { await sb.rpc('padel_event_plan_notify', { e: ev.id, p_redo: redo }); } catch {} };
   act($('makePlan'), async () => {
     if (!lineupOk()) return;

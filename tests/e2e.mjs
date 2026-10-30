@@ -100,7 +100,7 @@ try {
   await page.click('#makePlan');
   await wait(500);
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
-  ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 8), 'de 8 andre tilmeldte får besked om dagsplanen');
+  ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
   ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
   if (await page.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition)) && (await page.locator('.mine-card').innerText()).includes('Indtast resultat'))

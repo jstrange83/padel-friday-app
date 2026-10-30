@@ -717,7 +717,7 @@ Object.assign(RPC, {
   },
   padel_event_plan_notify: ({ e, p_redo }) => {
     const ev = db.padel_events.find((x) => x.id === e);
-    const us = db.padel_signups.filter((x) => x.event_id === e && x.player_id !== uid()).map((x) => x.player_id);
+    const us = db.padel_signups.filter((x) => x.event_id === e).map((x) => x.player_id);
     notify(us, 'dagsplan', p_redo ? '🔄 Dagsplanen er lavet om' : '📋 Dagsplanen er klar', 'Se, hvor og med hvem du starter.', '/#/fredag/' + ev.id);
     return us.length;
   },
