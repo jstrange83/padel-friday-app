@@ -1,7 +1,7 @@
 // En spilledag: din næste kamp, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
   sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
-  esc, nameOf, first, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave,
+  esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -436,7 +436,7 @@ function signupsSection(c) {
   const { ev, me, signed, L, courts, run, log } = c;
   const person = (ids, wait, offset = 0) => `<div class="people">${ids.map((pid, i) => {
     const p = S.profiles[pid] || {};
-    return `<div class="person ${wait ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span>${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em>
+    return `<div class="person ${wait ? 'wait' : ''} ${pid === me ? 'meP' : ''}"><small>${offset + i + 1}</small><span>${p.gender === 'kvinde' ? '♀' : '♂'}</span><b class="pn" title="${esc(p.name)}">${esc(shortName(pid))}</b><em>${SIDE_SHORT[p.side] || ''}</em>
       ${run ? `<button class="x" data-unsign="${pid}" aria-label="Afmeld ${esc(p.name)}">×</button>` : ''}</div>`;
   }).join('')}</div>`;
   const head = `<h3>Tilmeldte (${signed.length})</h3>`;

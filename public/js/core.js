@@ -83,6 +83,15 @@ export const first = (id) => {
   const fn = nameOf(id).split(' ')[0];
   return Object.values(S.profiles).some((p) => p.id !== id && p.name.split(' ')[0] === fn) ? nameOf(id) : fn;
 };
+// Kort navn til lister: fornavn, og forbogstav i efternavn hvis andre har samme fornavn (fx "Thomas N.")
+export const shortName = (id) => {
+  const full = nameOf(id), parts = full.trim().split(/\s+/), fn = parts[0];
+  const others = Object.values(S.profiles).filter((p) => p.id !== id && p.name?.trim().split(/\s+/)[0] === fn);
+  if (!others.length) return fn;
+  const ini = (n) => (n.trim().split(/\s+/).length > 1 ? n.trim().split(/\s+/).at(-1)[0] : '');
+  const mine = parts.length > 1 ? parts.at(-1)[0] : '';
+  return mine && !others.some((p) => ini(p.name) === mine) ? `${fn} ${mine}.` : full;
+};
 export const fmtDate = (d, opts = { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) =>
   new Intl.DateTimeFormat('da-DK', { ...opts, timeZone: 'Europe/Copenhagen' }).format(new Date(d));
 export const hm = (d) => fmtDate(d, { hour: '2-digit', minute: '2-digit' });

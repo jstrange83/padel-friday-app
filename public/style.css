@@ -806,3 +806,11 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .imgview { position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.88); display: grid; place-items: center; padding: 16px; }
 .imgview img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 .imgview .imgx { top: 16px; right: 16px; width: 36px; height: 36px; font-size: 16px; line-height: 36px; background: #fff; color: #000; }
+/* Tilmeldte: to lige brede kolonner med korte navne */
+.people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.person { min-width: 0; }
+.person .pn { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.person .x { margin-left: auto; }
+.people .person { gap: 5px; padding: 7px 8px 7px 10px; }
+.people .person small { min-width: 10px; }
+@media (max-width: 360px) { .people .person { gap: 3px; padding: 6px 6px 6px 8px; } .people .person .x { padding: 0; } }
