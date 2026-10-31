@@ -77,12 +77,16 @@ export async function viewFines() {
   const kings = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const tile = (cls, label, fs) => `<div class="ftile ${cls}"><small>${label}</small><b>${kr(sum(fs))}</b><span>${plural(fs.length, 'bøde', 'bøder')}</span></div>`;
+  // Ens egen bøde godkendes af en anden admin eller superbruger (hvis der er en)
+  const ownNeedsOther = (f) => f.player_id === S.me?.id && S.members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role) && m.player_id !== S.me.id);
   const row = (f) => `<div class="fine ${f.status}">
     <div class="ftop"><b class="fname">${esc(nameOf(f.player_id))}</b><span class="famt">${kr(f.amount)}</span></div>
     ${editBtn('padel_fines', f.id)}<div class="ftitle">${esc(f.title)}${f.minutes ? ` <span class="muted">(${f.minutes} min)</span>` : ''}</div>
     ${f.note ? `<div class="muted small">${esc(f.note)}</div>` : ''}
     <div class="fmeta"><span class="badge st-${f.status}">${STATUS[f.status]}</span>${f.auto ? '<span class="badge auto">⚡ Automatisk</span>' : ''}<small class="muted">${fmtDate(f.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
-    ${run && f.status !== 'betalt' ? `<div class="mact">
+    ${run && ownNeedsOther(f) ? (f.status === 'afventer' ? '<p class="muted small">⏳ Din egen bøde: en anden admin godkender betalingen.</p>'
+      : f.status === 'ubetalt' ? `<div class="mact"><button class="btn sm primary" data-paid="${f.id}" data-own>Jeg har betalt</button></div>` : '') : ''}
+    ${run && !ownNeedsOther(f) && f.status !== 'betalt' ? `<div class="mact">
       <button class="btn sm primary" data-paid="${f.id}">${f.status === 'afventer' ? 'Godkend betaling' : 'Markér betalt'}</button>
       ${f.status === 'afventer' ? `<button class="btn sm" data-fstatus="${f.id}" data-to="ubetalt">Ikke betalt</button>` : `<button class="btn sm ghost danger" data-fstatus="${f.id}" data-to="annulleret">Annuller</button>`}
     </div>` : ''}
@@ -229,7 +233,7 @@ function bind(g, types, fines, myOpen) {
   const run = async (btn, fn, msg) => { busy(btn, true); try { await fn(); if (msg) toast(msg); await reload(); } catch { busy(btn, false); } };
 
   app.querySelectorAll('[data-ftab]').forEach((b) => (b.onclick = () => { S.fineTab = b.dataset.ftab; reload(); }));
-  app.querySelectorAll('[data-paid]').forEach((b) => (b.onclick = () => run(b, () => q(sb.rpc('padel_fine_paid', { p_fine: b.dataset.paid })), 'Bøden er betalt')));
+  app.querySelectorAll('[data-paid]').forEach((b) => (b.onclick = () => run(b, () => q(sb.rpc('padel_fine_paid', { p_fine: b.dataset.paid })), b.hasAttribute('data-own') ? 'Tak! En anden admin godkender din betaling' : 'Bøden er betalt')));
   app.querySelectorAll('[data-fstatus]').forEach((b) => (b.onclick = () => {
     if (b.dataset.to === 'annulleret' && !confirm('Annuller bøden? Den forsvinder fra listen.')) return;
     if (b.textContent.includes('Fortryd') && !confirm('Sæt bøden tilbage til ubetalt?')) return;

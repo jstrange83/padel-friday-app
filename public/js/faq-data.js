@@ -216,7 +216,8 @@ export const FAQ = [
   {
     cat: 'Bødekasse',
     q: 'Hvordan betaler jeg en bøde?',
-    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, åbner knappen MobilePay med nummer og beløb udfyldt. Når du trykker på MobilePay-knappen, bliver dine bøder automatisk meldt betalt og står som <b>Afventer</b>, til en admin har set pengene. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b>, betal i MobilePay selv, og tryk derefter <b>Jeg har betalt</b>.</p>`,
+    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, åbner knappen MobilePay med nummer og beløb udfyldt. Når du trykker på MobilePay-knappen, bliver dine bøder automatisk meldt betalt og står som <b>Afventer</b>, til en admin har set pengene. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b>, betal i MobilePay selv, og tryk derefter <b>Jeg har betalt</b>.</p>
+<p>Det gælder også admins: En admins egen bøde skal godkendes af en anden admin eller superbruger. Er der ingen andre i gruppen, kan admin godkende den selv.</p>`,
   },
   {
     cat: 'Bødekasse',

@@ -360,7 +360,9 @@ const RPC = {
   },
   padel_fine_paid: ({ p_fine }) => {
     const f = db.padel_fines.find((x) => x.id === p_fine);
-    if (canRun(f.group_id)) f.status = 'betalt'; else if (f.player_id === uid()) f.status = 'afventer'; else throw new Error('Det kan du ikke');
+    const others = db.padel_group_members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role) && m.player_id !== uid());
+    if (f.player_id === uid() && (others || !canRun(f.group_id))) { if (f.status === 'afventer') throw new Error('En anden admin skal godkende din egen bøde'); f.status = 'afventer'; }
+    else if (canRun(f.group_id)) f.status = 'betalt'; else throw new Error('Det kan du ikke');
   },
   padel_fines_seen: ({ p_ids }) => { db.padel_fines.filter((f) => p_ids.includes(f.id) && f.player_id === uid()).forEach((f) => (f.seen_at = now())); },
   padel_fine_set_status: ({ p_fine, p_status }) => { db.padel_fines.find((x) => x.id === p_fine).status = p_status; },

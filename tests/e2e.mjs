@@ -642,6 +642,21 @@ try {
   await loginAs('jimmy@test');
   await shot('boeder-fortryd');
 
+  // Admins egen bøde: skal godkendes af en anden admin eller superbruger
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').role = 'superbruger';
+    db.padel_fines.push({ id: 'f-own', group_id: 'g-fre', player_id: 'u-admin', title: 'Egen test', amount: 20, status: 'ubetalt', created_at: new Date().toISOString(), seen_at: new Date().toISOString() }); window.__mock.save(); });
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  await page.evaluate(() => { const b = [...document.querySelectorAll('[data-ftab]')].find((x) => x.dataset.ftab === 'alle'); b?.click(); });
+  await wait(400);
+  await page.waitForSelector('[data-paid="f-own"][data-own]');
+  await page.click('[data-paid="f-own"]');
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_fines.find((f) => f.id === 'f-own').status === 'afventer'), 'admins egen bøde venter på, at en anden admin godkender');
+  ok(!(await page.locator('[data-paid="f-own"]').count()), 'admin kan ikke selv godkende sin egen bøde');
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').role = 'bruger'; db.padel_fines = db.padel_fines.filter((f) => f.id !== 'f-own'); window.__mock.save(); });
+
   // Automatisk bøde ved afmelding: Jimmy tilmelder sig en kommende dag (med 3 andre), venter og melder fra
   await page.goto('http://localhost:8765/#/fredage');
   await page.waitForSelector('.page');
