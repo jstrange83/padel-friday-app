@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-10-31', date: '31. oktober 2026', admin: true, groups: true, title: 'Bødeansvarlig',
+    items: ['💸 Under <b>Bøder → Indstillinger</b> kan du vælge en <b>bødeansvarlig</b>, som godkender betalinger sammen med admin. Superbrugere kan stadig give bøder, men ikke godkende betalinger. En admins egen bøde skal godkendes af en anden.'],
+  },
+  {
     id: '2026-10-30', date: '30. oktober 2026', groups: true, title: 'Besked når dagsplanen er klar',
     items: ['📋 Når admin laver dagsplanen, får alle tilmeldte en notifikation om, hvilken bane de starter på, og hvem de spiller med og mod.'],
   },

@@ -60,6 +60,8 @@ async function load(g) {
 export async function viewFines() {
   const g = S.groupId, gr = group();
   const admin = isAdmin(), run = canRun(), me = S.me.id;
+  // Godkender betalinger: admin eller den, admin har gjort bødeansvarlig
+  const approver = admin || S.members.some((m) => m.group_id === g && m.player_id === me && m.status === 'aktiv' && m.fines_manager);
   if (!gr?.fines_enabled && !admin) {
     app.innerHTML = `<div class="page">${groupBar(viewFines)}<h1>Bødekasse</h1><p class="muted">${esc(gr?.name || 'Gruppen')} har ikke en bødekasse.</p></div>`;
     return;
@@ -77,20 +79,20 @@ export async function viewFines() {
   const kings = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
   const tile = (cls, label, fs) => `<div class="ftile ${cls}"><small>${label}</small><b>${kr(sum(fs))}</b><span>${plural(fs.length, 'bøde', 'bøder')}</span></div>`;
-  // Ens egen bøde godkendes af en anden admin eller superbruger (hvis der er en)
-  const ownNeedsOther = (f) => f.player_id === S.me?.id && S.members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role) && m.player_id !== S.me.id);
+  // Ens egen bøde godkendes af en anden admin eller bødeansvarlig (hvis der er en)
+  const ownNeedsOther = (f) => f.player_id === S.me?.id && S.members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && (m.role === 'admin' || m.fines_manager) && m.player_id !== S.me.id);
   const row = (f) => `<div class="fine ${f.status}">
     <div class="ftop"><b class="fname">${esc(nameOf(f.player_id))}</b><span class="famt">${kr(f.amount)}</span></div>
     ${editBtn('padel_fines', f.id)}<div class="ftitle">${esc(f.title)}${f.minutes ? ` <span class="muted">(${f.minutes} min)</span>` : ''}</div>
     ${f.note ? `<div class="muted small">${esc(f.note)}</div>` : ''}
     <div class="fmeta"><span class="badge st-${f.status}">${STATUS[f.status]}</span>${f.auto ? '<span class="badge auto">⚡ Automatisk</span>' : ''}<small class="muted">${fmtDate(f.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}</small></div>
-    ${run && ownNeedsOther(f) ? (f.status === 'afventer' ? '<p class="muted small">⏳ Din egen bøde: en anden admin godkender betalingen.</p>'
+    ${approver && ownNeedsOther(f) ? (f.status === 'afventer' ? '<p class="muted small">⏳ Din egen bøde: en anden godkender betalingen.</p>'
       : f.status === 'ubetalt' ? `<div class="mact"><button class="btn sm primary" data-paid="${f.id}" data-own>Jeg har betalt</button></div>` : '') : ''}
-    ${run && !ownNeedsOther(f) && f.status !== 'betalt' ? `<div class="mact">
+    ${approver && !ownNeedsOther(f) && f.status !== 'betalt' ? `<div class="mact">
       <button class="btn sm primary" data-paid="${f.id}">${f.status === 'afventer' ? 'Godkend betaling' : 'Markér betalt'}</button>
       ${f.status === 'afventer' ? `<button class="btn sm" data-fstatus="${f.id}" data-to="ubetalt">Ikke betalt</button>` : `<button class="btn sm ghost danger" data-fstatus="${f.id}" data-to="annulleret">Annuller</button>`}
     </div>` : ''}
-    ${run && f.status === 'betalt' ? `<div class="mact"><button class="btn sm ghost" data-fstatus="${f.id}" data-to="ubetalt">↩️ Fortryd betalt</button></div>` : ''}
+    ${approver && f.status === 'betalt' ? `<div class="mact"><button class="btn sm ghost" data-fstatus="${f.id}" data-to="ubetalt">↩️ Fortryd betalt</button></div>` : ''}
   </div>`;
 
   app.innerHTML = `
@@ -114,7 +116,7 @@ export async function viewFines() {
     <div class="lbl">Hele gruppen</div>
     <div class="ftiles">${tile('red', 'Ubetalte', by('ubetalt'))}${tile('amber', 'Afventer', by('afventer'))}${tile('green', 'Betalte', by('betalt'))}</div>
 
-    ${run && by('afventer').length ? `<div class="card approvals"><div class="mtitle">✋ Venter på godkendelse (${by('afventer').length})</div>
+    ${approver && by('afventer').length ? `<div class="card approvals"><div class="mtitle">✋ Venter på godkendelse (${by('afventer').length})</div>
       ${by('afventer').map(row).join('')}</div>` : ''}
 
     ${run && gr.fines_enabled ? giveForm(types) : ''}
@@ -206,6 +208,7 @@ function settings(gr, types) {
         <input name="box" type="url" inputmode="url" value="${esc(gr.fines_box_url || '')}" maxlength="400" placeholder="https://…"></label>
       <label>Eller betal til et mobilnummer <small class="muted">(bruges hvis der ikke er en Box)</small><input name="payto" value="${esc(gr.fines_pay_to || '')}" maxlength="60"></label>
       <label>Tekst øverst <small class="muted">(fx hvad pengene går til)</small><input name="note" value="${esc(gr.fines_note || '')}" maxlength="200"></label>
+      <label>Bødeansvarlig <small class="muted">(godkender betalinger sammen med admin)</small><select name="mgr"><option value="">Ingen, kun admin</option>${activeMembers(gr.id).filter((m) => m.role !== 'admin').map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name)).map((p) => `<option value="${p.id}" ${S.members.some((m) => m.group_id === gr.id && m.player_id === p.id && m.fines_manager) ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
       <button class="btn">Gem</button>
     </form>
     <div class="lbl">Takster</div>
@@ -256,6 +259,9 @@ function bind(g, types, fines, myOpen) {
     e.preventDefault();
     run(fs.querySelector('button'), async () => {
       await q(sb.rpc('padel_set_fines_v2', { g, p_enabled: !!group().fines_enabled, p_pay_to: fs.payto.value, p_note: fs.note.value, p_box_url: fs.box.value }));
+      const cur = S.members.filter((m) => m.group_id === g && m.fines_manager).map((m) => m.player_id);
+      for (const u of cur.filter((u) => u !== fs.mgr.value)) await q(sb.rpc('padel_fine_set_manager', { g, p_user: u, p_on: false }));
+      if (fs.mgr.value && !cur.includes(fs.mgr.value)) await q(sb.rpc('padel_fine_set_manager', { g, p_user: fs.mgr.value, p_on: true }));
       await hooks.loadBase();
     }, 'Gemt');
   };

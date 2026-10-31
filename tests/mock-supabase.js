@@ -360,12 +360,13 @@ const RPC = {
   },
   padel_fine_paid: ({ p_fine }) => {
     const f = db.padel_fines.find((x) => x.id === p_fine);
-    const others = db.padel_group_members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role) && m.player_id !== uid());
-    if (f.player_id === uid() && (others || !canRun(f.group_id))) { if (f.status === 'afventer') throw new Error('En anden admin skal godkende din egen bøde'); f.status = 'afventer'; }
-    else if (canRun(f.group_id)) f.status = 'betalt'; else throw new Error('Det kan du ikke');
+    const others = db.padel_group_members.some((m) => m.group_id === f.group_id && m.status === 'aktiv' && (m.role === 'admin' || m.fines_manager) && m.player_id !== uid());
+    if (f.player_id === uid() && (others || !fineOk(f.group_id))) { if (f.status === 'afventer') throw new Error('En anden skal godkende din egen bøde'); f.status = 'afventer'; }
+    else if (fineOk(f.group_id)) f.status = 'betalt'; else throw new Error('Kun admin eller bødeansvarlig kan godkende betalinger');
   },
   padel_fines_seen: ({ p_ids }) => { db.padel_fines.filter((f) => p_ids.includes(f.id) && f.player_id === uid()).forEach((f) => (f.seen_at = now())); },
-  padel_fine_set_status: ({ p_fine, p_status }) => { db.padel_fines.find((x) => x.id === p_fine).status = p_status; },
+  padel_fine_set_status: ({ p_fine, p_status }) => { const f = db.padel_fines.find((x) => x.id === p_fine); if (!fineOk(f.group_id)) throw new Error('Kun admin eller bødeansvarlig'); f.status = p_status; },
+  padel_fine_set_manager: ({ g, p_user, p_on }) => { if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun admin'); GM(g, p_user).fines_manager = !!p_on; },
   padel_global_ranking: () => db.padel_profiles.map((p) => ({ id: p.id, name: p.name, gender: p.gender, elo: p.elo, matches: db.padel_elo_changes.filter((c) => c.player_id === p.id && c.active).length })),
   padel_set_event_courts: ({ p_event, p_courts }) => { db.padel_events.find((e) => e.id === p_event).court_ids = p_courts; },
   padel_save_profile: ({ p_name, p_gender, p_side }) => {
@@ -420,6 +421,8 @@ const KID = (id) => db.padel_club_kids.find((k) => k.id === id);
 const kidMine = (id) => db.padel_club_guardians.some((x) => x.kid_id === id && x.user_id === uid() && x.active) || KID(id)?.player_id === uid();
 const teamGroup = (t) => db.padel_club_teams.find((x) => x.id === t)?.group_id;
 const sessGroup = (s) => teamGroup(db.padel_club_sessions.find((x) => x.id === s)?.team_id);
+// Godkender bøder: admin (eller superadmin) eller bødeansvarlig
+const fineOk = (g) => me()?.is_superadmin || GM(g, uid())?.status === 'aktiv' && (GM(g, uid()).role === 'admin' || GM(g, uid()).fines_manager);
 const trainerIds = (g) => db.padel_group_members.filter((m) => m.group_id === g && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role)).map((m) => m.player_id);
 const clubPeople = (g, t) => db.padel_club_kids.filter((k) => k.group_id === g && k.status === 'aktiv' && (!t || k.team_id === t))
   .flatMap((k) => [...db.padel_club_guardians.filter((x) => x.kid_id === k.id && x.active).map((x) => x.user_id), k.player_id]).filter(Boolean);

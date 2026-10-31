@@ -642,8 +642,8 @@ try {
   await loginAs('jimmy@test');
   await shot('boeder-fortryd');
 
-  // Admins egen bøde: skal godkendes af en anden admin eller superbruger
-  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').role = 'superbruger';
+  // Admins egen bøde: skal godkendes af en anden admin eller af den bødeansvarlige
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').fines_manager = true;
     db.padel_fines.push({ id: 'f-own', group_id: 'g-fre', player_id: 'u-admin', title: 'Egen test', amount: 20, status: 'ubetalt', created_at: new Date().toISOString(), seen_at: new Date().toISOString() }); window.__mock.save(); });
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/boeder');
@@ -655,7 +655,29 @@ try {
   await wait(500);
   ok(await page.evaluate(() => window.__mock.db().padel_fines.find((f) => f.id === 'f-own').status === 'afventer'), 'admins egen bøde venter på, at en anden admin godkender');
   ok(!(await page.locator('[data-paid="f-own"]').count()), 'admin kan ikke selv godkende sin egen bøde');
-  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').role = 'bruger'; db.padel_fines = db.padel_fines.filter((f) => f.id !== 'f-own'); window.__mock.save(); });
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-2').role = 'superbruger'; window.__mock.save(); });
+  await loginAs(await page.evaluate(() => window.__mock.db().padel_profiles.find((p) => p.id === 'u-2').email));
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  await wait(400);
+  ok(!(await page.locator('[data-paid="f-own"]').count()) && !(await page.locator('.approvals').count()), 'en superbruger kan ikke godkende betalinger');
+  await loginAs(await page.evaluate(() => window.__mock.db().padel_profiles.find((p) => p.id === 'u-1').email));
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.approvals [data-paid="f-own"]');
+  await page.click('.approvals [data-paid="f-own"]');
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_fines.find((f) => f.id === 'f-own').status === 'betalt'), 'den bødeansvarlige godkender admins betaling');
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-1').fines_manager = false; db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-2').role = 'bruger'; db.padel_fines = db.padel_fines.filter((f) => f.id !== 'f-own'); window.__mock.save(); });
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/boeder');
+  await page.waitForSelector('.page.fines');
+  await page.evaluate(() => document.querySelectorAll('details.fset').forEach((d) => (d.open = true)));
+  ok(await page.locator('#fineSettings select[name=mgr]').count() === 1, 'admin kan vælge en bødeansvarlig i indstillingerne');
+  await page.locator('#fineSettings select[name=mgr]').selectOption('u-3');
+  await page.click('#fineSettings button');
+  await wait(600);
+  ok(await page.evaluate(() => window.__mock.db().padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-3').fines_manager === true), 'den bødeansvarlige er gemt');
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_group_members.find((m) => m.group_id === 'g-fre' && m.player_id === 'u-3').fines_manager = false; window.__mock.save(); });
 
   // Automatisk bøde ved afmelding: Jimmy tilmelder sig en kommende dag (med 3 andre), venter og melder fra
   await page.goto('http://localhost:8765/#/fredage');
@@ -1001,7 +1023,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Billeder i beskeder') && nm.includes('dagsplanen er klar'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Bødeansvarlig') && nm.includes('dagsplanen er klar'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1017,7 +1039,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a, .finegate');
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
-  ok(!(await page.locator('#newsModal').innerText()).includes('Se appen som almindelig bruger'), 'spillere ser ikke admin-nyheder');
+  ok(!(await page.locator('#newsModal').innerText()).includes('Bødeansvarlig'), 'spillere ser ikke admin-nyheder');
   await page.click('#newsOk');
   await page.goto('http://localhost:8765/#/nyt');
   await page.waitForSelector('.news-entry');

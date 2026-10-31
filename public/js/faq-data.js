@@ -160,7 +160,7 @@ export const FAQ = [
     q: 'Hvad kan en superbruger og en admin?',
     a: `<p>Roller gælder pr. gruppe.</p>
 <p><b>Superbruger</b> kan køre en spilledag: lave dagsplan, starte runder ved Rotation på tid, lave en runde om, rette hold og baner, til‑ og afmelde spillere, indtaste, godkende og rette resultater direkte og afslutte dagen.</p>
-<p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller, lægge Americano på ranglisten og styre bødekassen. Superbrugere kan også give bøder og godkende betalinger.</p>
+<p><b>Admin</b> kan det samme for sin gruppe og desuden oprette spilledage, ændre spiltype, invitere og godkende spillere, give roller, lægge Americano på ranglisten og styre bødekassen. Superbrugere kan også give bøder, men kun admin og den bødeansvarlige godkender betalinger.</p>
 <p><b>Superadmin</b> opretter grupper og vælger, hvilke centre hver gruppe må bruge. Under Admin → Grupper står gruppens admins øverst på kortet, og medlemmer og roller ligger foldet sammen under <b>Medlemmer og roller</b>. Nederst kan superadmin slette (arkivere) gruppen, så ingen kan bruge den længere; kampe og point gemmes, og gruppen kan hentes tilbage. Superadmin kan også slå <b>Redigeringstilstand</b> til under Admin og så rette og slette spilledage, kampe, bøder, takster, point og forslag direkte, hvor de står.</p>`,
   },
   {
@@ -217,12 +217,12 @@ export const FAQ = [
     cat: 'Bødekasse',
     q: 'Hvordan betaler jeg en bøde?',
     a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, åbner knappen MobilePay med nummer og beløb udfyldt. Når du trykker på MobilePay-knappen, bliver dine bøder automatisk meldt betalt og står som <b>Afventer</b>, til en admin har set pengene. Virker knappen ikke på din telefon, så tryk <b>Kopiér nummer</b>, betal i MobilePay selv, og tryk derefter <b>Jeg har betalt</b>.</p>
-<p>Det gælder også admins: En admins egen bøde skal godkendes af en anden admin eller superbruger. Er der ingen andre i gruppen, kan admin godkende den selv.</p>`,
+<p>Betalinger godkendes af gruppens admin eller af den <b>bødeansvarlige</b>, som admin kan vælge under Bøder → Indstillinger. Superbrugere kan give bøder, men ikke godkende betalinger. En admins egen bøde skal godkendes af en anden admin eller af den bødeansvarlige. Er der ingen andre, kan admin godkende den selv.</p>`,
   },
   {
     cat: 'Bødekasse',
     q: 'Kan en bøde fjernes igen?',
-    a: `<p>Ja. Admin og superbrugere kan annullere en bøde, der er givet ved en fejl. Har nogen trykket "Jeg har betalt" uden at betale, eller er en bøde markeret som betalt ved en fejl, kan den sættes tilbage til ubetalt med <b>Fortryd betalt</b>.</p>
+    a: `<p>Ja. Admin og den bødeansvarlige kan annullere en bøde, der er givet ved en fejl. Har nogen trykket "Jeg har betalt" uden at betale, eller er en bøde markeret som betalt ved en fejl, kan den sættes tilbage til ubetalt med <b>Fortryd betalt</b>.</p>
 <p>Bøder har intet med dine point på ranglisten at gøre.</p>`,
   },
 
