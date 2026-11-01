@@ -1123,6 +1123,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#clubSet input[name=fee]', '600');
   await page.fill('#clubSet input[name=label]', 'Efterår 2026');
   await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
+  await page.fill('#clubSet input[name=acct]', 'Reg. 1234 konto 0012345678');
   await page.fill('#clubSet textarea[name=info]', 'Husk vand og indendørssko. Træner: Brian');
   await page.locator('#clubSet input[name=addr]').check();
   await page.fill('#clubSet input[name=hours]', '48');
@@ -1130,6 +1131,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(500);
   ok((await page.locator('details.gset:not(.staff) summary').innerText()).includes('600'), 'kontingent sat op');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_absence_hours, clubId)) === 48, 'afbudsfrist sat til 48 timer');
+  ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_fee_account, clubId)) === 'Reg. 1234 konto 0012345678', 'kontonummer til kontingent er gemt');
   // Klubben kan findes i appen: andre ser en lille linje under Profil, som kan lukkes
   await page.locator('#clubSet input[name=disc]').check();
   await page.click('#clubSet button.primary');
@@ -1247,6 +1249,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(500);
   ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');
   ok((await page.locator('.feecard').innerText()).includes('1.200 kr.'), 'kontingent for to børn vises');
+  ok((await page.locator('.feecard .feeacct').innerText()).includes('Reg. 1234 konto 0012345678'), 'forælderen ser kontonummeret til overførsel');
   ok((await page.locator('.card.trainers').innerText()).includes('Brian'), 'forælderen ser holdets træner');
   ok((await page.locator('.card.mykids .krow').count()) === 2 && await page.locator('.card.mykids a[href^="#/klub-ind/"]').count(), 'kortet "Mine børn" på Træning med knap til at melde flere ind');
   await page.click('.card.mykids a[href="#/boern"]');
@@ -1719,6 +1722,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await sf2.locator('label:has-text("Kvinde")').click();
   await sf2.locator('label:has-text("Ja")').click();
   if (await sf2.locator('input[name=kaddr]').count()) await sf2.locator('input[name=kaddr]').fill('Strandvejen 2, 3250 Gilleleje');
+  ok((await sf2.locator('select[name=kwish] option').allInnerTexts()).some((t) => t.includes('Begyndere') && t.includes('tir 16.00–17.30')), 'man kan ønske hold, og holdene vises med tider');
+  await sf2.locator('select[name=kwish]').selectOption({ label: (await sf2.locator('select[name=kwish] option').allInnerTexts()).find((t) => t.includes('Begyndere')) });
   await page.click('#joinForm button.primary');
   await wait(700);
   ok(await page.evaluate(() => { const k = window.__mock.db().padel_club_kids.find((x) => x.player_id === 'u-nyvoksen'); return k && k.adult && k.gender === 'pige' && k.status === 'ansoegt' && window.__mock.db().padel_club_guardians.some((x) => x.kid_id === k.id && x.user_id === 'u-nyvoksen'); }), 'den voksne er meldt ind som sit eget medlem');
@@ -1731,11 +1736,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('[data-tab="boern"]').innerText()).includes('Spillere'), 'fanen hedder Spillere i en klub med voksne');
   const vp = await page.locator('.kpend:has-text("Vera Voksen")').innerText();
   ok(vp.includes('Voksen') && vp.includes('Har meldt sig selv ind') && vp.includes('Kvinde'), 'træneren ser, at det er en voksen: ' + vp.replace(/\n/g, ' '));
+  ok(vp.includes('Ønsker Begyndere') && (await page.locator('.kpend:has-text("Vera Voksen") select option:checked').innerText()).includes('Begyndere'), 'træneren ser ønsket hold, og det er valgt på forhånd');
   await shot('klub-voksen-godkend');
-  await page.locator('.kpend:has-text("Vera Voksen") select').selectOption({ index: 1 });
   await page.locator('.kpend:has-text("Vera Voksen") [data-kdo$="|aktiv"]').click();
   await wait(600);
-  ok(await page.evaluate(() => window.__mock.db().padel_club_kids.find((x) => x.player_id === 'u-nyvoksen').status === 'aktiv'), 'den voksne er godkendt');
+  ok(await page.evaluate(() => { const k = window.__mock.db().padel_club_kids.find((x) => x.player_id === 'u-nyvoksen'); const t = window.__mock.db().padel_club_teams.find((x) => x.id === k.team_id); return k.status === 'aktiv' && t?.name === 'Begyndere' && !k.wish_team; }), 'den voksne er godkendt på det ønskede hold');
   await freshLogin('nyvoksen@test');
   await page.waitForSelector('#nav a');
   await pastGates();
@@ -1756,6 +1761,21 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/boern');
   await page.waitForSelector('.kidcard');
   ok((await text()).includes('ret dine oplysninger') && !(await page.locator('[data-kidparent]').count()), 'den voksne kan rette sine egne oplysninger (uden "Forælder 2")');
+  // Ønske om at skifte hold bagefter: træneren får besked og flytter
+  await page.locator('.kidcard').first().evaluate((d) => (d.open = true));
+  await page.locator('form[data-wishkid] select').selectOption({ index: 1 });
+  await page.click('form[data-wishkid] button');
+  await page.waitForSelector('.wishline');
+  ok(await page.evaluate(() => window.__mock.db().padel_notifications.some((n) => n.kind === 'klub_oenske' && n.user_id === 'u-brian')), 'trænerne får besked om ønsket');
+  await freshLogin('brian@test');
+  await page.waitForSelector('#nav a');
+  await pastGates();
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('.wishbox [data-wishok]');
+  await shot('klub-oenske-hold');
+  await page.click('.wishbox [data-wishok]');
+  await wait(600);
+  ok(await page.evaluate(() => { const k = window.__mock.db().padel_club_kids.find((x) => x.player_id === 'u-nyvoksen'); return window.__mock.db().padel_club_teams.find((x) => x.id === k.team_id)?.name === 'U12' && !k.wish_team; }), 'træneren flytter til det ønskede hold, og ønsket forsvinder');
   await page.evaluate((g) => { const db = window.__mock.db(); db.padel_groups.find((x) => x.id === g).club_audience = 'boern'; window.__mock.save(); }, klubId);
 
   // Spørgsmål og svar passer til der, hvor man er

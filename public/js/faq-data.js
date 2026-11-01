@@ -380,7 +380,14 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan betaler jeg kontingent?',
-    a: `<p>Når klubben har sat kontingent op, står det øverst under <b>Træning</b>. Tryk <b>💳 MobilePay</b> for at betale til klubbens MobilePay Box, eller <b>Har betalt</b> hvis du har betalt på anden måde. Træneren bekræfter betalingen.</p>`,
+    a: `<p>Når klubben har sat kontingent op, står det øverst under <b>Træning</b>. Tryk <b>💳 MobilePay</b> for at betale til klubbens MobilePay Box, eller <b>Har betalt</b> hvis du har betalt på anden måde. Har klubben skrevet et <b>kontonummer</b>, står det også der: overfør beløbet, skriv barnets navn i beskeden, og tryk <b>Har betalt</b>. Kassereren hakker betalingen af under Kontingent, når pengene er kommet.</p>
+<p>Klubbens admin skriver kontonummeret under <b>Admin → Medlemmer → Klubbens indstillinger</b>.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
+    q: 'Kan jeg ønske et bestemt hold?',
+    a: `<p>Ja. Ved indmeldelsen kan du vælge <b>Ønsket hold</b>. Holdene står med dag og tidspunkt, så du kan vælge det, der passer bedst. Træneren ser ønsket og bestemmer.</p>
+<p>Er barnet allerede på et hold, kan du under <b>Profil → Mine børn</b> trykke på barnet og vælge <b>Ønsk et andet hold</b>. Trænerne får besked og kan flytte barnet eller afvise ønsket. Ønsket forsvinder, når barnet er flyttet.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,

@@ -447,11 +447,12 @@ Object.assign(RPC, {
   padel_club_decide: ({ p_kid, p_status, p_team }) => {
     const k = KID(p_kid); needTrainer(k.group_id);
     Object.assign(k, { status: p_status, team_id: p_team || k.team_id, approved_by: uid() });
+    if (k.wish_team && k.wish_team === k.team_id) k.wish_team = null;
     const us = db.padel_club_guardians.filter((x) => x.kid_id === k.id && x.active).map((x) => x.user_id);
     if (p_status === 'aktiv') { [...us, k.player_id].filter(Boolean).forEach((u) => activate(k.group_id, u)); notify([...us, k.player_id], 'klub_optaget', `${k.name} er optaget 🎾`, 'Se træningstiderne i appen.', '/#/traening'); }
     else notify(us, 'klub_afvist', `${k.name} er ikke optaget`, '', '/#/profil');
   },
-  padel_club_set_kid: ({ p_kid, p_name, p_birth_year, p_team, p_status }) => { const k = KID(p_kid); needTrainer(k.group_id); Object.assign(k, { name: p_name.trim(), birth_year: p_birth_year, team_id: p_team, status: p_status }); },
+  padel_club_set_kid: ({ p_kid, p_name, p_birth_year, p_team, p_status }) => { const k = KID(p_kid); needTrainer(k.group_id); Object.assign(k, { name: p_name.trim(), birth_year: p_birth_year, team_id: p_team, status: p_status }); if (k.wish_team && k.wish_team === k.team_id) k.wish_team = null; },
   padel_club_leave: ({ p_kid }) => { if (!kidMine(p_kid) && !canRun(KID(p_kid).group_id)) throw new Error('Det har du ikke adgang til'); KID(p_kid).status = 'udmeldt'; },
   padel_club_save_team: ({ p_id, g, p_name, p_archived }) => {
     if (p_id) { const t = db.padel_club_teams.find((x) => x.id === p_id); needTrainer(t.group_id); Object.assign(t, { name: p_name.trim(), archived: !!p_archived }); return p_id; }
@@ -649,6 +650,21 @@ Object.assign(RPC, {
 Object.assign(RPC, {
   padel_club_set_discoverable: ({ g, p_on }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_discoverable = !!p_on; },
   padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address, audience: x.club_audience || 'boern', self: db.padel_club_kids.some((k) => k.group_id === g && k.player_id === uid() && ['ansoegt', 'aktiv'].includes(k.status)) } : null; },
+  padel_club_set_fee_account: ({ g, p_account }) => { if (!(isAdm(g) || treasurer(g))) throw new Error('Kun admin og kasserer'); db.padel_groups.find((x) => x.id === g).club_fee_account = p_account?.trim() || null; },
+  padel_club_join_teams: ({ g }) => db.padel_club_teams.filter((t) => t.group_id === g && !t.archived).map((t) => ({ id: t.id, name: t.name,
+    sessions: db.padel_club_sessions.filter((x) => x.team_id === t.id && x.active).map((x) => ({ weekday: x.weekday, start: x.start_time.slice(0, 5), end: x.end_time.slice(0, 5), place: x.place })) })),
+  padel_club_apply_v4: ({ g, p_kids }) => {
+    const n = RPC.padel_club_apply_v3({ g, p_kids });
+    const ks = p_kids.filter((y) => y.name?.trim());
+    db.padel_club_kids.filter((k) => k.group_id === g && k.created_by === uid()).slice(-n).forEach((k, i) => { if (ks[i]?.wish_team) k.wish_team = ks[i].wish_team; });
+    return n;
+  },
+  padel_club_wish_team: ({ p_kid, p_team }) => {
+    const k = KID(p_kid);
+    if (!kidMine(p_kid) && !canRun(k.group_id)) throw new Error('Det har du ikke adgang til');
+    k.wish_team = p_team && p_team !== k.team_id ? p_team : null;
+    if (k.wish_team && kidMine(p_kid) && k.status === 'aktiv') notify(trainerIds(k.group_id), 'klub_oenske', 'Ønske om hold: ' + k.name, 'Se under Admin.', '/#/admin');
+  },
   padel_group_audience: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? x.club_audience || 'boern' : null; },
   padel_club_set_audience: ({ g, p_audience }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_audience = p_audience; },
   padel_club_apply_self: ({ g, p }) => {

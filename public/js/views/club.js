@@ -175,6 +175,7 @@ function feeCard(gr, kids) {
   return `<div class="card feecard">
     <b>💳 Kontingent ${esc(gr.club_fee_label)}</b>
     ${due.length ? `<p>${kr(gr.club_fee * due.length)}${due.length > 1 ? ` <small class="muted">(${due.length} × ${kr(gr.club_fee)})</small>` : ''} for ${due.map((k) => esc(k.name.split(' ')[0])).join(' og ')}</p>
+      ${gr.club_fee_account ? `<div class="feeacct"><span class="grow">🏦 Overfør til <b>${esc(gr.club_fee_account)}</b><small class="muted">Skriv ${due.length > 1 ? 'navnene' : 'navnet'} i beskeden, og tryk Har betalt bagefter.</small></span><button class="btn sm" data-copyacct="${esc(gr.club_fee_account)}">Kopiér</button></div>` : ''}
       <div class="mact">${gr.club_fee_url ? `<a class="btn primary" href="${esc(gr.club_fee_url)}" target="_blank" rel="noopener" data-feepay="${ids}">💳 MobilePay</a>` : ''}
         <button class="btn ${gr.club_fee_url ? '' : 'primary'}" data-feepay="${ids}" data-only>Har betalt</button></div>` : ''}
     ${waiting.map((k) => `<p class="muted small">⏳ ${esc(k.name.split(' ')[0])}: venter på, at træneren bekræfter betalingen · <button class="link sm" data-feeundo="${k.id}">Fortryd</button></p>`).join('')}
@@ -268,6 +269,7 @@ function bindTraining() {
     busy(b, true);
     try { await q(sb.rpc('padel_club_cancel', { p_session: sid, p_day: day, p_cancelled: on === '1', p_note: note })); toast(on === '1' ? 'Træningen er aflyst. Holdet har fået besked' : 'Træningen er genoprettet'); viewTraining(); } catch { busy(b, false); }
   }));
+  app.querySelectorAll('[data-copyacct]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copyacct); toast('Kontonummeret er kopieret'); } catch { toast(`Kontonummer: ${b.dataset.copyacct}`); } }));
   app.querySelectorAll('[data-feepay]').forEach((b) => (b.onclick = async (e) => {
     if (b.dataset.only !== undefined) e.preventDefault();
     try { for (const id of b.dataset.feepay.split(',')) await q(sb.rpc('padel_club_fee_paid', { p_kid: id })); } catch { return; }
@@ -461,11 +463,19 @@ export const kidFormFields = (k = {}, i = 0, collect = false, lockName = false) 
   <label>${k.adult ? 'Godt at vide' : 'Godt at vide om barnet'} <small class="muted">(valgfri, fx ${k.adult ? 'skader' : 'allergi'} eller særlige behov. Gemmes, og kun ${k.adult ? '' : 'barnets '}trænere kan se det)</small><textarea name="kinfo" class="kta" rows="2" maxlength="1000" placeholder="${k.adult ? 'Fx dårligt knæ' : 'Fx astma, har inhalator med'}">${esc(k.info || '')}</textarea></label>
   ${collect ? `<label>Adresse <small class="muted">(bruges til kommunens tilskud)</small><input name="kaddr" required maxlength="200" autocomplete="street-address" value="${esc(k.address || '')}" placeholder="Vej og nr., postnr. og by"></label>` : ''}`;
 };
+// Ønske om hold: holdene med tider (hentes ved indmeldelsen, også før man er med i klubben)
+let JOIN_TEAMS = [];
+const WD_SHORT = { 1: 'man', 2: 'tir', 3: 'ons', 4: 'tor', 5: 'fre', 6: 'lør', 7: 'søn' };
+export const teamTimes = (t) => (t.sessions || []).map((x) => `${WD_SHORT[x.weekday]} ${x.start.replace(':', '.')}–${x.end.replace(':', '.')}`).join(', ');
+const wishOpts = (teams, sel = '', skip = null) => teams.filter((t) => t.id !== skip).map((t) => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${esc(t.name)}${teamTimes(t) ? ` · ${teamTimes(t)}` : ''}</option>`).join('');
+const wishSel = () => (JOIN_TEAMS.length > 1 ? `<label>Ønsket hold <small class="muted">(valgfri, træneren bestemmer)</small><select name="kwish"><option value="">Intet ønske</option>${wishOpts(JOIN_TEAMS)}</select></label>` : '');
 // Indmeldelse af en selv (voksen)
 const selfFields = (collect) => `<fieldset class="kidf selff"><legend>Dig</legend>${kidFormFields({ adult: true, player_id: S.me?.id, name: S.me?.name }, 0, collect, true)}
+  ${wishSel()}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Jeg vil gerne prøve 1-2 træninger først</span></label>
   <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold, niveau eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne spille om aftenen"></label></fieldset>`;
 const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + 1}</legend>${kidFormFields({}, i, collect)}
+  ${wishSel()}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Vi vil gerne prøve 1-2 træninger først</span></label>
   <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
 const readKid = (root, i) => ({
@@ -473,7 +483,7 @@ const readKid = (root, i) => ({
   gender: root.querySelector(`[name=kgender${i}]:checked`)?.value || null,
   photo_ok: root.querySelector(`[name=kphoto${i}]:checked`) ? root.querySelector(`[name=kphoto${i}]:checked`).value === 'ja' : null,
   info: root.querySelector('[name=kinfo]').value, address: root.querySelector('[name=kaddr]')?.value || null, note: root.querySelector('[name=knote]')?.value || null,
-  trial: !!root.querySelector('[name=ktrial]')?.checked,
+  trial: !!root.querySelector('[name=ktrial]')?.checked, wish_team: root.querySelector('[name=kwish]')?.value || null,
 });
 
 const myGroupsIds = () => S.members.filter((m) => m.player_id === S.me?.id && m.status === 'aktiv').map((m) => m.group_id);
@@ -509,6 +519,7 @@ export async function viewClubJoin(g) {
     return;
   }
   const mode = canSelf && canKid ? (S.joinMode || 'self') : canSelf ? 'self' : 'kid';
+  JOIN_TEAMS = g ? ((await q(sb.rpc('padel_club_join_teams', { g })).catch(() => [])) || []) : [];
   app.innerHTML = `
   <div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
@@ -546,8 +557,11 @@ export async function viewClubJoin(g) {
     const kids = [...f.querySelectorAll('.kidf')].map((fs, i) => readKid(fs, i));
     const btn = f.querySelector('button.primary'); busy(btn, true);
     try {
-      if (mode === 'self') { const { name, ...p } = kids[0]; await q(sb.rpc('padel_club_apply_self', { g: gid, p })); }
-      else await q(sb.rpc('padel_club_apply_v3', { g: gid, p_kids: kids }));
+      if (mode === 'self') {
+        const { name, wish_team, ...p } = kids[0];
+        const kid = await q(sb.rpc('padel_club_apply_self', { g: gid, p }));
+        if (wish_team) await q(sb.rpc('padel_club_wish_team', { p_kid: kid, p_team: wish_team })).catch(() => {});
+      } else await q(sb.rpc('padel_club_apply_v4', { g: gid, p_kids: kids }));
       toast('Tak! En træner godkender indmeldelsen');
       S.joinClub = null; S.joinMode = null;
       await hooks.loadBase();
@@ -613,8 +627,8 @@ export async function myKidsSection(page = false) {
   // Hold og trænere pr. klub
   const per = {};
   for (const g of [...new Set(mineK.map((k) => k.group_id))]) {
-    const [teams, trainers] = await Promise.all([q(sb.from('padel_club_teams').select('*').eq('group_id', g)).catch(() => []), q(sb.rpc('padel_club_trainer_contacts', { g })).catch(() => [])]);
-    per[g] = { teams, trainers: trainers || [] };
+    const [teams, trainers, jt] = await Promise.all([q(sb.from('padel_club_teams').select('*').eq('group_id', g)).catch(() => []), q(sb.rpc('padel_club_trainer_contacts', { g })).catch(() => []), q(sb.rpc('padel_club_join_teams', { g })).catch(() => [])]);
+    per[g] = { teams, trainers: trainers || [], jt: jt || [] };
   }
   S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '' }));
   return `${page ? '' : `<h3>${mineTitle(S.myKids).replace(/^\S+ /, '')}</h3>`}
@@ -624,6 +638,11 @@ export async function myKidsSection(page = false) {
       const ts = (per[k.group_id]?.trainers || []).filter((x) => x.team_ids.includes(k.team_id));
       return `<details class="card kidcard" ${page && S.myKids.length === 1 ? 'open' : ''}><summary><span class="grow"><b>${esc(k.name)}</b><small class="muted">${esc(group(k.group_id)?.name || 'Klub')}${tm ? ` · ${esc(tm.name)}` : ''}${k.status === 'ansoegt' ? ' · ⏳ venter på godkendelse' : ''}${k.player_id && !me ? ' · har eget login' : ''}</small></span><span class="muted">›</span></summary>
       ${ts.length ? `<div class="lbl">Trænere</div>${ts.map(trainerLinks).join('')}` : ''}
+      ${k.status === 'aktiv' && (per[k.group_id]?.jt || []).length > 1 ? (() => {
+        const wt = (per[k.group_id].jt || []).find((t) => t.id === k.wish_team);
+        return wt ? `<p class="small wishline">⏳ Du har ønsket <b>${esc(wt.name)}</b>. Træneren tager stilling. <button class="link sm" data-wishundo="${k.id}">Fortryd</button></p>`
+          : `<form class="wishform" data-wishkid="${k.id}"><label>Ønsk et andet hold <small class="muted">(træneren bestemmer)</small><select name="team"><option value="">Vælg hold…</option>${wishOpts(per[k.group_id].jt, '', k.team_id)}</select></label><button class="btn sm">Send ønske</button></form>`;
+      })() : ''}
       <details class="kidedit"><summary><span class="link sm">✏️ ${me ? 'Ret dine oplysninger' : `Ret ${esc(k.name.split(' ')[0])}s oplysninger`}</span></summary>
         <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address, me)}<button class="btn primary">Gem</button></form></details>
       ${me ? '' : `<div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Forælder 2</button></div>
@@ -652,6 +671,15 @@ export function bindMyKids(rerender) {
     const btn = f.querySelector('button.primary'); busy(btn, true);
     try { await q(sb.rpc('padel_club_update_kid', { p_kid: f.dataset.kidform, p_name: k.name, p_birth_date: k.birth_date, p_gender: k.gender, p_photo_ok: k.photo_ok, p_info: k.info, p_address: k.address })); toast('Oplysningerne er gemt'); rerender(); } catch { busy(btn, false); }
   }));
+  app.querySelectorAll('form[data-wishkid]').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (!f.team.value) return toast('Vælg et hold', true);
+    const btn = f.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_club_wish_team', { p_kid: f.dataset.wishkid, p_team: f.team.value })); toast('Ønsket er sendt til trænerne'); rerender(); } catch { busy(btn, false); }
+  }));
+  app.querySelectorAll('[data-wishundo]').forEach((b) => (b.onclick = async () => {
+    try { await q(sb.rpc('padel_club_wish_team', { p_kid: b.dataset.wishundo, p_team: null })); toast('Ønsket er fjernet'); rerender(); } catch {}
+  }));
   app.querySelectorAll('[data-kidleave]').forEach((b) => (b.onclick = async () => {
     const k = S.myKids.find((x) => x.id === b.dataset.kidleave);
     const me = k.adult && k.player_id === S.me.id;
@@ -676,15 +704,20 @@ export function clubKidsTab() {
   const teamSel = (k, attr, list = allTeams) => `<select class="sm" ${attr} aria-label="Hold"><option value="">Intet hold</option>${list.map((t) => `<option value="${t.id}" ${k.team_id === t.id ? 'selected' : ''}>${tLabel(t)}</option>`).join('')}</select>`;
   const byTeam = [...teams.map((t) => ({ t, ks: act.filter((k) => k.team_id === t.id) })), { t: null, ks: act.filter((k) => !k.team_id || !allTeams.some((t) => t.id === k.team_id)) }].filter((x) => x.ks.length);
   const collect = !!group().club_collect_address;
+  // Ønsker om at skifte hold (optagne børn), for holdene træneren har
+  const wishes = act.filter((k) => k.wish_team && team(k.wish_team) && k.wish_team !== k.team_id && (isTeamTrainer(k.wish_team) || (k.team_id && isTeamTrainer(k.team_id))));
   return `
     ${pend.length ? `<div class="card pendingbox"><b>⏳ Nye indmeldelser (${pend.length})</b>${pend.map((k) => `
-      <div class="kpend"><div><b>${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}${kidFlags(k)}<small class="muted">${esc([age(k), genderOf(k)].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}${k.adult ? 'Har meldt sig selv ind' : `Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}`}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
-        <label class="kteam">Hold${teamSel(k, `data-pteam="${k.id}"`)}</label>
+      <div class="kpend"><div><b>${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}${k.wish_team && team(k.wish_team) ? ` <span class="badge wish">Ønsker ${esc(team(k.wish_team).name)}</span>` : ''}${kidFlags(k)}<small class="muted">${esc([age(k), genderOf(k)].filter(Boolean).join(' · '))}${k.birth_date || k.gender ? ' · ' : ''}${k.adult ? 'Har meldt sig selv ind' : `Meldt ind af ${esc(guardianNames(k.id) || nameOf(k.created_by))}`}</small>${k.note ? `<small>"${esc(k.note)}"</small>` : ''}${infoOf(k.id) ? `<small>⚠️ ${esc(infoOf(k.id))}</small>` : ''}</div>
+        <label class="kteam">Hold${teamSel({ ...k, team_id: k.team_id || k.wish_team }, `data-pteam="${k.id}"`)}</label>
         <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|venteliste">Venteliste</button></div>
         <div class="mact"><button class="btn sm" data-kdo="${k.id}|proeve">Prøvetræning</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Godkend</button></div></div>`).join('')}</div>` : ''}
     ${wait.length ? `<div class="card waitbox"><b>⏳ Venteliste (${wait.length})</b>${wait.map((k, i) => `
       <div class="kpend"><div><b>${i + 1}. ${esc(k.name)}</b>${k.trial_requested ? ' <span class="badge trial">Ønsker prøvetræning</span>' : ''}<small class="muted">Venter på ${esc(team(k.team_id)?.name || 'et hold')}${fullT(k.team_id) ? ' (fuldt)' : ' · der er plads nu'} · ${esc(guardianNames(k.id))}</small></div>
         <div class="mact"><button class="btn sm ghost" data-kdo="${k.id}|afvist">Afvis</button><button class="btn sm" data-kdo="${k.id}|proeve">Prøve</button><button class="btn sm primary" data-kdo="${k.id}|aktiv">Optag</button></div></div>`).join('')}</div>` : ''}
+    ${wishes.length ? `<div class="card wishbox"><b>🔁 Ønsker om hold (${wishes.length})</b>${wishes.map((k) => `
+      <div class="kpend"><div><b>${esc(k.name)}</b><small class="muted">${esc(team(k.team_id)?.name || 'Intet hold')} → <b>${esc(team(k.wish_team).name)}</b> · ønsket af ${esc(k.adult ? 'spilleren selv' : guardianNames(k.id))}</small></div>
+        <div class="mact"><button class="btn sm ghost" data-wishno="${k.id}">Afvis ønsket</button><button class="btn sm primary" data-wishok="${k.id}">Flyt til ${esc(team(k.wish_team).name)}</button></div></div>`).join('')}</div>` : ''}
     ${!isAdmin() && myAssigned().length ? `<p class="muted small">Du ser dine egne hold: ${teams.map((t) => esc(t.name)).join(', ')}.</p>` : ''}
     ${byTeam.map(({ t, ks }) => `<details class="card plist ${t ? '' : 'noteam'}" ${S.kidsOpen?.[t?.id || 'none'] ?? !t ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : '⚠️ Mangler hold'} (${ks.length})</b>${t ? '' : '<small class="muted">Tryk på barnet, vælg hold og tryk Gem</small>'}</summary>
       <div class="list compact">${ks.map((k, i) => `<details class="prow"><summary><span class="grow"><b>${esc(k.name)}</b>${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${k.trial ? '' : feeBadge(k)}<small>${kidMeta(k)}</small></span><span class="muted">›</span></summary>
@@ -718,6 +751,15 @@ export function bindClubKids(refresh) {
       toast({ aktiv: k.trial ? `${k.name} er nu medlem` : `${k.name} er godkendt. ${k.adult ? 'Spilleren' : 'Forældrene'} har fået besked`, proeve: `${k.name} er velkommen til prøvetræning`, venteliste: `${k.name} er sat på venteliste`, afvist: `${k.name} er afvist` }[act]);
       await refresh();
     } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-wishno]').forEach((b) => (b.onclick = async () => {
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_wish_team', { p_kid: b.dataset.wishno, p_team: null })); toast('Ønsket er afvist'); await refresh(); } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-wishok]').forEach((b) => (b.onclick = async () => {
+    const k = kid(b.dataset.wishok);
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_set_kid', { p_kid: k.id, p_name: k.name, p_birth_year: k.birth_year, p_team: k.wish_team, p_status: 'aktiv' })); toast(`${k.name} er flyttet til ${team(k.wish_team).name}`); await refresh(); } catch { busy(b, false); }
   }));
   app.querySelectorAll('form[data-kedit]').forEach((f, n) => (f.onsubmit = async (e) => {
     e.preventDefault();
@@ -998,6 +1040,8 @@ export function clubSettingsCard() {
       <p class="muted small">Ny periode = alle skal betale igen. Forældrene ser kontingentet på Træning.</p>
       <label>Link til MobilePay Box <small class="muted">(valgfrit)</small><input name="url" type="url" value="${esc(gr.club_fee_url || '')}" placeholder="https://qr.mobilepay.dk/box/…"></label>
       <p class="muted small">Find linket i MobilePay: åbn boksen og tryk "Del boks".</p>
+      <label>Kontonummer <small class="muted">(valgfrit, til bankoverførsel)</small><input name="acct" maxlength="60" value="${esc(gr.club_fee_account || '')}" placeholder="Fx reg. 1234 konto 0012345678"></label>
+      <p class="muted small">Forældrene ser kontonummeret på Træning. Kassereren hakker dem af under Kontingent, når pengene er kommet.</p>
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
  <label class="switch"><input type="checkbox" name="disc" ${gr.club_discoverable ? 'checked' : ''}><span>🔎 Kan findes i appen</span></label>
@@ -1017,10 +1061,13 @@ export function bindClubSettings(refresh) {
   f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
+    // Uden periode bruges årstallet, så kontingentet kan vises og hakkes af
+    if (f.fee.value && !f.label.value.trim()) f.label.value = String(new Date().getFullYear());
     try { await q(sb.rpc('padel_club_set_fee_v2', { g: S.groupId, p_fee: f.fee.value ? +f.fee.value : null, p_label: f.label.value, p_url: f.url.value, p_info: f.info.value, p_collect_address: f.addr.checked }));
       await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 }));
       await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked }));
       if (f.aud.value !== audience()) await q(sb.rpc('padel_club_set_audience', { g: S.groupId, p_audience: f.aud.value }));
+      if ((f.acct.value.trim() || null) !== (group().club_fee_account || null)) await q(sb.rpc('padel_club_set_fee_account', { g: S.groupId, p_account: f.acct.value }));
       toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };
 }
