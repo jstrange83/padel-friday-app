@@ -1401,6 +1401,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await text()).includes('husk vand') && (await text()).includes('velkommen'), 'forælder ser info og opslag');
   await page.click('details.people summary');
   ok((await page.locator('details.people').innerText()).includes('Kasserer') && (await page.locator('details.people').innerText()).includes('Brian'), 'bestyrelse og trænere med kontaktinfo under Opslag');
+  ok(await page.evaluate(() => { const d = document.querySelector('details.people'), r = d.querySelector('.coachrow').getBoundingClientRect(), c = d.getBoundingClientRect(); return r.width > c.width * 0.8; }), 'bestyrelse og trænere fylder hele kortets bredde');
+  await shot('opslag-bestyrelse');
   ok((await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.user_id === 'u-nyforaelder' && n.kind === 'klub_opslag').length)) === 1, 'forælder får notifikation om opslag');
   await page.goto('http://localhost:8765/#/traening');
   await page.waitForSelector('details.tr.event');
