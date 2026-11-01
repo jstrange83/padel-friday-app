@@ -1111,6 +1111,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('details.teamcard[open] form[data-tdesc] button');
   await wait(500);
   ok(await page.evaluate(() => window.__mock.db().padel_club_teams.find((t) => t.name === 'U12').description === 'For børn 9-12 år. Vi lærer grundslagene.'), 'træneren skriver en beskrivelse af holdet');
+  await page.click('details.welcomeset summary');
+  await page.fill('#welcomeForm textarea', 'Velkommen i klubben! Husk indendørssko.');
+  await page.click('#welcomeForm button');
+  await wait(500);
+  ok(await page.evaluate(() => !!window.__mock.db().padel_groups.find((g) => g.kind === 'klub').club_welcome), 'træneren skriver en velkomstbesked');
   ok((await page.locator('details.teamcard[open] details.srow:not(.new)').count()) === 2, 'to træningstider på holdet');
   await page.locator('details.teamcard[open] label:has([data-coach][value="u-brian"])').click();
   await wait(500);
@@ -1128,7 +1133,6 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#clubSet input[name=label]', 'Efterår 2026');
   await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
   await page.fill('#clubSet input[name=acct]', 'Reg. 1234 konto 0012345678');
-  await page.fill('#clubSet textarea[name=welcome]', 'Velkommen i klubben! Husk indendørssko.');
   await page.fill('#clubSet textarea[name=info]', 'Husk vand og indendørssko. Træner: Brian');
   await page.locator('#clubSet input[name=addr]').check();
   await page.fill('#clubSet input[name=hours]', '48');
@@ -1624,6 +1628,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('.tabbar');
   await page.click('[data-tab="hold"]');
   await page.waitForSelector('#newTeam');
+  ok(await page.locator('details.welcomeset').count() === 1, 'en træner kan også skrive velkomstbeskeden');
   await page.fill('#newTeam input[name=name]', 'Begyndere');
   await page.click('#newTeam button');
   await page.waitForSelector('details.teamcard[open]');

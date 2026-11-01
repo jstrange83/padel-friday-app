@@ -982,7 +982,10 @@ export function clubTeamsTab() {
   const coaches = S.members.filter((m) => m.group_id === S.groupId && m.status === 'aktiv' && ['admin', 'superbruger'].includes(m.role) && S.profiles[m.player_id]).map((m) => m.player_id).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   const onTeam = (t, u) => C().teamTrainers.some((x) => x.team_id === t && x.user_id === u);
   const count = (t) => C().kids.filter((k) => k.status === 'aktiv' && k.team_id === t).length;
+  const gr = group();
   return `
+    <details class="card welcomeset" ${S.welcomeOpen ? 'open' : ''}><summary><b>👋 Velkomstbesked</b><small class="muted">${gr.club_welcome ? 'Skrevet' : 'Ikke skrevet endnu'}</small></summary>
+      <form id="welcomeForm" class="tdesc"><label>Vises på indmeldelsen og for nye medlemmer under Træning<textarea name="welcome" rows="4" maxlength="2000" placeholder="Fx Velkommen i klubben! Vi træner i Padelhuset Gilleleje. Husk indendørssko og vand.">${esc(gr.club_welcome || '')}</textarea></label><button class="btn sm primary">Gem velkomst</button></form></details>
     ${quickSessionCard(teams)}
     ${teams.map((t) => {
       const ss = C().sessions.filter((s) => s.team_id === t.id && s.active && !sessionOver(s)).sort((a, b) => a.weekday - b.weekday || t5(a.start_time).localeCompare(t5(b.start_time)));
@@ -1003,6 +1006,15 @@ export function clubTeamsTab() {
 export function bindClubTeams(refresh) {
   const g = S.groupId;
   bindQuickSession(refresh);
+  const wf = document.getElementById('welcomeForm');
+  if (wf) {
+    const d = wf.closest('details'); d.ontoggle = () => (S.welcomeOpen = d.open);
+    wf.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = wf.querySelector('button'); busy(btn, true);
+      try { await q(sb.rpc('padel_club_set_welcome', { g, p_text: wf.welcome.value })); toast('Velkomsten er gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
+    };
+  }
   app.querySelectorAll('details[data-team]').forEach((d) => d.querySelector('summary').addEventListener('click', () => { S.teamOpen = d.open ? null : d.dataset.team; }));
   const nt = document.getElementById('newTeam');
   if (nt) nt.onsubmit = async (e) => {
@@ -1067,7 +1079,6 @@ export function clubSettingsCard() {
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>
-      <label>Velkomstbesked <small class="muted">(vises på indmeldelsen og for nye medlemmer under Træning)</small><textarea name="welcome" rows="4" maxlength="2000" placeholder="Fx Velkommen i klubben! Vi træner i Padelhuset Gilleleje. Husk indendørssko og vand.">${esc(gr.club_welcome || '')}</textarea></label>
       <label>Om klubben <small class="muted">(vises øverst under Opslag)</small><textarea name="info" rows="4" maxlength="2000" placeholder="Fx kontaktinfo på trænerne, hvad man skal have med, regler ved afbud">${esc(gr.club_info || '')}</textarea></label>
       <button class="btn primary">Gem</button>
     </form></details>`;
@@ -1086,7 +1097,6 @@ export function bindClubSettings(refresh) {
       await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 }));
       await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked }));
       if (f.aud.value !== audience()) await q(sb.rpc('padel_club_set_audience', { g: S.groupId, p_audience: f.aud.value }));
-      if ((f.welcome.value.trim() || null) !== (group().club_welcome || null)) await q(sb.rpc('padel_club_set_welcome', { g: S.groupId, p_text: f.welcome.value }));
       if ((f.acct.value.trim() || null) !== (group().club_fee_account || null)) await q(sb.rpc('padel_club_set_fee_account', { g: S.groupId, p_account: f.acct.value }));
       toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };

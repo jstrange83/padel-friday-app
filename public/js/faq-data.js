@@ -387,7 +387,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan skriver træneren en beskrivelse af holdet og en velkomst?',
     a: `<p><b>Beskrivelse af holdet:</b> Under <b>Admin → Hold og tider</b> trykker træneren på holdet og skriver i feltet <b>Beskrivelse</b>, fx hvilken alder og hvilket niveau holdet er for. Forældre og spillere ser beskrivelsen med holdets tider, når de melder ind, og når de ønsker et andet hold.</p>
-<p><b>Velkomstbesked:</b> Klubbens admin skriver den under <b>Admin → Medlemmer → Klubbens indstillinger</b>. Den står øverst på indmeldelsen og vises for nye medlemmer under Træning, til de lukker den.</p>`,
+<p><b>Velkomstbesked:</b> Klubbens trænere og admin skriver den øverst under <b>Admin → Hold og tider → 👋 Velkomstbesked</b>. Den står øverst på indmeldelsen og vises for nye medlemmer under Træning, til de lukker den.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
