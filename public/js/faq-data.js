@@ -385,6 +385,12 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Hvordan skriver træneren en beskrivelse af holdet og en velkomst?',
+    a: `<p><b>Beskrivelse af holdet:</b> Under <b>Admin → Hold og tider</b> trykker træneren på holdet og skriver i feltet <b>Beskrivelse</b>, fx hvilken alder og hvilket niveau holdet er for. Forældre og spillere ser beskrivelsen med holdets tider, når de melder ind, og når de ønsker et andet hold.</p>
+<p><b>Velkomstbesked:</b> Klubbens admin skriver den under <b>Admin → Medlemmer → Klubbens indstillinger</b>. Den står øverst på indmeldelsen og vises for nye medlemmer under Træning, til de lukker den.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Kan jeg ønske et bestemt hold?',
     a: `<p>Ja. Ved indmeldelsen kan du vælge <b>Ønsket hold</b>. Holdene står med dag og tidspunkt, så du kan vælge det, der passer bedst. Træneren ser ønsket og bestemmer.</p>
 <p>Er barnet allerede på et hold, kan du under <b>Profil → Mine børn</b> trykke på barnet og vælge <b>Ønsk et andet hold</b>. Trænerne får besked og kan flytte barnet eller afvise ønsket. Ønsket forsvinder, når barnet er flyttet.</p>`,

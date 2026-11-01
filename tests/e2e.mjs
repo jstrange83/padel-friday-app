@@ -1107,6 +1107,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await f.locator('button.primary').click();
     await wait(500);
   }
+  await page.fill('details.teamcard[open] form[data-tdesc] textarea', 'For børn 9-12 år. Vi lærer grundslagene.');
+  await page.click('details.teamcard[open] form[data-tdesc] button');
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_club_teams.find((t) => t.name === 'U12').description === 'For børn 9-12 år. Vi lærer grundslagene.'), 'træneren skriver en beskrivelse af holdet');
   ok((await page.locator('details.teamcard[open] details.srow:not(.new)').count()) === 2, 'to træningstider på holdet');
   await page.locator('details.teamcard[open] label:has([data-coach][value="u-brian"])').click();
   await wait(500);
@@ -1124,6 +1128,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#clubSet input[name=label]', 'Efterår 2026');
   await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
   await page.fill('#clubSet input[name=acct]', 'Reg. 1234 konto 0012345678');
+  await page.fill('#clubSet textarea[name=welcome]', 'Velkommen i klubben! Husk indendørssko.');
   await page.fill('#clubSet textarea[name=info]', 'Husk vand og indendørssko. Træner: Brian');
   await page.locator('#clubSet input[name=addr]').check();
   await page.fill('#clubSet input[name=hours]', '48');
@@ -1182,6 +1187,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#pf button.primary');
   await pastGates();
   await page.waitForSelector('#joinForm');
+  ok((await page.locator('.welcomecard').innerText()).includes('Husk indendørssko') && (await page.locator('.teaminfo').innerText()).includes('Vi lærer grundslagene'), 'indmeldelsen viser velkomstbeskeden og holdenes beskrivelse');
+  await shot('klub-indmeld-velkomst');
   const k0 = page.locator('.kidf').nth(0);
   await k0.locator('input[name=kname]').fill('Oscar Test');
   await k0.locator('input[name=kbirth]').fill('2014-05-03');
@@ -1240,6 +1247,9 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await pastGates();
   await page.goto('http://localhost:8765/#/traening');
   await page.waitForSelector('.tr');
+  ok((await page.locator('.welcomecard').innerText()).includes('Husk indendørssko'), 'nye medlemmer ser velkomstbeskeden på Træning');
+  await page.click('#welcomeOk');
+  ok(!(await page.locator('.welcomecard').count()), 'velkomsten på Træning kan lukkes');
   ok((await page.locator('.tr').first().locator('.krow').count()) === 2, 'træningen viser begge børn');
   ok(/Kommer Ida/.test(lastAsk) && /Kommer Oscar/.test(lastAsk), 'popup spørger om næste træning for begge egne børn: ' + lastAsk.replace(/\n/g, ' '));
   ok((await page.locator('.tr').first().locator('small.unans').count()) === 2 && !(await page.locator('.tr').first().locator('.btn.on').count()), 'ingen er meldt til automatisk: begge står som Ikke svaret');

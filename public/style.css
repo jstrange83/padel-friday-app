@@ -828,3 +828,15 @@ input.locked { opacity: .75; }
 .feeacct .btn { flex: none; }
 details.people { display: block; }
 .kage { display: block; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 13px; min-height: 1em; }
+/* Beskrivelse af holdene */
+.teaminfo > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.teaminfo > summary::-webkit-details-marker { display: none; }
+.tinfo { padding: 10px 0; border-top: 1px solid var(--line); }
+.tinfo:first-of-type { border-top: 0; }
+.tinfo small { display: block; }
+.tinfo p { margin: 6px 0 0; }
+.kidcard .teaminfo { padding: 10px 12px; margin: 8px 0; background: var(--card2); }
+.tdesc { margin: 10px 0; display: flex; flex-direction: column; gap: 6px; }
+.tdesc textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; resize: vertical; }
+.tdesc .btn { align-self: flex-start; }
+.welcomecard p { margin: 6px 0 0; } .welcomecard { border-left: 4px solid var(--accent); }

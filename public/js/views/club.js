@@ -137,6 +137,7 @@ export async function viewTraining() {
   <div class="page club">
     <div class="head"><h1>Træning</h1></div>
     ${groupBar(viewTraining)}
+    ${!trainer && mine.length && gr.club_welcome && !welcomeSeen(g) ? `<div class="card welcomecard"><div class="ftop"><b>👋 Velkommen i ${esc(gr.name)}</b><button class="link sm" id="welcomeOk">Luk</button></div><p>${rich(gr.club_welcome)}</p></div>` : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && !k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
     ${active.filter((k) => !k.team_id).map((k) => `<div class="card warnbox">👋 <b>${esc(k.name)}</b> er optaget. Træneren sætter snart ${k.player_id === S.me?.id ? 'dig' : 'barnet'} på et hold.</div>`).join('')}
     ${unpaid.length ? feeCard(gr, unpaid) : ''}
@@ -160,6 +161,8 @@ export async function viewTraining() {
   bindTraining();
 }
 
+// Velkomstbeskeden vises på Træning, til man lukker den (gemmes i browseren)
+const welcomeSeen = (g) => { try { return localStorage.getItem('fp-welcome-' + g) === '1'; } catch { return false; } };
 // Forældre: hvem er trænere på mine børns hold
 function trainersCard(teamIds) {
   const rows = teamIds.map((t) => ({ t: team(t), ts: trainersOf(t) })).filter((x) => x.t && x.ts.length);
@@ -228,6 +231,7 @@ function trainerCard(o, today) {
 }
 
 function bindTraining() {
+  document.getElementById('welcomeOk')?.addEventListener('click', () => { try { localStorage.setItem('fp-welcome-' + S.groupId, '1'); } catch {} document.querySelector('.welcomecard')?.remove(); });
   bindEvents(viewTraining);
   const ts = document.getElementById('trTeamSel'); if (ts) ts.onchange = () => { S.trTeam = ts.value || null; viewTraining(); };
   document.getElementById('trPast')?.addEventListener('click', () => { S.trPast = !S.trPast; viewTraining(); });
@@ -471,6 +475,9 @@ let JOIN_TEAMS = [];
 const WD_SHORT = { 1: 'man', 2: 'tir', 3: 'ons', 4: 'tor', 5: 'fre', 6: 'lør', 7: 'søn' };
 export const teamTimes = (t) => (t.sessions || []).map((x) => `${WD_SHORT[x.weekday]} ${x.start.replace(':', '.')}–${x.end.replace(':', '.')}`).join(', ');
 const wishOpts = (teams, sel = '', skip = null) => teams.filter((t) => t.id !== skip).map((t) => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${esc(t.name)}${teamTimes(t) ? ` · ${teamTimes(t)}` : ''}</option>`).join('');
+// Holdene med tider og trænerens beskrivelse, så man ved, hvilket hold man skal vælge
+const teamInfo = (teams, open = true) => (teams.length && (teams.length > 1 || teams.some((t) => t.description)) ? `<details class="card teaminfo" ${open ? 'open' : ''}><summary><b>📋 Holdene</b><span class="muted">›</span></summary>
+  ${teams.map((t) => `<div class="tinfo"><b>${esc(t.name)}</b>${teamTimes(t) ? `<small class="muted">${esc(teamTimes(t))}${t.sessions?.[0]?.place ? ` · ${esc(t.sessions[0].place)}` : ''}</small>` : ''}${t.description ? `<p>${rich(t.description)}</p>` : ''}</div>`).join('')}</details>` : '');
 const wishSel = () => (JOIN_TEAMS.length > 1 ? `<label>Ønsket hold <small class="muted">(valgfri, træneren bestemmer)</small><select name="kwish"><option value="">Intet ønske</option>${wishOpts(JOIN_TEAMS)}</select></label>` : '');
 // Indmeldelse af en selv (voksen)
 const selfFields = (collect) => `<fieldset class="kidf selff"><legend>Dig</legend>${kidFormFields({ adult: true, player_id: S.me?.id, name: S.me?.name }, 0, collect, true)}
@@ -508,7 +515,7 @@ export async function viewClubJoin(g) {
   } else {
     let info = null;
     try { info = await q(sb.rpc('padel_club_join_info', { g })); } catch {}
-    clubs = [{ id: g, name: info?.name || group(g)?.name, collect_address: !!(info?.collect_address ?? group(g)?.club_collect_address), audience: info?.audience || audience(g), self: !!info?.self }];
+    clubs = [{ id: g, name: info?.name || group(g)?.name, collect_address: !!(info?.collect_address ?? group(g)?.club_collect_address), audience: info?.audience || audience(g), self: !!info?.self, welcome: info?.welcome || group(g)?.club_welcome || '' }];
   }
   const fixed = !pick;
   const cur = clubs.find((c) => c.id === g);
@@ -528,6 +535,8 @@ export async function viewClubJoin(g) {
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
     <h1>${fixed && cur ? `Meld ind i ${esc(cur.name)}` : aud === 'boern' ? 'Meld et barn ind' : 'Meld ind i en klub'}</h1>
     <p class="muted">${mode === 'self' ? 'Udfyld oplysningerne om dig. En træner godkender indmeldelsen og sætter dig på et hold, og du får besked her i appen.' : 'Udfyld for hvert barn. En træner godkender indmeldelsen og sætter barnet på et hold, og du får besked her i appen.'}</p>
+    ${cur?.welcome ? `<div class="card welcomecard"><b>👋 Velkommen</b><p>${rich(cur.welcome)}</p></div>` : ''}
+    ${teamInfo(JOIN_TEAMS)}
     <form id="joinForm" class="card">
       ${fixed ? '' : `<label>Klub<select name="club" required><option value="">Vælg klub…</option>${clubs.map((c) => `<option value="${c.id}" ${c.id === g ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>`}
       ${canSelf && canKid ? `<div class="lbl">Hvem skal meldes ind?</div><div class="seg two" role="radiogroup"><label><input type="radio" name="jmode" value="self" ${mode === 'self' ? 'checked' : ''}><span>Mig selv</span></label><label><input type="radio" name="jmode" value="kid" ${mode === 'kid' ? 'checked' : ''}><span>Et barn</span></label></div>` : ''}
@@ -644,7 +653,7 @@ export async function myKidsSection(page = false) {
       ${k.status === 'aktiv' && (per[k.group_id]?.jt || []).length > 1 ? (() => {
         const wt = (per[k.group_id].jt || []).find((t) => t.id === k.wish_team);
         return wt ? `<p class="small wishline">⏳ Du har ønsket <b>${esc(wt.name)}</b>. Træneren tager stilling. <button class="link sm" data-wishundo="${k.id}">Fortryd</button></p>`
-          : `<form class="wishform" data-wishkid="${k.id}"><label>Ønsk et andet hold <small class="muted">(træneren bestemmer)</small><select name="team"><option value="">Vælg hold…</option>${wishOpts(per[k.group_id].jt, '', k.team_id)}</select></label><button class="btn sm">Send ønske</button></form>`;
+          : `<form class="wishform" data-wishkid="${k.id}"><label>Ønsk et andet hold <small class="muted">(træneren bestemmer)</small><select name="team"><option value="">Vælg hold…</option>${wishOpts(per[k.group_id].jt, '', k.team_id)}</select></label><button class="btn sm">Send ønske</button></form>${teamInfo(per[k.group_id].jt, false)}`;
       })() : ''}
       <details class="kidedit"><summary><span class="link sm">✏️ ${me ? 'Ret dine oplysninger' : `Ret ${esc(k.name.split(' ')[0])}s oplysninger`}</span></summary>
         <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address, me)}<button class="btn primary">Gem</button></form></details>
@@ -980,6 +989,7 @@ export function clubTeamsTab() {
       return `<details class="card teamcard" data-team="${t.id}" ${S.teamOpen === t.id ? 'open' : ''}><summary><span class="grow"><b>${esc(t.name)}</b><small class="muted">${count(t.id)}${t.max_kids ? `/${t.max_kids}` : ''} børn · ${ss.length ? ss.map((s) => `${WEEKDAY[s.weekday].slice(0, 3).toLowerCase()} ${t5(s.start_time)}`).join(', ') : 'ingen tider'}${trainersOf(t.id).length ? ` · ${trainersOf(t.id).map((x) => esc(x.name.split(' ')[0])).join(', ')}` : ''}</small></span><span class="muted">›</span></summary>
         ${admin ? `<div class="lbl">Trænere på holdet</div>${coaches.length ? `<div class="checks coach">${coaches.map((u) => `<label><input type="checkbox" data-coach="${t.id}" value="${u}" ${onTeam(t.id, u) ? 'checked' : ''}><span>${esc(nameOf(u).split(' ')[0])}</span></label>`).join('')}</div>` : '<p class="muted small">Gør først nogen til Træner under Medlemmer.</p>'}` : ''}
         ${admin ? `<form class="frow tmax" data-tmax="${t.id}"><label class="grow">Maks. antal børn <small class="muted">(tom = ingen grænse)</small><input name="max" type="number" min="0" value="${t.max_kids || ''}"></label><button class="btn sm">Gem</button></form>` : ''}
+        <form class="tdesc" data-tdesc="${t.id}"><label>Beskrivelse <small class="muted">(vises for forældre og spillere, når de vælger hold)</small><textarea name="desc" rows="3" maxlength="1000" placeholder="Fx for børn 8-11 år, der er nye i padel. Vi leger og lærer grundslagene.">${esc(t.description || '')}</textarea></label><button class="btn sm">Gem beskrivelse</button></form>
         <div class="lbl">Træningstider</div>
         ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place || periodText(s) ? `<small class="muted">${esc([s.place, periodText(s)].filter(Boolean).join(' · '))}</small>` : ''}${byLine(s.created_by, s.created_at)}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
         <details class="srow new"><summary><span class="grow">➕ Tilføj træningstid</span></summary>${sessForm(null, t.id)}</details>
@@ -1007,6 +1017,11 @@ export function bindClubTeams(refresh) {
     const t = team(b.dataset.tarch);
     if (!confirm(`Slet holdet ${t.name}?\n\nBørnene på holdet bliver i klubben, men uden hold, indtil du sætter dem på et nyt.`)) return;
     try { await q(sb.rpc('padel_club_save_team', { p_id: t.id, g, p_name: t.name, p_archived: true })); await refresh(); } catch {}
+  }));
+  app.querySelectorAll('form[data-tdesc]').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_club_set_team_description', { p_team: f.dataset.tdesc, p_desc: f.desc.value })); S.teamOpen = f.dataset.tdesc; toast('Beskrivelsen er gemt'); await refresh(); } catch { busy(btn, false); }
   }));
   app.querySelectorAll('form[data-tmax]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
@@ -1052,6 +1067,7 @@ export function clubSettingsCard() {
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>
+      <label>Velkomstbesked <small class="muted">(vises på indmeldelsen og for nye medlemmer under Træning)</small><textarea name="welcome" rows="4" maxlength="2000" placeholder="Fx Velkommen i klubben! Vi træner i Padelhuset Gilleleje. Husk indendørssko og vand.">${esc(gr.club_welcome || '')}</textarea></label>
       <label>Om klubben <small class="muted">(vises øverst under Opslag)</small><textarea name="info" rows="4" maxlength="2000" placeholder="Fx kontaktinfo på trænerne, hvad man skal have med, regler ved afbud">${esc(gr.club_info || '')}</textarea></label>
       <button class="btn primary">Gem</button>
     </form></details>`;
@@ -1070,6 +1086,7 @@ export function bindClubSettings(refresh) {
       await q(sb.rpc('padel_club_set_options', { g: S.groupId, p_reminders: f.remind.checked, p_absence_hours: +f.hours.value || 0 }));
       await q(sb.rpc('padel_club_set_discoverable', { g: S.groupId, p_on: f.disc.checked }));
       if (f.aud.value !== audience()) await q(sb.rpc('padel_club_set_audience', { g: S.groupId, p_audience: f.aud.value }));
+      if ((f.welcome.value.trim() || null) !== (group().club_welcome || null)) await q(sb.rpc('padel_club_set_welcome', { g: S.groupId, p_text: f.welcome.value }));
       if ((f.acct.value.trim() || null) !== (group().club_fee_account || null)) await q(sb.rpc('padel_club_set_fee_account', { g: S.groupId, p_account: f.acct.value }));
       toast('Gemt'); await hooks.loadBase(); await refresh(); } catch { busy(btn, false); }
   };

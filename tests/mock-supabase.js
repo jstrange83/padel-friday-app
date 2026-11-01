@@ -649,9 +649,11 @@ Object.assign(RPC, {
 // Find en klub
 Object.assign(RPC, {
   padel_club_set_discoverable: ({ g, p_on }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_discoverable = !!p_on; },
-  padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address, audience: x.club_audience || 'boern', self: db.padel_club_kids.some((k) => k.group_id === g && k.player_id === uid() && ['ansoegt', 'aktiv'].includes(k.status)) } : null; },
+  padel_club_join_info: ({ g }) => { const x = db.padel_groups.find((y) => y.id === g && y.kind === 'klub'); return x ? { name: x.name, collect_address: !!x.club_collect_address, audience: x.club_audience || 'boern', welcome: x.club_welcome || null, self: db.padel_club_kids.some((k) => k.group_id === g && k.player_id === uid() && ['ansoegt', 'aktiv'].includes(k.status)) } : null; },
   padel_club_set_fee_account: ({ g, p_account }) => { if (!(isAdm(g) || treasurer(g))) throw new Error('Kun admin og kasserer'); db.padel_groups.find((x) => x.id === g).club_fee_account = p_account?.trim() || null; },
-  padel_club_join_teams: ({ g }) => db.padel_club_teams.filter((t) => t.group_id === g && !t.archived).map((t) => ({ id: t.id, name: t.name,
+  padel_club_set_welcome: ({ g, p_text }) => { if (!isAdm(g)) throw new Error('Kun klubbens admin'); db.padel_groups.find((x) => x.id === g).club_welcome = p_text?.trim() || null; },
+  padel_club_set_team_description: ({ p_team, p_desc }) => { const t = db.padel_club_teams.find((x) => x.id === p_team); needTrainer(t.group_id); t.description = p_desc?.trim() || null; },
+  padel_club_join_teams: ({ g }) => db.padel_club_teams.filter((t) => t.group_id === g && !t.archived).map((t) => ({ id: t.id, name: t.name, description: t.description || null,
     sessions: db.padel_club_sessions.filter((x) => x.team_id === t.id && x.active).map((x) => ({ weekday: x.weekday, start: x.start_time.slice(0, 5), end: x.end_time.slice(0, 5), place: x.place })) })),
   padel_club_apply_v4: ({ g, p_kids }) => {
     const n = RPC.padel_club_apply_v3({ g, p_kids });
