@@ -1185,6 +1185,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const k0 = page.locator('.kidf').nth(0);
   await k0.locator('input[name=kname]').fill('Oscar Test');
   await k0.locator('input[name=kbirth]').fill('2014-05-03');
+  ok(/^\d+ år$/.test(await k0.locator('.kage').innerText()), 'barnets alder vises under fødselsdatoen: ' + await k0.locator('.kage').innerText());
   await k0.locator('label:has-text("Dreng")').click();
   await k0.locator('label:has-text("Ja")').click();
   await k0.locator('textarea[name=kinfo]').fill('Glemmer tit sin drikkedunk');

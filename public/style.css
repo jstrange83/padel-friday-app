@@ -827,3 +827,4 @@ input.locked { opacity: .75; }
 .feeacct small { display: block; margin-top: 2px; }
 .feeacct .btn { flex: none; }
 details.people { display: block; }
+.kage { display: block; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 13px; min-height: 1em; }

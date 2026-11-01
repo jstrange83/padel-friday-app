@@ -450,6 +450,9 @@ export async function viewPosts() {
 
 // ---------- Indmeldelse ----------
 // Felter om ét barn (bruges både ved indmeldelse og når forældre retter)
+// Alderen vises lige under fødselsdatoen, så man kan se, at datoen er rigtig
+const ageText = (d) => { const b = new Date(d + 'T12:00:00'), n = new Date(); if (isNaN(b)) return ''; let a = n.getFullYear() - b.getFullYear(); if (n < new Date(n.getFullYear(), b.getMonth(), b.getDate())) a--; return a >= 0 && a < 120 ? `${a} år` : ''; };
+if (typeof document !== 'undefined') document.addEventListener('input', (e) => { if (e.target?.name === 'kbirth') { const s = e.target.parentElement.querySelector('.kage'); if (s) s.textContent = ageText(e.target.value); } });
 // Voksne (k.adult): Mand/Kvinde, og teksterne handler om personen selv. lockName: navnet kommer fra profilen.
 export const kidFormFields = (k = {}, i = 0, collect = false, lockName = false) => {
   const self = k.adult && k.player_id === S.me?.id;
@@ -457,7 +460,7 @@ export const kidFormFields = (k = {}, i = 0, collect = false, lockName = false) 
   const gval = k.adult ? { pige: 'kvinde', dreng: 'mand' }[k.gender] || '' : k.gender || '';
   return `
   <label>Navn<input name="kname" required maxlength="60" autocomplete="off" value="${esc(k.name || '')}" ${lockName ? 'readonly class="locked"' : ''}>${lockName ? '<small class="muted">Navnet fra din profil</small>' : ''}</label>
-  <div class="frow"><label class="grow">Fødselsdato<input name="kbirth" type="date" required value="${k.birth_date || ''}" max="${todayISO()}"></label></div>
+  <div class="frow"><label class="grow">Fødselsdato<input name="kbirth" type="date" required value="${k.birth_date || ''}" max="${todayISO()}"><small class="kage">${k.birth_date ? ageText(k.birth_date) : ''}</small></label></div>
   <div class="lbl">Køn</div>${radios(`kgender${i}`, gsel, gval)}
   <div class="lbl">${self ? 'Må du være på billeder fra klubben?' : k.adult ? 'Må personen være på billeder fra klubben?' : 'Må barnet være på billeder fra klubben?'}</div>${radios(`kphoto${i}`, { ja: 'Ja', nej: 'Nej' }, k.photo_ok === true ? 'ja' : k.photo_ok === false ? 'nej' : '')}
   <label>${k.adult ? 'Godt at vide' : 'Godt at vide om barnet'} <small class="muted">(valgfri, fx ${k.adult ? 'skader' : 'allergi'} eller særlige behov. Gemmes, og kun ${k.adult ? '' : 'barnets '}trænere kan se det)</small><textarea name="kinfo" class="kta" rows="2" maxlength="1000" placeholder="${k.adult ? 'Fx dårligt knæ' : 'Fx astma, har inhalator med'}">${esc(k.info || '')}</textarea></label>
