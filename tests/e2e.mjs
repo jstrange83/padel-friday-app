@@ -1348,7 +1348,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(!(await page.locator('details.tr.event .byline').count()), 'en træner ser ikke, hvem der har oprettet');
   await page.click('#nav a[href="#/admin"]');
   await page.waitForSelector('.tabbar');
-  ok(!(await page.locator('[data-tab="kontingent"]').count()) && !(await page.locator('[data-tab="spillere"]').count()), 'træneren ser ikke kontingent og medlemmer');
+  ok(!(await page.locator('[data-tab="kontingent"]').count()) && (await page.locator('[data-tab="spillere"]').count()) === 1, 'træneren ser ikke kontingent, men gerne Medlemmer');
   await page.click('[data-tab="boern"]');
   await page.click('details.plist summary');
   await shot('klub-boern');
@@ -1629,6 +1629,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('[data-tab="hold"]');
   await page.waitForSelector('#newTeam');
   ok(await page.locator('details.welcomeset').count() === 1, 'en træner kan også skrive velkomstbeskeden');
+  await page.click('[data-tab="spillere"]');
+  await page.waitForSelector('#invite');
+  ok(!(await page.locator('.rolesel').count()) && !(await page.locator('#clubSet').count()), 'en træner ser Medlemmer med invitationslink, men kan ikke ændre roller eller indstillinger');
+  await page.click('[data-tab="hold"]');
+  await page.waitForSelector('#newTeam');
   await page.fill('#newTeam input[name=name]', 'Begyndere');
   await page.click('#newTeam button');
   await page.waitForSelector('details.teamcard[open]');

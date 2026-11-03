@@ -473,7 +473,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan kommer en ny træner eller et bestyrelsesmedlem med i klubben?',
-    a: `<p>Send klubbens invitationslink (Admin → Medlemmer → Inviter). Personen opretter sig og trykker <b>🙋 Bed om adgang</b> nederst på siden, hvor man ellers melder et barn ind.</p>
+    a: `<p>Send klubbens invitationslink (Admin → Medlemmer → Inviter). Både admin og trænere kan finde linket og QR-koden dér. Personen opretter sig og trykker <b>🙋 Bed om adgang</b> nederst på siden, hvor man ellers melder et barn ind.</p>
 <p>Klubbens admin får en besked og godkender under <b>Admin → Medlemmer → Venter på godkendelse</b>, enten som <b>Træner</b> eller <b>Medlem</b>. En post i bestyrelsen vælges bagefter under Bestyrelse og rettigheder.</p>`,
   },
   {

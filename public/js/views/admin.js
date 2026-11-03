@@ -17,7 +17,8 @@ export async function viewAdmin() {
     club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
     club && canRun() ? ['fremmode', '📊 Fremmøde'] : null,
     club && isTreasurer() ? ['kontingent', '💳 Kontingent'] : null,
-    (isAdmin() && S.groupId) || isSuper() ? ['spillere', club ? '👥 Medlemmer' : '👥 Spillere'] : null,
+    // Klubbens trænere ser også Medlemmer (invitationslink og kontaktinfo), men kan ikke ændre roller
+    (isAdmin() && S.groupId) || isSuper() || (club && canRun()) ? ['spillere', club ? '👥 Medlemmer' : '👥 Spillere'] : null,
     isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null, isSuper() && hasSuggest() ? ['forslag', '💡 Forslag'] : null].filter(Boolean);
   if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
   if (S.adminTab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
@@ -107,10 +108,10 @@ function playersTab() {
   const pending = gm.filter((m) => m.status === 'afventer' && S.profiles[m.player_id]);
   const players = gm.filter((m) => m.status === 'aktiv' && S.profiles[m.player_id]).map((m) => S.profiles[m.player_id]).sort((a, b) => a.name.localeCompare(b.name));
   const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${roleNames()[r]}</span>` : ''; };
-  const club = isClub();
+  const club = isClub(), adm = isAdmin() || isSuper();
   return `
     ${playersBar()}
-    ${pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
+    ${adm && pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
       return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}${phoneOf(p.id) ? ` · ${fmtPhone(phoneOf(p.id))}` : ''}</small></span>
         ${club ? `<div class="mact"><button class="btn sm ghost" data-decline="${p.id}">Afvis</button><button class="btn sm" data-approve="${p.id}">Medlem</button><button class="btn sm primary" data-approve="${p.id}" data-arole="superbruger">Træner</button></div>` : `<button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button>`}</div>`;
@@ -130,21 +131,21 @@ function playersTab() {
 
 
     <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 ${club ? 'Medlemmer' : 'Spillere'} (${players.length})</b></summary>
-    ${club ? '<p class="muted small">Gør trænerne til <b>Træner</b>. Trænere kan godkende børn, sætte hold og tider, krydse fremmøde af og skrive opslag.</p>' : ''}
+    ${club && adm ? '<p class="muted small">Gør trænerne til <b>Træner</b>. Trænere kan godkende børn, sætte hold og tider, krydse fremmøde af og skrive opslag.</p>' : ''}
     <input type="search" id="playerSearch" placeholder="🔍 Find…" autocomplete="off">
     <div class="list compact" id="players">${players.map((p) => `
       <details class="prow" data-name="${esc(p.name.toLowerCase())}">
         <summary><span class="grow"><b>${esc(p.name)}</b>${badge(p)}${noLogin(p)}<small>${club ? (phoneOf(p.id) ? fmtPhone(phoneOf(p.id)) : '') : `${GENDER[p.gender]} · ${SIDE[p.side]} · ${member(p.id)?.elo ?? 1000} point`}</small></span><span class="muted">›</span></summary>
         <div class="ppanel" id="p-${p.id}">
           ${noLoginNote(p)}<div class="mact contact">${phoneLinks(p.id)}</div>
-          <label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(roleNames()).map(([k, v]) =>
+          ${adm ? `<label>Rolle<select class="rolesel" data-role="${p.id}">${Object.entries(roleNames()).map(([k, v]) =>
             `<option value="${k}" ${(roleIn(p.id) || 'bruger') === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
           <div class="mact">
             <button class="btn sm" data-edit="${p.id}">Ret</button>
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
             ${club ? '' : `<a class="btn sm" href="#/spiller/${p.id}">Statistik</a>`}
           </div>
-          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button></div>${p.is_superadmin ? '' : `<div class="mact"><button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller helt</button></div>`}` : ''}
+          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button></div>${p.is_superadmin ? '' : `<div class="mact"><button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller helt</button></div>`}` : ''}` : ''}
         </div>
       </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div></details>`;
 }
