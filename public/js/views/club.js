@@ -226,6 +226,7 @@ function trainerCard(o, today) {
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
     ${byLine(o.s.created_by, o.s.created_at)}
+    ${!c && o.day >= today && kids.length ? `<div class="lbl">🔔 Send påmindelse</div><div class="mact remindrow"><button class="btn sm ${unans ? 'primary' : ''}" data-remind="${key}|0" ${unans ? '' : 'disabled'}>Ikke svaret (${unans})</button><button class="btn sm" data-remind="${key}|1">Alle</button></div>` : ''}
     <div class="mact">${c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
   </details>`;
 }
@@ -233,6 +234,17 @@ function trainerCard(o, today) {
 function bindTraining() {
   document.getElementById('welcomeOk')?.addEventListener('click', () => { try { localStorage.setItem('fp-welcome-' + S.groupId, '1'); } catch {} document.querySelector('.welcomecard')?.remove(); });
   bindEvents(viewTraining);
+  // Træneren sender en påmindelse om én træning: til dem, der ikke har svaret, eller til alle (undtagen afbud)
+  app.querySelectorAll('[data-remind]').forEach((b) => (b.onclick = async () => {
+    const [sid, day, all] = b.dataset.remind.split('|');
+    if (!confirm(all === '1' ? 'Send en påmindelse om træningen til alle, der ikke har meldt afbud?' : 'Send en påmindelse til dem, der ikke har svaret?')) return;
+    busy(b, true);
+    try {
+      const n = await q(sb.rpc('padel_club_remind_session', { p_session: sid, p_day: day, p_all: all === '1' }));
+      toast(n ? `Påmindelsen er sendt (${n} ${n === 1 ? 'barn' : 'børn'})` : 'Der var ingen at sende til');
+    } catch {}
+    busy(b, false);
+  }));
   const ts = document.getElementById('trTeamSel'); if (ts) ts.onchange = () => { S.trTeam = ts.value || null; viewTraining(); };
   document.getElementById('trPast')?.addEventListener('click', () => { S.trPast = !S.trPast; viewTraining(); });
   document.getElementById('trMore')?.addEventListener('click', () => { S.trWeeks += 2; viewTraining(); });

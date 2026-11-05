@@ -1314,6 +1314,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('.tr.trainer');
   await shot('klub-traening-traener');
   await noOverflow('klub træning træner');
+  // Påmindelse om én træning: til alle, der ikke har meldt afbud
+  await page.locator('.tr.trainer').nth(1).locator('summary').click();
+  const pBefore = await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'klub_paamind').length);
+  await page.locator('.tr.trainer').nth(1).locator('[data-remind$="|1"]').click();
+  await wait(500);
+  ok(await page.evaluate((b) => window.__mock.db().padel_notifications.filter((n) => n.kind === 'klub_paamind').length > b, pBefore), 'træneren sender en påmindelse om træningen');
+  await shot('klub-paamind');
+  await noOverflow('påmind');
+  await page.locator('.tr.trainer').nth(1).locator('summary').click();
   await page.locator('.tr.trainer').last().locator('summary').click();
   await page.locator('.tr.trainer').last().locator('[data-cancel$="|1"]').click();
   await wait(500);

@@ -391,6 +391,14 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Kan træneren minde forældrene om at svare?',
+    a: `<p>Ja. Under <b>Træning</b> trykker træneren på en træning og vælger under <b>🔔 Send påmindelse</b>:</p>
+<ul><li><b>Ikke svaret</b>: forældrene til børn, der hverken har svaret Kommer eller Afbud, får en notifikation og bliver bedt om at svare.</li>
+<li><b>Alle</b>: alle, der ikke har meldt afbud, får en påmindelse om træningen.</li></ul>
+<p>Appen sender også selv en påmindelse dagen før, hvis klubben har slået det til.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Kan jeg ønske et bestemt hold?',
     a: `<p>Ja. Ved indmeldelsen kan du vælge <b>Ønsket hold</b>. Holdene står med dag og tidspunkt, så du kan vælge det, der passer bedst. Træneren ser ønsket og bestemmer.</p>
 <p>Er barnet allerede på et hold, kan du under <b>Profil → Mine børn</b> trykke på barnet og vælge <b>Ønsk et andet hold</b>. Trænerne får besked og kan flytte barnet eller afvise ønsket. Ønsket forsvinder, når barnet er flyttet.</p>`,
