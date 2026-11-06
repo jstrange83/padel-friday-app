@@ -182,8 +182,6 @@ function priceCard(c) {
   const iPaid = paid.includes(me);
   const nr = pr.phone || '';
   const fmt = (n) => String(n).replace(/(\d{2})(?=\d)/g, '$1\u00a0');
-  const day = fmtDate(ev.starts_at, { day: 'numeric', month: 'numeric' });
-  const mp = `mobilepay://send?phone=${nr}&amount=${pr.total}&comment=${encodeURIComponent(`Padel ${day}`)}&lock=1`;
   // Dem, der skal betale: alle i dagsplanen (eller de tilmeldte), undtagen den, der har booket
   const inPlan = [...new Set((c.raw?.matches || []).flatMap((m) => [m.a_left, m.a_right, m.b_left, m.b_right]).filter(Boolean))];
   const payers = (inPlan.length ? inPlan : L.courts ? L.playing : signed).filter((p) => p !== pr.payee);
@@ -195,9 +193,8 @@ function priceCard(c) {
   const booker = `<select id="bookedBy" aria-label="Banen er booket af">${members.map((p) => `<option value="${p.id}" ${p.id === pr.payee ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
   return `<div class="card pricecard"><div class="mtitle">💰 Bane og bolde</div>
     <p><b class="big">${pr.total} kr.</b> <small class="muted">pr. spiller</small></p>
-    ${plays && !payee && !iPaid && nr ? `<p class="small">Betal med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}.</p>
-      <div class="mact"><a class="btn sm primary" href="${mp}" data-paynow>📱 Betal ${pr.total} kr.</a><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nr.</button></div>
-      <p class="center"><button type="button" class="link sm" data-ipaid="1">Jeg har betalt</button></p>` : ''}
+    ${plays && !payee && !iPaid && nr ? `<p class="small">Send ${pr.total} kr. med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}, og tryk så <b>Jeg har betalt</b>.</p>
+      <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button><button type="button" class="btn sm primary" data-ipaid="1">✓ Jeg har betalt</button></div>` : ''}
     ${plays && !payee && iPaid ? '<p class="small ok">✓ Du har betalt.</p>' : ''}
     ${overview && payers.length ? `<div class="paidlist">${payers.map((p) => `<button type="button" class="chip sm ${paid.includes(p) ? 'on' : ''}" data-paidfor="${p}" data-on="${paid.includes(p) ? 1 : 0}" title="Tryk for at ændre">${paid.includes(p) ? '✓' : '○'} ${esc(shortName(p))}</button>`).join('')}</div>
       <p class="muted small">${paid.filter((p) => payers.includes(p)).length} af ${payers.length} har betalt til ${payee ? 'dig' : esc(pr.payee_name || '')}.</p>` : ''}
@@ -617,14 +614,7 @@ function bind(c) {
   $('bookedBy')?.addEventListener('change', async (e) => {
     try { await q(sb.rpc('padel_event_set_booker', { e: ev.id, p_user: e.target.value })); toast('Gemt. Spillerne betaler til ' + (S.profiles[e.target.value]?.name.split(' ')[0] || '')); await reload(); } catch {}
   });
-  // Betaling: tryk Betal (MobilePay åbner) eller "Jeg har betalt"; admin og den, der har booket, kan hakke af
-  app.querySelectorAll('.pricecard [data-paynow]').forEach((a) => (a.onclick = async (e) => {
-    e.preventDefault();
-    const href = a.getAttribute('href');
-    try { await sb.rpc('padel_event_set_paid', { e: ev.id, p_player: me, p_paid: true }); } catch {}
-    location.href = href;
-    setTimeout(reload, 1500);
-  }));
+  // Betaling: spilleren trykker "Jeg har betalt"; admin og den, der har booket, kan hakke af
   app.querySelectorAll('.pricecard [data-ipaid]').forEach((b) => (b.onclick = async () => {
     try { await q(sb.rpc('padel_event_set_paid', { e: ev.id, p_player: me, p_paid: true })); toast('Tak! Betalingen er noteret'); await reload(); } catch {}
   }));

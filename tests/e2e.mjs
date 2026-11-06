@@ -106,7 +106,7 @@ try {
   await page.evaluate(() => { window.__savedSession = sessionStorage.getItem('mock-session'); sessionStorage.setItem('mock-session', JSON.stringify({ user: { id: 'u-1', email: 'test1@fredagspadel.test' } })); });
   await page.reload();
   await page.waitForSelector('.pricecard');
-  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard a[href^="mobilepay://"]').count()) === 1, 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
+  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard [data-copy="26129208"]').count()) === 1 && !(await page.locator('.pricecard a[href^="mobilepay://"]').count()), 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
   await page.click('.pricecard [data-ipaid]');
   await wait(600);
   ok(!(await page.locator('.pricecard').count()), 'når spilleren har betalt, forsvinder kortet');
@@ -603,7 +603,7 @@ try {
   await page.waitForSelector('.finegate');
   const fgt = await page.locator('.finegate').innerText();
   ok(fgt.includes('Du har fået 2 bøder') && fgt.includes('55 kr.'), 'ny bøde vises, når spilleren logger ind');
-  ok((await page.locator('.finegate a.mp').getAttribute('href')).startsWith('mobilepay://send?phone=12345678&amount=55'), 'MobilePay-knap med nummer og beløb');
+  ok((await page.locator('.finegate [data-copy="12345678"]').count()) === 1 && (await page.locator('.finegate .mp[data-payids]').count()) === 1 && !(await page.locator('.finegate a[href^="mobilepay://"]').count()), 'kopiér nummer og "Jeg har betalt" (ingen gamle MobilePay-links)');
   await shot('boede-ved-login');
   await page.click('#fgSee');
   await page.waitForSelector('.page.fines');
@@ -615,8 +615,8 @@ try {
   const mc = await page.locator('.mine-card').innerText();
   ok(mc.includes('55 kr.') && mc.includes('MobilePay 12 34 56 78'), 'spilleren ser sit udestående og hvor der betales');
   ok(!(await page.locator('#giveFine').count()), 'almindelig spiller kan ikke give bøder');
-  ok(await page.locator('.mine-card a.mp').count() === 1, 'MobilePay-knap i Dit udestående');
-  await page.click('.mine-card a.mp');
+  ok(await page.locator('.mine-card .mp').count() === 1, '"Jeg har betalt" i Dit udestående');
+  await page.click('.mine-card .mp');
   await wait(1000);
   if (!page.url().includes('#/boeder')) { await page.goto('http://localhost:8765/#/boeder'); }
   await page.waitForSelector('.page.fines');

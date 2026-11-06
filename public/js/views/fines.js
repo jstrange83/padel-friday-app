@@ -23,9 +23,9 @@ export function payButtons(gr, amount, ids = []) {
   if (box) return `<div class="mact"><a class="btn sm mp" href="${esc(box)}" ${pid}>📱 Betal ${kr(amt)} i MobilePay Box</a></div>
     <p class="muted small">Skriv ${kr(amt)} i MobilePay, når boksen åbner. Bøderne meldes betalt, når du trykker på knappen.</p>`;
   if (!nr) return '';
-  const url = `mobilepay://send?phone=${nr}&amount=${amt}&comment=${encodeURIComponent(`Bøder ${gr.name}`)}&lock=1`;
-  return `<div class="mact"><a class="btn sm mp" href="${url}" ${pid}>📱 Betal ${kr(amt)} med MobilePay</a></div>
-    <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer (${nr.replace(/(\d{2})(?=\d)/g, '$1 ')})</button></div>`;
+  // MobilePays gamle betalingslinks til et mobilnummer virker ikke længere, så man kopierer nummeret og melder selv betalt
+  return `<p class="small">Send ${kr(amt)} med MobilePay til ${nr.replace(/(\d{2})(?=\d)/g, '$1\u00a0')}.</p>
+    <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button><button type="button" class="btn sm primary mp" ${pid}>✓ Jeg har betalt</button></div>`;
 }
 // Tekst om hvor man betaler
 const payText = (gr) => (boxUrl(gr) ? 'Betal i bødekassens MobilePay Box' : gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>` : '');
@@ -33,8 +33,8 @@ export function bindCopy(root = app, onPaid = null) {
   root.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); }
   }));
-  // MobilePay-knap: meld bøderne betalt først, åbn så MobilePay
-  root.querySelectorAll('a.mp[data-payids]').forEach((a) => (a.onclick = async (e) => {
+  // Betal-knap: meld bøderne betalt; er det en MobilePay Box, åbnes den bagefter
+  root.querySelectorAll('.mp[data-payids]').forEach((a) => (a.onclick = async (e) => {
     e.preventDefault();
     if (a.classList.contains('busy')) return;
     a.classList.add('busy');
@@ -43,7 +43,7 @@ export function bindCopy(root = app, onPaid = null) {
     if (ids.length) toast('Bøden er meldt betalt. Admin godkender, når pengene er modtaget');
     const href = a.getAttribute('href');
     if (onPaid) setTimeout(onPaid, 300);
-    location.href = href;
+    if (href) location.href = href;
   }));
 }
 
