@@ -1,6 +1,6 @@
 // Bødekasse pr. gruppe. Admin slår den til og fra og bestemmer taksterne.
 // Admin og superbruger giver bøder og godkender betalinger. Spilleren melder selv "Jeg har betalt".
-import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBar, isAdmin, canRun, activeMembers, plural } from '../core.js';
+import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBar, isAdmin, canRun, activeMembers, plural, openMobilePay } from '../core.js';
 import { editBtn } from '../editmode.js';
 
 export const kr = (n) => `${new Intl.NumberFormat('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(+n || 0)} kr.`;
@@ -25,11 +25,13 @@ export function payButtons(gr, amount, ids = []) {
   if (!nr) return '';
   // MobilePays gamle betalingslinks til et mobilnummer virker ikke længere, så man kopierer nummeret og melder selv betalt
   return `<p class="small">Send ${kr(amt)} med MobilePay til ${nr.replace(/(\d{2})(?=\d)/g, '$1\u00a0')}.</p>
-    <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button><button type="button" class="btn sm primary mp" ${pid}>✓ Jeg har betalt</button></div>`;
+    <div class="mact"><button type="button" class="btn sm primary" data-mpopen="${nr}">📱 MobilePay</button><button type="button" class="btn sm ghost mp" ${pid}>✓ Jeg har betalt</button></div>
+    <p class="muted small">Nummeret kopieres, når du trykker, så du kan sætte det ind i MobilePay.</p>`;
 }
 // Tekst om hvor man betaler
 const payText = (gr) => (boxUrl(gr) ? 'Betal i bødekassens MobilePay Box' : gr.fines_pay_to ? `Betal til <b>${esc(gr.fines_pay_to)}</b>` : '');
 export function bindCopy(root = app, onPaid = null) {
+  root.querySelectorAll('[data-mpopen]').forEach((b) => (b.onclick = () => openMobilePay(b.dataset.mpopen)));
   root.querySelectorAll('[data-copy]').forEach((b) => (b.onclick = async () => {
     try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); }
   }));

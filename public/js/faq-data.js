@@ -88,7 +88,7 @@ export const FAQ = [
     cat: 'Hold og runder', group: true,
     q: 'Hvad koster det at spille, og hvem betaler jeg til?',
     a: `<p>Prisen pr. spiller regnes sådan: Banelejen for de baner, I spiller på, deles ligeligt mellem alle, der spiller (rundet op til hele kroner), og så lægges der et beløb oveni til bolde, fx 15 kr.</p>
-<p>Prisen står på spilledagen under <b>💰 Bane og bolde</b> og i beskeden, du får, når dagsplanen er klar. Du betaler med MobilePay til den, der har booket banen. Tryk <b>Kopiér nummer</b>, send beløbet i MobilePay, og tryk så <b>Jeg har betalt</b>. Når du har betalt, forsvinder kortet, så det ikke fylder på dagen.</p>
+<p>Prisen står på spilledagen under <b>💰 Bane og bolde</b> og i beskeden, du får, når dagsplanen er klar. Du betaler med MobilePay til den, der har booket banen. Tryk <b>📱 MobilePay</b>. Så kopieres nummeret, og MobilePay åbner, hvor du sætter nummeret ind og sender beløbet. Tryk så <b>Jeg har betalt</b>. Når du har betalt, forsvinder kortet, så det ikke fylder på dagen.</p>
 <p>Den, der har booket banen, og admin kan se, hvem der har betalt, og selv hakke folk af.</p>
 <p>Admin og superbrugere vælger på spilledagen, hvem der har booket banen. Når dagsplanen er lavet, foldes det sammen til en lille linje (“Booket af … · Skift”). Banepriserne sættes under Admin → Baner, og beløbet til bolde under Gruppens indstillinger.</p>`,
   },
@@ -224,7 +224,7 @@ export const FAQ = [
   {
     cat: 'Bødekasse',
     q: 'Hvordan betaler jeg en bøde?',
-    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, så tryk <b>Kopiér nummer</b>, send beløbet i MobilePay, og tryk derefter <b>Jeg har betalt</b>. Så står bøderne som <b>Afventer</b>, til en admin har set pengene.</p>
+    a: `<p>Under <b>Bøder</b> kan du se <b>Dit udestående</b>. Har admin lagt et link til gruppens <b>MobilePay Box</b> ind, trykker du <b>Betal i MobilePay Box</b>, så åbner boksen, og du skriver beløbet. Har admin i stedet skrevet et mobilnummer, så tryk <b>📱 MobilePay</b> (nummeret kopieres), send beløbet, og tryk derefter <b>Jeg har betalt</b>. Så står bøderne som <b>Afventer</b>, til en admin har set pengene.</p>
 <p>Betalinger godkendes af gruppens admin eller af den <b>bødeansvarlige</b>, som admin kan vælge under Bøder → Indstillinger. Superbrugere kan give bøder, men ikke godkende betalinger. En admins egen bøde skal godkendes af en anden admin eller af den bødeansvarlige. Er der ingen andre, kan admin godkende den selv.</p>`,
   },
   {

@@ -99,6 +99,16 @@ export const courtById = (id) => S.courts.find((c) => c.id === id);
 export const centerById = (id) => S.centers.find((c) => c.id === id);
 export const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
+// MobilePay: links med nummer og beløb virker ikke længere i den nye app.
+// Vi kopierer nummeret og åbner bare appen; åbner den ikke, kan man selv åbne den og sætte nummeret ind.
+export async function openMobilePay(nr) {
+  try { await navigator.clipboard.writeText(nr); } catch {}
+  let left = false;
+  const gone = () => { left = true; };
+  document.addEventListener('visibilitychange', gone, { once: true });
+  setTimeout(() => { if (!left && document.visibilityState === 'visible') toast(`Nummeret ${nr} er kopieret. Åbn MobilePay og sæt det ind`); }, 1500);
+  location.href = 'mobilepay://';
+}
 export function toast(msg, bad = false) {
   const t = document.getElementById('toast');
   t.textContent = msg;

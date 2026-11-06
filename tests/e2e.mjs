@@ -106,7 +106,7 @@ try {
   await page.evaluate(() => { window.__savedSession = sessionStorage.getItem('mock-session'); sessionStorage.setItem('mock-session', JSON.stringify({ user: { id: 'u-1', email: 'test1@fredagspadel.test' } })); });
   await page.reload();
   await page.waitForSelector('.pricecard');
-  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard [data-copy="26129208"]').count()) === 1 && !(await page.locator('.pricecard a[href^="mobilepay://"]').count()), 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
+  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard [data-mpopen="26129208"]').count()) === 1 && !(await page.locator('.pricecard a[href^="mobilepay://"]').count()), 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
   await page.click('.pricecard [data-ipaid]');
   await wait(600);
   ok(!(await page.locator('.pricecard').count()), 'når spilleren har betalt, forsvinder kortet');
@@ -603,7 +603,7 @@ try {
   await page.waitForSelector('.finegate');
   const fgt = await page.locator('.finegate').innerText();
   ok(fgt.includes('Du har fået 2 bøder') && fgt.includes('55 kr.'), 'ny bøde vises, når spilleren logger ind');
-  ok((await page.locator('.finegate [data-copy="12345678"]').count()) === 1 && (await page.locator('.finegate .mp[data-payids]').count()) === 1 && !(await page.locator('.finegate a[href^="mobilepay://"]').count()), 'kopiér nummer og "Jeg har betalt" (ingen gamle MobilePay-links)');
+  ok((await page.locator('.finegate [data-mpopen="12345678"]').count()) === 1 && (await page.locator('.finegate .mp[data-payids]').count()) === 1 && !(await page.locator('.finegate a[href^="mobilepay://"]').count()), 'kopiér nummer og "Jeg har betalt" (ingen gamle MobilePay-links)');
   await shot('boede-ved-login');
   await page.click('#fgSee');
   await page.waitForSelector('.page.fines');

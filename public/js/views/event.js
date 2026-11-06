@@ -1,7 +1,7 @@
 // En spilledag: din næste kamp, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
   sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
-  esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave,
+  esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -194,7 +194,8 @@ function priceCard(c) {
   return `<div class="card pricecard"><div class="mtitle">💰 Bane og bolde</div>
     <p><b class="big">${pr.total} kr.</b> <small class="muted">pr. spiller</small></p>
     ${plays && !payee && !iPaid && nr ? `<p class="small">Send ${pr.total} kr. med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}, og tryk så <b>Jeg har betalt</b>.</p>
-      <div class="mact"><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button><button type="button" class="btn sm primary" data-ipaid="1">✓ Jeg har betalt</button></div>` : ''}
+      <div class="mact"><button type="button" class="btn sm primary" data-mpopen="${nr}">📱 MobilePay</button><button type="button" class="btn sm ghost" data-ipaid="1">✓ Jeg har betalt</button></div>
+      <p class="muted small">Nummeret kopieres, når du trykker, så du kan sætte det ind i MobilePay.</p>` : ''}
     ${plays && !payee && iPaid ? '<p class="small ok">✓ Du har betalt.</p>' : ''}
     ${overview && payers.length ? `<div class="paidlist">${payers.map((p) => `<button type="button" class="chip sm ${paid.includes(p) ? 'on' : ''}" data-paidfor="${p}" data-on="${paid.includes(p) ? 1 : 0}" title="Tryk for at ændre">${paid.includes(p) ? '✓' : '○'} ${esc(shortName(p))}</button>`).join('')}</div>
       <p class="muted small">${paid.filter((p) => payers.includes(p)).length} af ${payers.length} har betalt til ${payee ? 'dig' : esc(pr.payee_name || '')}.</p>` : ''}
@@ -621,6 +622,7 @@ function bind(c) {
   app.querySelectorAll('.pricecard [data-paidfor]').forEach((b) => (b.onclick = async () => {
     try { await q(sb.rpc('padel_event_set_paid', { e: ev.id, p_player: b.dataset.paidfor, p_paid: b.dataset.on !== '1' })); await reload(); } catch {}
   }));
+  app.querySelectorAll('.pricecard [data-mpopen]').forEach((b) => (b.onclick = () => openMobilePay(b.dataset.mpopen)));
   app.querySelectorAll('.pricecard [data-copy]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); } }));
   act($('makePlan'), async () => {
     if (!lineupOk()) return;
