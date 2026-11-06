@@ -841,3 +841,7 @@ details.people { display: block; }
 .tdesc .btn { align-self: flex-start; }
 .welcomecard p { margin: 6px 0 0; } .welcomecard { border-left: 4px solid var(--accent); }
 .welcomeset > summary { display: flex; flex-direction: column; cursor: pointer; list-style: none; } .welcomeset > summary::-webkit-details-marker { display: none; }
+/* Pris pr. spiller på spilledagen */
+.pricecard .big { font-size: 26px; }
+.pricecard p { margin: 6px 0; }
+.pricecard select { margin-top: 4px; }

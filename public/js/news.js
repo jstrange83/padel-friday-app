@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-06', date: '6. november 2026', groups: true, title: 'Pris pr. spiller',
+    items: ['💰 Når dagsplanen er lavet, kan du se, hvad dagen koster pr. spiller (baneleje delt ligeligt + bolde), og betale med MobilePay til den, der har booket banen, med ét tryk. Prisen står også i beskeden om dagsplanen.'],
+  },
+  {
     id: '2026-10-31', date: '31. oktober 2026', admin: true, groups: true, title: 'Bødeansvarlig',
     items: ['💸 Under <b>Bøder → Indstillinger</b> kan du vælge en <b>bødeansvarlig</b>, som godkender betalinger sammen med admin. Superbrugere kan stadig give bøder, men ikke godkende betalinger. En admins egen bøde skal godkendes af en anden.'],
   },

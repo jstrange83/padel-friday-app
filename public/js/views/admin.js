@@ -124,6 +124,7 @@ function playersTab() {
     <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
       ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
       <p class="muted small">Én fælles rangliste med samme point i alle grupper. Vælg om gruppen ser alle, kun sine egne, eller ingen (kampene giver stadig point).</p></div>
+    <form class="frow ballfee" id="ballFee"><label class="grow">🎾 Bolde pr. spiller (kr.) <small class="muted">lægges oveni banelejen</small><input name="fee" type="number" min="0" value="${group()?.ball_fee ?? ''}" placeholder="Fx 15"></label><button class="btn sm">Gem</button></form>
     <div class="finesrow"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
       <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
     </details>`}
@@ -202,8 +203,9 @@ function courtsTab() {
   return `${S.centers.map((c) => {
     const cs = S.courts.filter((x) => x.center_id === c.id).sort((a, b) => a.sort - b.sort);
     return `<details class="card centerbox"><summary><b>${esc(c.name)}</b><small class="muted">${cs.length} baner</small></summary>
-      <p class="muted small">Øverst er den bedste bane. Det stærkeste hold kommer på den øverste.</p>
-      ${cs.map((x, i) => `<div class="crow"><span class="rk">${i + 1}</span><span class="grow">${esc(x.name)}</span>
+      <p class="muted small">Øverst er den bedste bane. Det stærkeste hold kommer på den øverste. 💰 er prisen for at leje banen, som deles mellem spillerne.</p>
+      ${cs.map((x, i) => `<div class="crow"><span class="rk">${i + 1}</span><span class="grow">${esc(x.name)}<small class="muted">${x.price ? `${Number(x.price).toLocaleString('da-DK')} kr.` : 'Ingen pris'}</small></span>
+        <button class="icon sm" data-pricecourt="${x.id}" aria-label="Pris for ${esc(x.name)}">💰</button>
         <button class="icon sm" data-cmove="${x.id}" data-dir="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} op">↑</button>
         <button class="icon sm" data-cmove="${x.id}" data-dir="1" ${i === cs.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} ned">↓</button>
         <button class="icon sm" data-rencourt="${x.id}" aria-label="Omdøb ${esc(x.name)}">✏️</button>
@@ -337,6 +339,8 @@ function bind() {
   app.querySelectorAll('input[name=rankmode]').forEach((r) => (r.onchange = async () => {
     try { await q(sb.rpc('padel_set_ranking_mode', { g, p_mode: r.value })); toast({ alle: 'Ranglisten viser alle spillere', gruppe: 'Ranglisten viser kun gruppen', ingen: 'Gruppen har nu ingen rangliste' }[r.value]); await refresh(); } catch {}
   }));
+  const bf = document.getElementById('ballFee');
+  if (bf) bf.onsubmit = async (e) => { e.preventDefault(); try { await q(sb.rpc('padel_set_ball_fee', { g: S.groupId, p_fee: +bf.fee.value || null })); toast('Gemt'); await refresh(); } catch {} };
   const fo = document.getElementById('finesOn');
   if (fo) fo.onchange = async (e) => {
     try {
@@ -418,6 +422,11 @@ function bind() {
     for (const [k, x] of cs.entries()) if (x.sort !== k + 1) await q(sb.from('padel_courts').update({ sort: k + 1 }).eq('id', x.id));
     await hooks.loadBase(); viewAdmin();
     document.querySelectorAll('details.centerbox').forEach((d) => { if (d.querySelector(`[data-cmove="${c.id}"]`)) d.open = true; });
+  });
+  on('[data-pricecourt]', async (b) => {
+    const c = courtById(b.dataset.pricecourt), n = prompt(`Pris for at leje ${c.name} (kr.). Tom = ingen pris`, c.price ?? '');
+    if (n === null) return;
+    await q(sb.rpc('padel_set_court_price', { p_court: c.id, p_price: n.trim() ? +n.replace(',', '.') : null })); refresh();
   });
   on('[data-rencourt]', async (b) => {
     const c = courtById(b.dataset.rencourt), n = prompt('Nyt navn', c.name);

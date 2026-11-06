@@ -19,7 +19,8 @@ async function loadEvent(id) {
   ]);
   const ids = matches.map((m) => m.id);
   const changes = ids.length ? await q(sb.from('padel_elo_changes').select('*').in('match_id', ids).eq('active', true)) : [];
-  return { ev, signups, matches, changes, log };
+  const price = await q(sb.rpc('padel_event_price', { e: id })).catch(() => null);
+  return { ev, signups, matches, changes, log, price };
 }
 
 export async function viewEvent(id) {
@@ -171,6 +172,27 @@ function quickSettings(c, status) {
 }
 
 // "Din næste kamp": det vigtigste for spilleren selv, øverst. Kort og visuelt: runde, bane, tid og holdene.
+// Pris pr. spiller: banelejen delt ligeligt mellem dem, der spiller, plus bolde. Betales med MobilePay til den, der har booket.
+function priceCard(c) {
+  const { ev, me, signed, L, run } = c, pr = c.raw?.price;
+  if (!pr || ev.status === 'afsluttet' && !run) return '';
+  const plays = signed.includes(me) && !(L.courts && L.waiting.includes(me));
+  const payee = pr.payee === me;
+  const nr = pr.phone || '';
+  const fmt = (n) => String(n).replace(/(\d{2})(?=\d)/g, '$1 ');
+  const day = fmtDate(ev.starts_at, { day: 'numeric', month: 'numeric' });
+  const mp = `mobilepay://send?phone=${nr}&amount=${pr.total}&comment=${encodeURIComponent(`Padel ${day}`)}&lock=1`;
+  const members = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
+  if (!plays && !run) return '';
+  return `<div class="card pricecard"><div class="mtitle">💰 Pris pr. spiller</div>
+    <p><b class="big">${pr.total} kr.</b> <small class="muted">${pr.ball ? `bane ${pr.court} kr. + bolde ${pr.ball} kr.` : 'baneleje'} · ${pr.players} spillere deler ${Number(pr.rent).toLocaleString('da-DK')} kr.</small></p>
+    ${plays && !payee && nr ? `<p class="small">Betal med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}.</p>
+      <div class="mact"><a class="btn sm primary" href="${mp}">📱 Betal ${pr.total} kr. med MobilePay</a><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button></div>` : ''}
+    ${plays && payee ? '<p class="small muted">Du har booket banen. De andre betaler til dig.</p>' : ''}
+    ${run ? `<label class="small">Banen er booket af<select id="bookedBy">${members.map((p) => `<option value="${p.id}" ${p.id === pr.payee ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>` : ''}
+  </div>`;
+}
+
 function myNight(c, st) {
   const { ev, me, signed, L, rounds, inRound, roundStart, totalRounds } = c;
   const iAmIn = signed.includes(me);
@@ -467,6 +489,7 @@ function render(data) {
     ${header(c)}
     ${approvals(c)}
     ${myNight(c, st)}
+    ${priceCard(c)}
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
@@ -578,6 +601,10 @@ function bind(c) {
   });
   // Alle tilmeldte (også den, der laver planen) får en notifikation om, hvor og med hvem de starter
   const planNotify = async (redo) => { try { await sb.rpc('padel_event_plan_notify', { e: ev.id, p_redo: redo }); } catch {} };
+  $('bookedBy')?.addEventListener('change', async (e) => {
+    try { await q(sb.rpc('padel_event_set_booker', { e: ev.id, p_user: e.target.value })); toast('Gemt. Spillerne betaler til ' + (S.profiles[e.target.value]?.name.split(' ')[0] || '')); await reload(); } catch {}
+  });
+  app.querySelectorAll('.pricecard [data-copy]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); } }));
   act($('makePlan'), async () => {
     if (!lineupOk()) return;
     if (await buildRounds(c.base + 1, totalRounds)) { toast('Dagsplanen er lavet, og de tilmeldte har fået besked'); await planNotify(false); await reload(); }

@@ -768,6 +768,22 @@ Object.assign(RPC, {
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     notify(thPeople(x).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + x.subject, p_body.slice(0, 140), '/#/samtale/' + t);
   },
+  padel_event_price: ({ e }) => {
+    const ev = db.padel_events.find((x) => x.id === e); if (!ev) return null;
+    const ms = db.padel_matches.filter((m) => m.event_id === e);
+    let courts = [...new Set(ms.map((m) => m.court_id).filter(Boolean))]; if (!courts.length) courts = ev.court_ids || [];
+    let players = new Set(ms.flatMap((m) => [m.a_left, m.a_right, m.b_left, m.b_right]).filter(Boolean)).size;
+    if (!players) players = db.padel_signups.filter((x) => x.event_id === e).length;
+    const rent = db.padel_courts.filter((c) => courts.includes(c.id)).reduce((a, c) => a + (+c.price || 0), 0);
+    const ball = +(db.padel_groups.find((g) => g.id === ev.group_id)?.ball_fee || 0);
+    if (!rent || !players) return null;
+    const pp = Math.ceil(rent / players), payee = ev.booked_by || ev.created_by || 'u-admin';
+    const phone = (db.padel_contacts.find((c) => c.player_id === payee)?.phone || '').replace(/\D/g, '').slice(-8);
+    return { court: pp, ball, total: pp + ball, players, rent, payee, payee_name: nameOf(payee).split(' ')[0], phone };
+  },
+  padel_event_set_booker: ({ e, p_user }) => { const ev = db.padel_events.find((x) => x.id === e); if (!canRun(ev.group_id)) throw new Error('Det har du ikke adgang til'); ev.booked_by = p_user; },
+  padel_set_ball_fee: ({ g, p_fee }) => { if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).ball_fee = p_fee || null; },
+  padel_set_court_price: ({ p_court, p_price }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); db.padel_courts.find((c) => c.id === p_court).price = p_price || null; },
   padel_event_plan_notify: ({ e, p_redo }) => {
     const ev = db.padel_events.find((x) => x.id === e);
     const us = db.padel_signups.filter((x) => x.event_id === e).map((x) => x.player_id);
