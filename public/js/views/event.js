@@ -187,8 +187,10 @@ function priceCard(c) {
   const payers = (inPlan.length ? inPlan : L.courts ? L.playing : signed).filter((p) => p !== pr.payee);
   const overview = run || payee;
   // Har man betalt, forsvinder kortet (admin, superbruger og den, der har booket, ser stadig hvem der har betalt)
-  if (!overview && (!plays || iPaid)) return '';
   const planned = (c.raw?.matches || []).length > 0;
+  // Kortet vises først, når dagsplanen er lavet
+  if (!planned) return '';
+  if (!overview && (!plays || iPaid)) return '';
   const members = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
   const booker = `<select id="bookedBy" aria-label="Banen er booket af">${members.map((p) => `<option value="${p.id}" ${p.id === pr.payee ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`;
   return `<div class="card pricecard"><div class="mtitle">💰 Bane og bolde</div>

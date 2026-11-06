@@ -98,6 +98,8 @@ try {
 
   // Dagsplan (med banepris og bolde, så prisen pr. spiller kan regnes ud)
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_courts.forEach((c) => (c.price = 500)); db.padel_groups.find((g) => g.id === 'g-fre').ball_fee = 15; db.padel_events.forEach((e) => (e.booked_by = 'u-2')); if (!db.padel_contacts.some((c) => c.player_id === 'u-2')) db.padel_contacts.push({ player_id: 'u-2', phone: '26129208' }); window.__mock.save(); });
+  await page.waitForSelector('#makePlan');
+  ok(!(await page.locator('.pricecard').count()), 'prisen vises først, når dagsplanen er lavet');
   await page.click('#makePlan');
   await wait(500);
   await page.waitForSelector('.pricecard');
