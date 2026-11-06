@@ -179,7 +179,7 @@ function priceCard(c) {
   const plays = signed.includes(me) && !(L.courts && L.waiting.includes(me));
   const payee = pr.payee === me;
   const nr = pr.phone || '';
-  const fmt = (n) => String(n).replace(/(\d{2})(?=\d)/g, '$1 ');
+  const fmt = (n) => String(n).replace(/(\d{2})(?=\d)/g, '$1\u00a0');
   const day = fmtDate(ev.starts_at, { day: 'numeric', month: 'numeric' });
   const mp = `mobilepay://send?phone=${nr}&amount=${pr.total}&comment=${encodeURIComponent(`Padel ${day}`)}&lock=1`;
   const members = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
@@ -187,7 +187,7 @@ function priceCard(c) {
   return `<div class="card pricecard"><div class="mtitle">💰 Pris pr. spiller</div>
     <p><b class="big">${pr.total} kr.</b> <small class="muted">${pr.ball ? `bane ${pr.court} kr. + bolde ${pr.ball} kr.` : 'baneleje'} · ${pr.players} spillere deler ${Number(pr.rent).toLocaleString('da-DK')} kr.</small></p>
     ${plays && !payee && nr ? `<p class="small">Betal med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}.</p>
-      <div class="mact"><a class="btn sm primary" href="${mp}">📱 Betal ${pr.total} kr. med MobilePay</a><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nummer</button></div>` : ''}
+      <div class="mact"><a class="btn sm primary" href="${mp}">📱 Betal ${pr.total} kr.</a><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nr.</button></div>` : ''}
     ${plays && payee ? '<p class="small muted">Du har booket banen. De andre betaler til dig.</p>' : ''}
     ${run ? `<label class="small">Banen er booket af<select id="bookedBy">${members.map((p) => `<option value="${p.id}" ${p.id === pr.payee ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>` : ''}
   </div>`;
