@@ -101,7 +101,7 @@ try {
   await page.click('#makePlan');
   await wait(500);
   await page.waitForSelector('.pricecard');
-  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && (await page.locator('.pricecard').innerText()).includes('8 spillere'), 'pris pr. spiller: 2 baner á 500 kr. delt på 8 + 15 kr. bolde = 140 kr.');
+  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && (await page.locator('.pricecard').innerText()).toLowerCase().includes('bane og bolde'), 'pris pr. spiller: 2 baner á 500 kr. delt på 8 + 15 kr. bolde = 140 kr.');
   ok(await page.locator('#bookedBy').count() === 1, 'admin kan vælge, hvem der har booket banen');
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');

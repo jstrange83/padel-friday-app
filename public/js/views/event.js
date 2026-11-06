@@ -172,7 +172,7 @@ function quickSettings(c, status) {
 }
 
 // "Din næste kamp": det vigtigste for spilleren selv, øverst. Kort og visuelt: runde, bane, tid og holdene.
-// Pris pr. spiller: banelejen delt ligeligt mellem dem, der spiller, plus bolde. Betales med MobilePay til den, der har booket.
+// Bane og bolde pr. spiller: banelejen delt ligeligt mellem dem, der spiller, plus bolde. Betales med MobilePay til den, der har booket.
 function priceCard(c) {
   const { ev, me, signed, L, run } = c, pr = c.raw?.price;
   if (!pr || ev.status === 'afsluttet' && !run) return '';
@@ -183,9 +183,10 @@ function priceCard(c) {
   const day = fmtDate(ev.starts_at, { day: 'numeric', month: 'numeric' });
   const mp = `mobilepay://send?phone=${nr}&amount=${pr.total}&comment=${encodeURIComponent(`Padel ${day}`)}&lock=1`;
   const members = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-  if (!plays && !run) return '';
-  return `<div class="card pricecard"><div class="mtitle">💰 Pris pr. spiller</div>
-    <p><b class="big">${pr.total} kr.</b> <small class="muted">${pr.ball ? `bane ${pr.court} kr. + bolde ${pr.ball} kr.` : 'baneleje'} · ${pr.players} spillere deler ${Number(pr.rent).toLocaleString('da-DK')} kr.</small></p>
+  // Kun admin og superbruger ser prisen på spilledagen; spillerne får den i beskeden om dagsplanen
+  if (!run) return '';
+  return `<div class="card pricecard"><div class="mtitle">💰 Bane og bolde</div>
+    <p><b class="big">${pr.total} kr.</b> <small class="muted">pr. spiller</small></p>
     ${plays && !payee && nr ? `<p class="small">Betal med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}.</p>
       <div class="mact"><a class="btn sm primary" href="${mp}">📱 Betal ${pr.total} kr.</a><button type="button" class="btn sm ghost" data-copy="${nr}">Kopiér nr.</button></div>` : ''}
     ${plays && payee ? '<p class="small muted">Du har booket banen. De andre betaler til dig.</p>' : ''}

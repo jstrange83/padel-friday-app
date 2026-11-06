@@ -87,15 +87,15 @@ export const FAQ = [
   {
     cat: 'Hold og runder', group: true,
     q: 'Hvad koster det at spille, og hvem betaler jeg til?',
-    a: `<p>Når dagsplanen er lavet, står <b>💰 Pris pr. spiller</b> på spilledagen. Banelejen for de baner, I spiller på, deles ligeligt mellem alle, der spiller (rundet op til hele kroner), og så lægges der et beløb oveni til bolde, fx 15 kr.</p>
-<p>Du betaler med MobilePay til den, der har booket banen. Tryk <b>📱 Betal med MobilePay</b>, så er nummer og beløb udfyldt. Prisen står også i beskeden, du får, når dagsplanen er klar.</p>
-<p>Admin vælger på spilledagen, hvem der har booket banen. Banepriserne sættes under Admin → Baner, og beløbet til bolde under Gruppens indstillinger.</p>`,
+    a: `<p>Prisen pr. spiller regnes sådan: Banelejen for de baner, I spiller på, deles ligeligt mellem alle, der spiller (rundet op til hele kroner), og så lægges der et beløb oveni til bolde, fx 15 kr.</p>
+<p>Prisen står i beskeden, du får, når dagsplanen er klar, sammen med nummeret på den, der har booket banen. Du betaler med MobilePay til det nummer.</p>
+<p>Admin og superbrugere ser prisen på spilledagen og vælger dér, hvem der har booket banen. Banepriserne sættes under Admin → Baner, og beløbet til bolde under Gruppens indstillinger.</p>`,
   },
   {
     cat: 'Hold og runder',
     q: 'Hvad er dagsplanen?',
     a: `<p>Når spillerne er tilmeldt, kan admin eller en superbruger trykke <b>Lav dagsplan</b>. Så lægger appen alle dagens runder ud på forhånd med hold, baner, pauser og cirka‑tider.</p>
-<p>Alle tilmeldte får en <b>notifikation</b>, når dagsplanen er lavet (og hvis den laves om), fx <i>"Du starter på Bane 2 med Dorthe mod Steen og Thomas. Pris: 178 kr. (bane 163 + bolde 15). MobilePay til Jimmy på 26129208."</i></p>
+<p>Alle tilmeldte får en <b>notifikation</b>, når dagsplanen er lavet (og hvis den laves om), fx <i>"Du starter på Bane 2 med Dorthe mod Steen og Thomas. Bane og bolde: 178 kr. MobilePay til Jimmy på 26129208."</i></p>
 <p>Et sæt tager ca. 20 minutter, så 2 timer giver 6 runder. En 30‑minutters rotation giver 4. Du kan altså se hele aftenen, inden I går på banen.</p>
 <p>Ingen skal starte runderne (undtagen ved Rotation på tid, hvor der er fælles nedtælling). Tryk på jeres kamp og tast resultatet, når I er færdige. Kortet <b>Din næste kamp</b> øverst viser runde, bane, tid og holdene, og du taster eller siger resultatet direkte i kortet. Runderne vælges med knapperne <b>1–6</b>; spillede runder får et ✓, og en prik viser, hvor du selv spiller.</p>
 <p>Melder nogen til eller fra, kan dagsplanen laves om, og runder der allerede er påbegyndt, bliver ikke rørt.</p>`,
