@@ -97,12 +97,19 @@ try {
   await shot('tilmeldte');
 
   // Dagsplan (med banepris og bolde, så prisen pr. spiller kan regnes ud)
-  await page.evaluate(() => { const db = window.__mock.db(); db.padel_courts.forEach((c) => (c.price = 500)); db.padel_groups.find((g) => g.id === 'g-fre').ball_fee = 15; window.__mock.save(); });
+  await page.evaluate(() => { const db = window.__mock.db(); db.padel_courts.forEach((c) => (c.price = 500)); db.padel_groups.find((g) => g.id === 'g-fre').ball_fee = 15; db.padel_events.forEach((e) => (e.booked_by = 'u-2')); if (!db.padel_contacts.some((c) => c.player_id === 'u-2')) db.padel_contacts.push({ player_id: 'u-2', phone: '26129208' }); window.__mock.save(); });
   await page.click('#makePlan');
   await wait(500);
   await page.waitForSelector('.pricecard');
   ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && (await page.locator('.pricecard').innerText()).toLowerCase().includes('bane og bolde'), 'pris pr. spiller: 2 baner á 500 kr. delt på 8 + 15 kr. bolde = 140 kr.');
   ok(await page.locator('#bookedBy').count() === 1, 'admin kan vælge, hvem der har booket banen');
+  await page.evaluate(() => { window.__savedSession = sessionStorage.getItem('mock-session'); sessionStorage.setItem('mock-session', JSON.stringify({ user: { id: 'u-1', email: 'test1@fredagspadel.test' } })); });
+  await page.reload();
+  await page.waitForSelector('.pricecard');
+  ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard a[href^="mobilepay://"]').count()) === 1, 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
+  await page.evaluate(() => sessionStorage.setItem('mock-session', JSON.stringify({ user: { id: 'u-admin', email: 'jimmy@test' } })));
+  await page.reload();
+  await page.waitForSelector('.pricecard');
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();

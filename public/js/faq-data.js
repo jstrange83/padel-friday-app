@@ -88,8 +88,8 @@ export const FAQ = [
     cat: 'Hold og runder', group: true,
     q: 'Hvad koster det at spille, og hvem betaler jeg til?',
     a: `<p>Prisen pr. spiller regnes sådan: Banelejen for de baner, I spiller på, deles ligeligt mellem alle, der spiller (rundet op til hele kroner), og så lægges der et beløb oveni til bolde, fx 15 kr.</p>
-<p>Prisen står i beskeden, du får, når dagsplanen er klar, sammen med nummeret på den, der har booket banen. Du betaler med MobilePay til det nummer.</p>
-<p>Admin og superbrugere ser prisen på spilledagen og vælger dér, hvem der har booket banen. Banepriserne sættes under Admin → Baner, og beløbet til bolde under Gruppens indstillinger.</p>`,
+<p>Prisen står på spilledagen under <b>💰 Bane og bolde</b> og i beskeden, du får, når dagsplanen er klar. Du betaler med MobilePay til den, der har booket banen. Tryk <b>📱 Betal</b>, så er nummer og beløb udfyldt.</p>
+<p>Admin og superbrugere vælger på spilledagen, hvem der har booket banen. Banepriserne sættes under Admin → Baner, og beløbet til bolde under Gruppens indstillinger.</p>`,
   },
   {
     cat: 'Hold og runder',

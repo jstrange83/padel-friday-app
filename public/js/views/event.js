@@ -183,8 +183,8 @@ function priceCard(c) {
   const day = fmtDate(ev.starts_at, { day: 'numeric', month: 'numeric' });
   const mp = `mobilepay://send?phone=${nr}&amount=${pr.total}&comment=${encodeURIComponent(`Padel ${day}`)}&lock=1`;
   const members = activeMembers(ev.group_id).map((m) => S.profiles[m.player_id]).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
-  // Kun admin og superbruger ser prisen på spilledagen; spillerne får den i beskeden om dagsplanen
-  if (!run) return '';
+  // Alle, der spiller, ser prisen; kun admin og superbruger vælger, hvem der har booket banen
+  if (!plays && !run) return '';
   return `<div class="card pricecard"><div class="mtitle">💰 Bane og bolde</div>
     <p><b class="big">${pr.total} kr.</b> <small class="muted">pr. spiller</small></p>
     ${plays && !payee && nr ? `<p class="small">Betal med MobilePay til <b>${esc(pr.payee_name || '')}</b> på ${fmt(nr)}.</p>

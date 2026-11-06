@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-06', date: '6. november 2026', groups: true, title: 'Pris pr. spiller',
-    items: ['💰 Når dagsplanen er lavet, står prisen for bane og bolde i beskeden, sammen med det MobilePay-nummer, du skal betale til.'],
+    items: ['💰 Når dagsplanen er lavet, kan du se, hvad bane og bolde koster pr. spiller, og betale med MobilePay til den, der har booket banen, med ét tryk. Prisen står også i beskeden om dagsplanen.'],
   },
   {
     id: '2026-10-31', date: '31. oktober 2026', admin: true, groups: true, title: 'Bødeansvarlig',
