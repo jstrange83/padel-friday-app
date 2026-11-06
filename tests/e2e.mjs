@@ -107,9 +107,13 @@ try {
   await page.reload();
   await page.waitForSelector('.pricecard');
   ok((await page.locator('.pricecard').innerText()).includes('140 kr.') && !(await page.locator('#bookedBy').count()) && (await page.locator('.pricecard a[href^="mobilepay://"]').count()) === 1, 'en spiller ser prisen og kan betale, men kan ikke vælge, hvem der har booket');
+  await page.click('.pricecard [data-ipaid]');
+  await wait(600);
+  ok(!(await page.locator('.pricecard').count()), 'når spilleren har betalt, forsvinder kortet');
   await page.evaluate(() => sessionStorage.setItem('mock-session', JSON.stringify({ user: { id: 'u-admin', email: 'jimmy@test' } })));
   await page.reload();
   await page.waitForSelector('.pricecard');
+  ok(await page.locator('.pricecard [data-paidfor="u-1"].on').count() === 1 && await page.locator('.pricecard details.bookedby').count() === 1, 'admin ser, hvem der har betalt, og "booket af" er foldet sammen, når dagsplanen er lavet');
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();

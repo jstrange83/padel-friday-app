@@ -779,7 +779,15 @@ Object.assign(RPC, {
     if (!rent || !players) return null;
     const pp = Math.ceil(rent / players), payee = ev.booked_by || ev.created_by || 'u-admin';
     const phone = (db.padel_contacts.find((c) => c.player_id === payee)?.phone || '').replace(/\D/g, '').slice(-8);
-    return { court: pp, ball, total: pp + ball, players, rent, payee, payee_name: nameOf(payee).split(' ')[0], phone };
+    const paid = (db.padel_event_payments || []).filter((x) => x.event_id === e && x.active).map((x) => x.player_id);
+    return { court: pp, ball, total: pp + ball, players, rent, payee, payee_name: nameOf(payee).split(' ')[0], phone, paid };
+  },
+  padel_event_set_paid: ({ e, p_player, p_paid }) => {
+    const ev = db.padel_events.find((x) => x.id === e);
+    if (!(p_player === uid() || canRun(ev.group_id) || (ev.booked_by || ev.created_by) === uid())) throw new Error('Det har du ikke adgang til');
+    db.padel_event_payments ||= [];
+    const r = db.padel_event_payments.find((x) => x.event_id === e && x.player_id === p_player);
+    if (r) r.active = !!p_paid; else db.padel_event_payments.push({ event_id: e, player_id: p_player, active: !!p_paid });
   },
   padel_event_set_booker: ({ e, p_user }) => { const ev = db.padel_events.find((x) => x.id === e); if (!canRun(ev.group_id)) throw new Error('Det har du ikke adgang til'); ev.booked_by = p_user; },
   padel_set_ball_fee: ({ g, p_fee }) => { if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).ball_fee = p_fee || null; },

@@ -845,3 +845,9 @@ details.people { display: block; }
 .pricecard .big { font-size: 26px; }
 .pricecard p { margin: 6px 0; }
 .pricecard select { margin-top: 4px; }
+.pricecard .paidlist { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.pricecard .chip.sm { padding: 5px 10px; font-size: 14px; }
+.pricecard .chip.on { border-color: var(--ok, #22c55e); color: var(--ok, #22c55e); }
+.pricecard .bookedby summary { cursor: pointer; list-style: none; margin-top: 6px; }
+.pricecard .bookedby summary::-webkit-details-marker { display: none; }
+.pricecard p.ok { color: var(--ok, #22c55e); }
