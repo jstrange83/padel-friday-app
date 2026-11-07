@@ -483,7 +483,13 @@ a.ev, .match, .fine, .card.sug, .list .row, .myfine, .logrow, .stats-page .head,
 :root[data-theme="hav"] { --bg: #04202b; --card: #0a3140; --card2: #0f4256; --line: #175b73; --text: #e8f8ff; --muted: #8fc3d6; --accent: #2dd4bf; --accent-ink: #04202b; }
 :root[data-theme="lilla"] { --bg: #160f2b; --card: #221845; --card2: #2e2160; --line: #41307f; --text: #f1edff; --muted: #a99cd6; --accent: #b694ff; --accent-ink: #160f2b; }
 :root[data-theme="nat"] { --bg: #0a0a0a; --card: #161616; --card2: #222222; --line: #303030; --text: #f5f5f5; --muted: #a3a3a3; --accent: #f5c542; --accent-ink: #0a0a0a; }
-:root[data-theme="rosa"] .faq > div, :root[data-theme="lys"] .faq > div { opacity: 1; }
+:root[data-theme="skov"] { --bg: #0b1f14; --card: #12301f; --card2: #19402a; --line: #23573a; --text: #ecf8f0; --muted: #93c4a6; --accent: #4ade80; --accent-ink: #0b1f14; }
+:root[data-theme="rubin"] { --bg: #1f0a0d; --card: #2f1116; --card2: #3f1820; --line: #5a2230; --text: #fdeef0; --muted: #d39aa4; --accent: #fb7185; --accent-ink: #1f0a0d; }
+:root[data-theme="himmel"] { --bg: #eef6fd; --card: #ffffff; --card2: #dcecfa; --line: #c3dbf0; --text: #0b2540; --muted: #4f6d8c; --accent: #0369a1; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="mint"] { --bg: #ecfaf4; --card: #ffffff; --card2: #d7f3e6; --line: #b8e6d1; --text: #0b2e22; --muted: #4b7a66; --accent: #0f766e; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="sand"] { --bg: #fbf5ec; --card: #ffffff; --card2: #f3e8d6; --line: #e6d4b8; --text: #2f1f0b; --muted: #7d6548; --accent: #c2410c; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="lavendel"] { --bg: #f5f2ff; --card: #ffffff; --card2: #ebe5ff; --line: #d8cffa; --text: #22184a; --muted: #6a5f99; --accent: #6d28d9; --accent-ink: #ffffff; --up: #15803d; --dn: #dc2626; --warn: #b45309; }
+:root[data-theme="rosa"] .faq > div, :root[data-theme="lys"] .faq > div, :root[data-theme="himmel"] .faq > div, :root[data-theme="mint"] .faq > div, :root[data-theme="sand"] .faq > div, :root[data-theme="lavendel"] .faq > div { opacity: 1; }
 
 .themes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .theme { border: 2px solid var(--line); border-radius: 16px; padding: 10px; cursor: pointer; text-align: left; font: inherit; color: var(--text); background: var(--card); }

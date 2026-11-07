@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-07', date: '7. november 2026', title: 'Vælg dine egne farver',
-    items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du skifte til <b>lys</b>. Der er også pink, lyserød, hav, lilla og sort og guld. Du finder det under <b>Profil → Udseende</b>.'],
+    items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du vælge en af de lyse: <b>Lys, Lyserød, Himmelblå, Mint, Sand eller Lavendel</b>. Der er også flere mørke, fx Pink, Hav, Skov og Rubin. Du finder det under <b>Profil → Udseende</b>.'],
     link: ['🎨 Vælg farver', '#/udseende'],
   },
   {

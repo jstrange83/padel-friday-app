@@ -1030,6 +1030,13 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await noOverflow('lyst tema');
   await page.goto('http://localhost:8765/#/udseende');
   await page.waitForSelector('.themes');
+  ok((await page.locator('.themes').count()) === 2 && (await page.locator('[data-theme-key]').count()) >= 13, 'temaer delt i Mørke og Lyse, med flere lyse');
+  await shot('tema-valg');
+  for (const k of ['himmel', 'mint', 'sand', 'lavendel', 'skov', 'rubin']) {
+    await page.click(`[data-theme-key="${k}"]`);
+    await wait(150);
+    ok((await page.evaluate(() => getComputedStyle(document.body).backgroundColor)) !== 'rgba(0, 0, 0, 0)' && (await page.evaluate(() => document.documentElement.dataset.theme)) === k, `tema ${k} virker`);
+  }
   await page.click('[data-theme-key=""]');
   await wait(300);
   ok(!(await page.evaluate(() => document.documentElement.dataset.theme)), 'tilbage til standard');

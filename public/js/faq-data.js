@@ -174,7 +174,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg ændre appens farver?',
-    a: `<p>Ja, under <b>Profil → 🎨 Udseende</b>. Vælg fx Pink, Lyserød, Lys, Hav, Lilla eller Sort og guld. Det gælder kun for dig og følger med på alle dine telefoner.</p>`,
+    a: `<p>Ja, under <b>Profil → 🎨 Udseende</b>. Der er mørke farver (fx Pink, Hav, Lilla, Skov, Rubin og Sort og guld) og lyse farver (Lys, Lyserød, Himmelblå, Mint, Sand og Lavendel). Det gælder kun for dig og følger med på alle dine telefoner.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
