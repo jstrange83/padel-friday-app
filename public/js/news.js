@@ -5,6 +5,11 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-07', date: '7. november 2026', title: 'Vælg dine egne farver',
+    items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du skifte til <b>lys</b>. Der er også pink, lyserød, hav, lilla og sort og guld. Du finder det under <b>Profil → Udseende</b>.'],
+    link: ['🎨 Vælg farver', '#/udseende'],
+  },
+  {
     id: '2026-11-06', date: '6. november 2026', groups: true, title: 'Pris pr. spiller',
     items: ['💰 Når dagsplanen er lavet, kan du se, hvad bane og bolde koster pr. spiller, og betale med MobilePay til den, der har booket banen, med ét tryk. Prisen står også i beskeden om dagsplanen.'],
   },
@@ -78,7 +83,8 @@ export async function markNewsSeen() {
 }
 
 const entry = (n) => `<div class="news-entry"><div class="news-head"><b>${esc(n.title)}</b><small class="muted">${esc(n.date)}</small></div>
-  <ul>${n.items.map((i) => `<li>${i}</li>`).join('')}</ul></div>`;
+  <ul>${n.items.map((i) => `<li>${i}</li>`).join('')}</ul>
+  ${n.link ? `<div class="mact"><a class="btn sm" href="${n.link[1]}" data-newslink>${esc(n.link[0])}</a></div>` : ''}</div>`;
 
 // Popup én gang, når appen åbnes efter en større opdatering
 export function maybeShowNews() {
@@ -94,6 +100,8 @@ export function maybeShowNews() {
     <div class="mact"><button class="btn primary" id="newsOk">Forstået</button></div></div>`;
   document.body.appendChild(wrap);
   wrap.querySelector('#newsOk').onclick = async () => { wrap.remove(); await markNewsSeen(); };
+  // Knap i en nyhed (fx Vælg farver): luk popuppen, marker som set, og gå derhen
+  wrap.querySelectorAll('[data-newslink]').forEach((a) => (a.onclick = () => { wrap.remove(); markNewsSeen(); }));
   return true;
 }
 

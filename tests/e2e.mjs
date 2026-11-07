@@ -1040,7 +1040,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Bødeansvarlig') && nm.includes('dagsplanen er klar'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Bødeansvarlig') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1057,7 +1057,9 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
   ok(!(await page.locator('#newsModal').innerText()).includes('Bødeansvarlig'), 'spillere ser ikke admin-nyheder');
-  await page.click('#newsOk');
+  await page.click('#newsModal [data-newslink]');
+  await page.waitForSelector('[data-theme-key]');
+  ok(!(await page.locator('#newsModal').count()) && page.url().includes('#/udseende'), 'knappen "Vælg farver" i nyheden fører til Udseende');
   await page.goto('http://localhost:8765/#/nyt');
   await page.waitForSelector('.news-entry');
   ok((await page.locator('.news-entry').count()) >= 1, 'tidligere nyheder kan læses under Profil');
