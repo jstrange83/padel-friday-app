@@ -483,6 +483,7 @@ export const kidFormFields = (k = {}, i = 0, collect = false, lockName = false) 
   ${collect ? `<label>Adresse <small class="muted">(bruges til kommunens tilskud)</small><input name="kaddr" required maxlength="200" autocomplete="street-address" value="${esc(k.address || '')}" placeholder="Vej og nr., postnr. og by"></label>` : ''}`;
 };
 // Ønske om hold: holdene med tider (hentes ved indmeldelsen, også før man er med i klubben)
+let JOIN_HAVE = [];
 let JOIN_TEAMS = [];
 const WD_SHORT = { 1: 'man', 2: 'tir', 3: 'ons', 4: 'tor', 5: 'fre', 6: 'lør', 7: 'søn' };
 export const teamTimes = (t) => (t.sessions || []).map((x) => `${WD_SHORT[x.weekday]} ${x.start.replace(':', '.')}–${x.end.replace(':', '.')}`).join(', ');
@@ -496,7 +497,7 @@ const selfFields = (collect) => `<fieldset class="kidf selff"><legend>Dig</legen
   ${wishSel()}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Jeg vil gerne prøve 1-2 træninger først</span></label>
   <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold, niveau eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne spille om aftenen"></label></fieldset>`;
-const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + 1}</legend>${kidFormFields({}, i, collect)}
+const kidFields = (i, collect) => `<fieldset class="kidf"><legend>Barn ${i + JOIN_HAVE.length + 1}</legend>${kidFormFields({}, i, collect)}
   ${wishSel()}
   <label class="switch"><input type="checkbox" name="ktrial"><span>Vi vil gerne prøve 1-2 træninger først</span></label>
   <label>Ønsker til indmeldelsen <small class="muted">(valgfri, fx hold eller erfaring)</small><input name="knote" maxlength="500" placeholder="Fx har spillet et år, vil gerne på hold med Oscar"></label></fieldset>`;
@@ -542,13 +543,22 @@ export async function viewClubJoin(g) {
   }
   const mode = canSelf && canKid ? (S.joinMode || 'self') : canSelf ? 'self' : 'kid';
   JOIN_TEAMS = g ? ((await q(sb.rpc('padel_club_join_teams', { g })).catch(() => [])) || []) : [];
+  // Børn, man allerede har meldt ind i klubben: nye børn nummereres efter dem
+  JOIN_HAVE = [];
+  if (g && S.me) {
+    try {
+      const gds = await q(sb.from('padel_club_guardians').select('kid_id').eq('user_id', S.me.id).eq('active', true));
+      if (gds.length) JOIN_HAVE = (await q(sb.from('padel_club_kids').select('id,name,adult,status,group_id').in('id', gds.map((x) => x.kid_id)))).filter((k) => k.group_id === g && !k.adult && ['ansoegt', 'aktiv'].includes(k.status));
+    } catch {}
+  }
   app.innerHTML = `
   <div class="page club">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
     <h1>${fixed && cur ? `Meld ind i ${esc(cur.name)}` : aud === 'boern' ? 'Meld et barn ind' : 'Meld ind i en klub'}</h1>
     <p class="muted">${mode === 'self' ? 'Udfyld oplysningerne om dig. En træner godkender indmeldelsen og sætter dig på et hold, og du får besked her i appen.' : 'Udfyld for hvert barn. En træner godkender indmeldelsen og sætter barnet på et hold, og du får besked her i appen.'}</p>
-    ${cur?.welcome ? `<div class="card welcomecard"><b>👋 Velkommen</b><p>${rich(cur.welcome)}</p></div>` : ''}
-    ${teamInfo(JOIN_TEAMS)}
+    ${cur?.welcome ? `<details class="card welcomecard"><summary><b>👋 Velkommen</b><span class="muted">›</span></summary><p>${rich(cur.welcome)}</p></details>` : ''}
+    ${teamInfo(JOIN_TEAMS, false)}
+    ${mode === 'kid' && JOIN_HAVE.length ? `<p class="muted small">Du har allerede meldt ${JOIN_HAVE.map((k) => `<b>${esc(k.name.split(' ')[0])}</b>`).join(' og ')} ind. Her melder du ${JOIN_HAVE.length === 1 ? 'et barn mere' : 'flere børn'} ind.</p>` : ''}
     <form id="joinForm" class="card">
       ${fixed ? '' : `<label>Klub<select name="club" required><option value="">Vælg klub…</option>${clubs.map((c) => `<option value="${c.id}" ${c.id === g ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>`}
       ${canSelf && canKid ? `<div class="lbl">Hvem skal meldes ind?</div><div class="seg two" role="radiogroup"><label><input type="radio" name="jmode" value="self" ${mode === 'self' ? 'checked' : ''}><span>Mig selv</span></label><label><input type="radio" name="jmode" value="kid" ${mode === 'kid' ? 'checked' : ''}><span>Et barn</span></label></div>` : ''}
@@ -1146,34 +1156,95 @@ export async function loadAttendance(weeks) {
   return { from, to };
 }
 
+// Små SVG-grafer til fremmøde (farver følger temaet)
+const isoWeek = (d) => { const t = new Date(d + 'T12:00:00Z'); const day = (t.getUTCDay() + 6) % 7; t.setUTCDate(t.getUTCDate() - day + 3); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 4)); return 1 + Math.round(((t - y) / 864e5 - 3 + ((y.getUTCDay() + 6) % 7)) / 7); };
+const pctClass = (p) => (p == null ? '' : p < 50 ? 'low' : p < 75 ? 'mid' : 'high');
+function donut(parts, center, sub) {
+  const total = parts.reduce((a, p) => a + p.n, 0);
+  const R = 42, L = 2 * Math.PI * R;
+  let off = 0;
+  const segs = total ? parts.filter((p) => p.n).map((p) => { const len = (p.n / total) * L; const seg = `<circle r="${R}" cx="50" cy="50" fill="none" stroke="${p.c}" stroke-width="14" stroke-dasharray="${len} ${L - len}" stroke-dashoffset="${-off}"/>`; off += len; return seg; }).join('') : '';
+  return `<div class="donut"><svg viewBox="0 0 100 100" role="img" aria-label="${esc(parts.map((p) => `${p.label}: ${p.n}`).join(', '))}">
+    <circle r="${R}" cx="50" cy="50" fill="none" stroke="var(--card2)" stroke-width="14"/><g transform="rotate(-90 50 50)">${segs}</g>
+    <text x="50" y="50" text-anchor="middle" class="dc">${center}</text><text x="50" y="64" text-anchor="middle" class="ds">${sub}</text></svg>
+    <ul class="dleg">${parts.map((p) => `<li><i style="background:${p.c}"></i>${esc(p.label)} <b>${p.n}</b></li>`).join('')}</ul></div>`;
+}
+function weekBars(weeks) {
+  if (!weeks.length) return '';
+  return `<div class="wbars">${weeks.map((w) => `<div class="wbar" title="Uge ${w.wk}: ${w.pct}%"><span class="wv">${w.pct}%</span><div class="wcol"><i class="${pctClass(w.pct)}" style="height:${Math.max(w.pct, 3)}%"></i></div><small>u${w.wk}</small></div>`).join('')}</div>`;
+}
+
 export function clubAttendanceTab() {
   const weeks = S.attWeeks || 8, teams = myTeams();
-  if (S.attTeam && !teams.some((t) => t.id === S.attTeam)) S.attTeam = null;
-  const tId = S.attTeam || teams[0]?.id;
-  if (!tId) return '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>';
+  if (S.attTeam && S.attTeam !== 'alle' && !teams.some((t) => t.id === S.attTeam)) S.attTeam = null;
+  if (!teams.length) return '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>';
+  const all = teams.length > 1 && (S.attTeam || 'alle') === 'alle';
+  const tIds = all ? teams.map((t) => t.id) : [S.attTeam && S.attTeam !== 'alle' ? S.attTeam : teams[0].id];
   const to = todayISO(), from = addDays(to, -weeks * 7);
   // Træninger der er holdt: ikke aflyst, og hvor træneren har krydset fremmøde af
-  const held = occurrences([tId], from, to).filter((o) => !cancelOf(o.s.id, o.day) && C().attendance.some((a) => a.session_id === o.s.id && a.day === o.day));
-  const kids = C().kids.filter((k) => k.status === 'aktiv' && k.team_id === tId);
+  const held = occurrences(tIds, from, to).filter((o) => !cancelOf(o.s.id, o.day) && C().attendance.some((a) => a.session_id === o.s.id && a.day === o.day));
+  const kids = C().kids.filter((k) => k.status === 'aktiv' && tIds.includes(k.team_id));
+  const heldFor = (k) => held.filter((o) => o.s.team_id === k.team_id);
+  let met = 0, afb = 0, ude = 0;
   const rows = kids.map((k) => {
-    const met = held.filter((o) => present(o.s.id, o.day, k.id)).length;
-    const afb = held.filter((o) => answer(o.s.id, o.day, k.id) === 'afbud').length;
-    const last = held.filter((o) => present(o.s.id, o.day, k.id)).map((o) => o.day).pop();
-    return { k, met, afb, pct: held.length ? Math.round((met / held.length) * 100) : null, last };
+    const h = heldFor(k);
+    const m = h.filter((o) => present(o.s.id, o.day, k.id)).length;
+    const a = h.filter((o) => !present(o.s.id, o.day, k.id) && answer(o.s.id, o.day, k.id) === 'afbud').length;
+    met += m; afb += a; ude += h.length - m - a;
+    const last = h.filter((o) => present(o.s.id, o.day, k.id)).map((o) => o.day).pop();
+    return { k, met: m, afb: a, n: h.length, pct: h.length ? Math.round((m / h.length) * 100) : null, last };
   }).sort((a, b) => (a.pct ?? 101) - (b.pct ?? 101) || a.k.name.localeCompare(b.k.name));
-  const avg = rows.length && held.length ? Math.round(rows.reduce((s2, x) => s2 + x.met, 0) / (rows.length * held.length) * 100) : null;
+  const slots = met + afb + ude;
+  const avg = slots ? Math.round((met / slots) * 100) : null;
+  // Pr. uge
+  const byWeek = new Map();
+  for (const o of held) {
+    const ks = kids.filter((k) => k.team_id === o.s.team_id);
+    const key = isoWeek(o.day);
+    const w = byWeek.get(key) || { wk: key, day: o.day, m: 0, n: 0 };
+    w.m += ks.filter((k) => present(o.s.id, o.day, k.id)).length; w.n += ks.length;
+    byWeek.set(key, w);
+  }
+  const wk = [...byWeek.values()].sort((a, b) => a.day.localeCompare(b.day)).filter((w) => w.n).map((w) => ({ ...w, pct: Math.round((w.m / w.n) * 100) }));
+  // Pr. hold (kun i "Alle hold")
+  const perTeam = all ? teams.map((t) => {
+    const rs = rows.filter((r) => r.k.team_id === t.id);
+    const m = rs.reduce((a, r) => a + r.met, 0), n = rs.reduce((a, r) => a + r.n, 0);
+    return { t, kids: rs.length, pct: n ? Math.round((m / n) * 100) : null };
+  }) : [];
+  const buckets = [
+    { label: 'Over 75%', n: rows.filter((r) => r.pct != null && r.pct >= 75).length, c: 'var(--up)' },
+    { label: '50–75%', n: rows.filter((r) => r.pct != null && r.pct >= 50 && r.pct < 75).length, c: 'var(--warn)' },
+    { label: 'Under 50%', n: rows.filter((r) => r.pct != null && r.pct < 50).length, c: 'var(--dn)' },
+  ];
+  const title = all ? 'Alle hold' : team(tIds[0]).name;
+  const word = hasAdults() ? 'spillere' : 'børn';
   return `
-    ${teams.length > 1 ? `<label class="teamsel"><span>Hold</span><select id="attTeamSel">${teams.map((t) => `<option value="${t.id}" ${t.id === tId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
+    ${teams.length > 1 ? `<label class="teamsel"><span>Hold</span><select id="attTeamSel"><option value="alle" ${all ? 'selected' : ''}>Alle hold</option>${teams.map((t) => `<option value="${t.id}" ${!all && t.id === tIds[0] ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
     <div class="chips static">${[4, 8, 16].map((w) => `<button class="chip ${w === weeks ? 'on' : ''}" data-attweeks="${w}">${w} uger</button>`).join('')}</div>
-    <div class="card feesum"><b>📊 ${esc(team(tId).name)} · de sidste ${weeks} uger</b>
-      <div class="ftiles"><div><b>${held.length}</b><small>træninger</small></div><div><b>${avg ?? '–'}${avg != null ? '%' : ''}</b><small>fremmøde</small></div><div><b>${kids.length}</b><small>børn</small></div></div>
+    <div class="card feesum"><b>📊 ${esc(title)} · de sidste ${weeks} uger</b>
+      <div class="ftiles"><div><b>${held.length}</b><small>træninger</small></div><div><b class="${pctClass(avg)}">${avg ?? '–'}${avg != null ? '%' : ''}</b><small>fremmøde</small></div><div><b>${kids.length}</b><small>${word}</small></div></div>
       <p class="muted small">Tæller de træninger, hvor fremmødet er krydset af.</p></div>
-    <div class="card">${rows.map((x) => `<div class="krow"><span class="grow"><b>${esc(x.k.name)}</b><small class="muted">${x.met} af ${held.length} gange${x.afb ? ` · ${x.afb} afbud` : ''}${x.last ? ` · sidst ${fmtDay(x.last)}` : ''}</small></span>
-      <span class="pct ${x.pct == null ? '' : x.pct < 50 ? 'low' : x.pct < 75 ? 'mid' : 'high'}">${x.pct == null ? '–' : `${x.pct}%`}</span></div>`).join('') || '<p class="muted small">Ingen børn på holdet.</p>'}</div>`;
+    ${slots ? `<div class="card attcharts">
+      <div class="mtitle">Overblik</div>
+      <div class="donuts">
+        ${donut([{ label: 'Mødt', n: met, c: 'var(--up)' }, { label: 'Afbud', n: afb, c: 'var(--warn)' }, { label: 'Udeblev', n: ude, c: 'var(--dn)' }], `${avg}%`, 'mødt')}
+        ${donut(buckets, String(rows.filter((r) => r.pct != null).length), word)}
+      </div>
+      <p class="muted small">Til venstre: alle pladser til træning. Til højre: ${word} fordelt efter, hvor tit de kommer.</p>
+    </div>` : ''}
+    ${wk.length > 1 ? `<div class="card"><div class="mtitle">Fremmøde uge for uge</div>${weekBars(wk)}</div>` : ''}
+    ${perTeam.length ? `<div class="card"><div class="mtitle">Hold</div>${perTeam.map((x) => `<button type="button" class="hbar" data-attteam="${x.t.id}"><span class="hname">${esc(x.t.name)} <small class="muted">${x.kids} ${word}</small></span>
+      <span class="htrack"><i class="${pctClass(x.pct)}" style="width:${x.pct ?? 0}%"></i></span><span class="pct ${pctClass(x.pct)}">${x.pct == null ? '–' : `${x.pct}%`}</span></button>`).join('')}
+      <p class="muted small">Tryk på et hold for at se det alene.</p></div>` : ''}
+    <div class="card"><div class="mtitle">${hasAdults() ? 'Spillere' : 'Børn'} <small class="muted">· lavest fremmøde øverst</small></div>${rows.map((x) => `<div class="krow"><span class="grow"><b>${esc(x.k.name)}</b><small class="muted">${all ? `${esc(team(x.k.team_id)?.name || '')} · ` : ''}${x.met} af ${x.n} gange${x.afb ? ` · ${x.afb} afbud` : ''}${x.last ? ` · sidst ${fmtDay(x.last)}` : ''}</small>
+      <span class="htrack sm"><i class="${pctClass(x.pct)}" style="width:${x.pct ?? 0}%"></i></span></span>
+      <span class="pct ${pctClass(x.pct)}">${x.pct == null ? '–' : `${x.pct}%`}</span></div>`).join('') || `<p class="muted small">Ingen ${word} på holdet.</p>`}</div>`;
 }
 
 export function bindClubAttendance(refresh) {
   const as = document.getElementById('attTeamSel'); if (as) as.onchange = () => { S.attTeam = as.value; refresh(); };
+  app.querySelectorAll('[data-attteam]').forEach((b) => (b.onclick = () => { S.attTeam = b.dataset.attteam; refresh(); }));
   app.querySelectorAll('[data-attweeks]').forEach((b) => (b.onclick = () => { S.attWeeks = +b.dataset.attweeks; refresh(); }));
 }
 

@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Fremmøde med grafer',
+    items: ['📊 Under <b>Admin → Fremmøde</b> kan du nu se <b>alle hold samlet</b> eller ét hold ad gangen, med lagkager, en graf uge for uge og en bjælke pr. hold.'],
+  },
+  {
     id: '2026-11-07', date: '7. november 2026', title: 'Vælg dine egne farver',
     items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du vælge en af de lyse: <b>Lys, Lyserød, Himmelblå, Mint, Sand eller Lavendel</b>. Der er også flere mørke, fx Pink, Hav, Skov og Rubin. Du finder det under <b>Profil → Udseende</b>.'],
     link: ['🎨 Vælg farver', '#/udseende'],

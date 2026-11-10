@@ -445,7 +445,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvor ser jeg fremmøde?',
-    a: `<p>Trænere ser under <b>Admin → Fremmøde</b>, hvor ofte hvert barn er kommet de sidste 4, 8 eller 16 uger. Det tæller de træninger, hvor fremmødet er krydset af under Træning. Børn med lavt fremmøde står øverst.</p>`,
+    a: `<p>Trænere ser under <b>Admin → Fremmøde</b>, hvor ofte hvert barn er kommet de sidste 4, 8 eller 16 uger. Vælg <b>Alle hold</b> for at se hele klubben samlet eller ét hold ad gangen. Der er lagkager over mødt, afbud og udeblevet, en graf uge for uge og en bjælke pr. hold (tryk på et hold for at se det alene). Det tæller de træninger, hvor fremmødet er krydset af under Træning. Børn med lavt fremmøde står øverst.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,

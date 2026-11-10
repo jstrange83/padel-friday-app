@@ -835,8 +835,8 @@ input.locked { opacity: .75; }
 details.people { display: block; }
 .kage { display: block; margin-top: 4px; color: var(--accent); font-weight: 600; font-size: 13px; min-height: 1em; }
 /* Beskrivelse af holdene */
-.teaminfo > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
-.teaminfo > summary::-webkit-details-marker { display: none; }
+.teaminfo > summary, details.welcomecard > summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.teaminfo > summary::-webkit-details-marker, details.welcomecard > summary::-webkit-details-marker { display: none; }
 .tinfo { padding: 10px 0; border-top: 1px solid var(--line); }
 .tinfo:first-of-type { border-top: 0; }
 .tinfo small { display: block; }
@@ -857,3 +857,28 @@ details.people { display: block; }
 .pricecard .bookedby summary { cursor: pointer; list-style: none; margin-top: 6px; }
 .pricecard .bookedby summary::-webkit-details-marker { display: none; }
 .pricecard p.ok { color: var(--ok, #22c55e); }
+
+/* Fremmøde: grafer */
+.attcharts .donuts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.donut svg { width: 100%; max-width: 150px; display: block; margin: 0 auto; }
+.donut circle { transition: stroke-dasharray .4s; }
+.donut .dc { font-size: 19px; font-weight: 800; fill: var(--text); }
+.donut .ds { font-size: 9px; fill: var(--muted); }
+.dleg { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13px; }
+.dleg li { display: flex; align-items: center; gap: 6px; padding: 2px 0; }
+.dleg li b { margin-left: auto; }
+.dleg i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.wbars { display: flex; align-items: flex-end; gap: 6px; height: 150px; margin-top: 10px; }
+.wbar { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.wbar .wv { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+.wbar .wcol { flex: 1; width: 100%; max-width: 34px; background: var(--card2); border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.wbar .wcol i { display: block; width: 100%; border-radius: 6px; }
+.wbar small { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.wcol i.high, .htrack i.high { background: var(--up); } .wcol i.mid, .htrack i.mid { background: var(--warn); } .wcol i.low, .htrack i.low { background: var(--dn); }
+.hbar { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "n p" "t t"; gap: 4px 10px; width: 100%; background: none; border: 0; border-top: 1px solid var(--line); color: inherit; font: inherit; text-align: left; padding: 10px 0; margin: 0; cursor: pointer; }
+.hbar:first-of-type { border-top: 0; }
+.hbar .hname { grid-area: n; font-weight: 700; min-width: 0; } .hbar .pct { grid-area: p; } .hbar .htrack { grid-area: t; }
+.htrack { display: block; height: 10px; background: var(--card2); border-radius: 99px; overflow: hidden; }
+.htrack.sm { height: 6px; margin-top: 6px; }
+.htrack i { display: block; height: 100%; border-radius: 99px; }
+.ftiles b.high { color: var(--up); } .ftiles b.mid { color: var(--warn); } .ftiles b.low { color: var(--dn); }

@@ -1047,7 +1047,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Bødeansvarlig') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Fremmøde med grafer') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1063,7 +1063,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a, .finegate');
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
-  ok(!(await page.locator('#newsModal').innerText()).includes('Bødeansvarlig'), 'spillere ser ikke admin-nyheder');
+  ok(!(await page.locator('#newsModal').innerText()).includes('Fremmøde med grafer'), 'spillere ser ikke admin-nyheder');
   await page.click('#newsModal [data-newslink]');
   await page.waitForSelector('[data-theme-key]');
   ok(!(await page.locator('#newsModal').count()) && page.url().includes('#/udseende'), 'knappen "Vælg farver" i nyheden fører til Udseende');
@@ -1217,6 +1217,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#pf button.primary');
   await pastGates();
   await page.waitForSelector('#joinForm');
+  const joinUrl = page.url();
+  ok(!(await page.locator('details.welcomecard[open], details.teaminfo[open]').count()), 'velkomst og holdene er foldet sammen ved indmeldelsen');
+  await page.click('details.welcomecard > summary');
+  await page.click('details.teaminfo > summary');
   ok((await page.locator('.welcomecard').innerText()).includes('Husk indendørssko') && (await page.locator('.teaminfo').innerText()).includes('Vi lærer grundslagene'), 'indmeldelsen viser velkomstbeskeden og holdenes beskrivelse');
   await shot('klub-indmeld-velkomst');
   const k0 = page.locator('.kidf').nth(0);
@@ -1241,6 +1245,9 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(600);
   ok((await text()).includes('oscar test') && (await text()).includes('træner har godkendt'), 'forælder ser at børnene venter på godkendelse');
   ok((await page.evaluate(() => { const db = window.__mock.db(); const o = db.padel_club_kids.find((k) => k.name === 'Oscar Test'), i = db.padel_club_kids.find((k) => k.name === 'Ida Test'); return o.birth_date === '2014-05-03' && o.gender === 'dreng' && o.photo_ok === true && i.photo_ok === false && !!o.address && db.padel_club_kid_info.some((x) => x.kid_id === o.id); })), 'fødselsdato, køn, billedsamtykke, adresse og info gemt');
+  await page.goto(joinUrl);
+  await page.waitForSelector('#joinForm .kidf legend');
+  ok((await page.locator('#joinForm .kidf legend').first().innerText()) === 'Barn 3' && (await page.locator('#joinForm').evaluate((f) => f.parentElement.innerText)).includes('allerede meldt Oscar og Ida ind'), 'har man allerede meldt børn ind, fortsætter nummereringen (Barn 3)');
 
   // Træneren (Brian) godkender og sætter på hold
   await freshLogin('brian@test');
@@ -1334,6 +1341,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('[data-tab="fremmode"]');
   await page.waitForSelector('.pct');
   ok((await page.locator('.krow:has-text("Ida Test") .pct').innerText()) === '100%' && (await page.locator('.krow:has-text("Oscar Test") .pct').innerText()) === '0%', 'fremmødestatistik pr. barn');
+  ok((await page.locator('.attcharts .donut').count()) === 2 && (await page.locator('.htrack').count()) >= 2, 'fremmøde med lagkager og bjælker');
+  if (await page.locator('#attTeamSel option[value="alle"]').count()) {
+    ok((await page.locator('#attTeamSel').inputValue()) === 'alle' && (await page.locator('.hbar').count()) >= 2, 'Alle hold samlet, med en bjælke pr. hold');
+    await page.locator('.hbar').first().click();
+    await page.waitForFunction(() => document.querySelector('#attTeamSel')?.value !== 'alle');
+    ok(!(await page.locator('.hbar').count()), 'tryk på et hold viser holdet alene');
+    await page.selectOption('#attTeamSel', 'alle');
+    await page.waitForSelector('.hbar');
+  }
   await shot('klub-fremmode');
   await noOverflow('klub fremmøde');
   await page.goto('http://localhost:8765/#/traening');
