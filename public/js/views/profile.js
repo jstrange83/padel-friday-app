@@ -6,6 +6,8 @@ import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupEl
 import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn, setEditMode } from '../editmode.js';
 import { msgRowLabel, unreadThreads } from './messages.js';
+// Barn uden e-mail: koden til login (gemt på telefonen ved login)
+const kidCodeTxt = () => { try { const c = localStorage.getItem('fp-kidcode'); return c ? c.toUpperCase().replace(/(.{4})(?=.)/g, '$1-') : ''; } catch { return ''; } };
 
 const initials = (name) => name.trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -79,6 +81,7 @@ export function renderProfile(isNew) {
       <p class="muted small">${S.realMe?.is_superadmin ? '<b>Superadmin</b>: alt i alle grupper. <b>Mine roller</b>: kun de grupper, du er med i, med den rolle du har dér. <b>Bruger</b>: som en almindelig spiller.' : '<b>Admin</b>: med dine admin- og trænerrettigheder. <b>Bruger</b>: som en almindelig spiller.'}</p>
       ${S.realMe?.is_superadmin ? `<label class="switch"><input type="checkbox" id="editMode" ${S.editMode ? 'checked' : ''}><span>✏️ Redigeringstilstand <small class="muted">(ret og slet alt, på denne enhed)</small></span></label>` : ''}</div>` : ''}
     <div class="pfoot">
+      ${!viewing && S.isKid && kidCodeTxt() ? `<div class="card kidcodebox"><small>Din kode til login (fx når du åbner appen fra hjemmeskærmen):</small><b>${kidCodeTxt()}</b></div>` : ''}
       ${viewing ? '' : '<button class="btn" id="logout">↩️ Log ud</button>'}
       ${p.is_superadmin ? '' : `<button class="link sm dn" id="deleteMe">🗑 ${viewing ? 'Slet spilleren' : 'Slet min profil'}</button>`}
     </div>
@@ -122,7 +125,10 @@ function bind(isNew) {
       renderProfile(false);
     } catch { busy(btn, false); }
   };
-  document.getElementById('logout')?.addEventListener('click', () => sb.auth.signOut());
+  document.getElementById('logout')?.addEventListener('click', () => {
+    if (S.isKid && kidCodeTxt() && !confirm(`Log ud? Du kan logge ind igen med din kode ${kidCodeTxt()}`)) return;
+    sb.auth.signOut();
+  });
   const em = document.getElementById('editMode');
   if (em) em.onchange = () => { setEditMode(em.checked); toast(em.checked ? 'Redigering er slået til' : 'Redigering er slået fra'); };
   app.querySelectorAll('input[name=vmode]').forEach((r) => (r.onchange = () => { setViewMode(r.value); toast({ super: 'Du ser appen som superadmin', mine: 'Du ser appen med dine egne roller', bruger: 'Du ser appen som almindelig bruger' }[r.value]); hooks.boot(); }));

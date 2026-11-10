@@ -537,6 +537,7 @@ Object.assign(RPC, {
     Object.assign(k, { name: p_name.trim(), birth_date: p_birth_date, birth_year: p_birth_date ? +p_birth_date.slice(0, 4) : k.birth_year, gender: { mand: 'dreng', kvinde: 'pige' }[p_gender] || p_gender, photo_ok: p_photo_ok, address: p_address || null });
     upsert('padel_club_kid_info', ['kid_id'], { kid_id: p_kid, info: p_info?.trim() || null });
   },
+  padel_club_kid_new_code: ({ p_kid }) => { if (!kidMine(p_kid)) throw new Error('Det har du ikke adgang til'); const k = KID(p_kid); k.login_code = uuid().replace(/-/g, '').slice(0, 12); return k.login_code; },
   padel_club_kid_family: ({ p_kids }) => db.padel_club_guardians.filter((g) => g.active !== false && p_kids.includes(g.kid_id) && db.padel_club_guardians.some((m) => m.kid_id === g.kid_id && m.user_id === uid() && m.active !== false))
     .map((g) => ({ kid_id: g.kid_id, user_id: g.user_id, name: db.padel_profiles.find((p) => p.id === g.user_id)?.name || '' })),
   padel_club_remove_guardian: ({ p_kid, p_user }) => {
@@ -861,16 +862,16 @@ export function createClient() {
     functions: {
       async invoke(name, { body } = {}) {
         if (name !== 'padel-kid-login') return { data: null, error: { message: 'Ukendt funktion' } };
-        const k = db.padel_club_kids.find((x) => x.login_code === body?.code && ['ansoegt', 'aktiv'].includes(x.status) && !x.adult);
+        const k = db.padel_club_kids.find((x) => x.login_code === String(body?.code || '').toLowerCase().replace(/[^a-z0-9]/g, '') && ['ansoegt', 'aktiv'].includes(x.status) && !x.adult);
         if (!k) return { data: null, error: { message: 'Linket virker ikke længere. Bed din forælder om et nyt.' } };
         const email = `barn-${k.id}@born.padel-friday-app.vercel.app`;
         let p = db.padel_profiles.find((x) => x.email === email);
         if (k.player_id && !p) return { data: null, error: { message: 'Du har allerede et login med e-mail. Log ind med din e-mail og adgangskode.' } };
         if (!p) { p = { id: 'u-barn-' + k.id.slice(0, 8), name: k.name, gender: k.gender === 'pige' ? 'kvinde' : 'mand', side: 'begge', elo: 1000, is_admin: false, role: 'bruger', email, news_seen: '9999' }; db.padel_profiles.push(p); }
-        k.player_id = p.id; k.login_code = uuid().replace(/-/g, '').slice(0, 12);
+        k.player_id = p.id;
         if (k.status === 'aktiv' && !db.padel_group_members.some((m) => m.group_id === k.group_id && m.player_id === p.id)) db.padel_group_members.push({ group_id: k.group_id, player_id: p.id, role: 'bruger', status: 'aktiv', elo: 1000 });
         save();
-        return { data: { email, password: 'x', group: k.group_id, name: k.name }, error: null };
+        return { data: { email, password: 'x', group: k.group_id, name: k.name, code: k.login_code }, error: null };
       },
     },
     from: (t) => new Query(t),

@@ -54,6 +54,7 @@ export function renderAuth(mode = 'login') {
       <button class="btn primary" type="submit">${signup ? 'Opret konto' : 'Log ind'}</button>
       ${signup ? '' : '<button class="link" type="button" id="forgot">Glemt adgangskode?</button>'}
     </form>
+    <p class="center"><button class="link sm" type="button" id="kidCode">🧒 Barn uden e-mail? Log ind med din kode</button></p>
   </div>`;
   // Bolden hopper kun første gang (ikke når man skifter fane), og aldrig hvis man har bedt om mindre bevægelse
   if (!replay || matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -61,6 +62,7 @@ export function renderAuth(mode = 'login') {
   }
 
   document.getElementById('switch').onclick = () => renderAuth(signup ? 'login' : 'signup');
+  document.getElementById('kidCode').onclick = () => renderKidLogin(null);
   const f = document.getElementById('authForm');
   document.getElementById('forgot')?.addEventListener('click', async () => {
     const email = f.email.value.trim();
@@ -109,23 +111,33 @@ export function renderNewPassword() {
   };
 }
 
+// Kode til barnets login: vises i grupper af 4, så den er nem at skrive af
+export const fmtKidCode = (c) => String(c || '').toUpperCase().replace(/(.{4})(?=.)/g, '$1-');
 function renderKidLogin(ji) {
-  const first = esc(ji.kid.split(' ')[0]);
+  let saved = null;
+  try { saved = localStorage.getItem('fp-kidcode'); } catch {}
+  const typed = !ji;
+  const first = ji ? esc(ji.kid.split(' ')[0]) : '';
   app.innerHTML = `
   <div class="auth authx">
     <div class="hero" aria-hidden="true">${court()}</div>
     <h1 class="word">Padel</h1>
-    <p class="intro">Hej ${first}! Tryk på knappen, så er du logget ind i <b>${esc(ji.name)}</b> på denne telefon. Du skal ikke bruge e-mail eller adgangskode.</p>
-    <button class="btn primary big" id="kidGo">🎾 Kom i gang</button>
-    <p class="muted small center">Bliver du logget ud, så bed din forælder om en ny kode under <b>Profil → Mine børn → Nyt login</b>.</p>
-    <p class="center"><button class="link sm" id="kidMail">Jeg har allerede et login med e-mail</button></p>
+    ${typed ? `<p class="intro">Skriv den kode, du har fået af din forælder. Du finder den også under <b>Profil</b>, når du er logget ind.</p>
+      <form id="kidForm"><label>Din kode<input name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(fmtKidCode(saved || ''))}"></label>
+      <button class="btn primary big" id="kidGo">🎾 Kom i gang</button></form>`
+    : `<p class="intro">Hej ${first}! Tryk på knappen, så er du logget ind i <b>${esc(ji.name)}</b> på denne telefon. Du skal ikke bruge e-mail eller adgangskode.</p>
+    <button class="btn primary big" id="kidGo">🎾 Kom i gang</button>`}
+    <p class="muted small center">Bliver du logget ud, så bed din forælder om koden under <b>Profil → Mine børn → Eget login</b>.</p>
+    <p class="center"><button class="link sm" id="kidMail">${typed ? '‹ Tilbage til log ind' : 'Jeg har allerede et login med e-mail'}</button></p>
   </div>`;
-  document.getElementById('kidMail').onclick = () => { S.joinInfo = { ...ji, kind: 'barnmail' }; renderAuth('login'); };
+  document.getElementById('kidMail').onclick = () => { if (ji) S.joinInfo = { ...ji, kind: 'barnmail' }; renderAuth('login'); };
   const btn = document.getElementById('kidGo');
-  btn.onclick = async () => {
+  const go = async (e) => {
+    e?.preventDefault();
     busy(btn, true);
     let code = null;
-    try { code = localStorage.getItem('fp-claim'); } catch {}
+    if (typed) code = document.querySelector('#kidForm input[name=code]').value.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+    else try { code = localStorage.getItem('fp-claim'); } catch {}
     try {
       const { data, error } = await sb.functions.invoke('padel-kid-login', { body: { code } });
       if (error) {
@@ -133,10 +145,11 @@ function renderKidLogin(ji) {
         try { msg = (await error.context.json()).error || msg; } catch {}
         throw new Error(msg);
       }
-      try { localStorage.removeItem('fp-claim'); if (data.group) localStorage.setItem('fp-group', data.group); } catch {}
+      try { localStorage.removeItem('fp-claim'); localStorage.setItem('fp-kidcode', data.code || code); if (data.group) localStorage.setItem('fp-group', data.group); } catch {}
       await q(sb.auth.signInWithPassword({ email: data.email, password: data.password }));
       location.hash = '#/traening';
-      toast(`Velkommen, ${first} 🎾`);
-    } catch (e) { toast(e.message || 'Noget gik galt. Prøv igen', true); busy(btn, false); }
+      toast(`Velkommen, ${esc((data.name || '').split(' ')[0])} 🎾`);
+    } catch (e2) { toast(e2.message || 'Noget gik galt. Prøv igen', true); busy(btn, false); }
   };
+  if (typed) document.getElementById('kidForm').onsubmit = go; else btn.onclick = go;
 }

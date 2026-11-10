@@ -382,7 +382,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Kan mit barn få sit eget login? Og den anden forælder eller bedsteforældre?',
     a: `<p>Ja. Under <b>Profil → Mine børn</b> trykker du på barnet:</p>
-<ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon. Barnet trykker <b>Kom i gang</b> og er logget ind. Der skal ikke bruges e-mail eller adgangskode. Bliver barnet logget ud eller får ny telefon, trykker du <b>Nyt login</b> og viser en ny kode.</li>
+<ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon. Barnet trykker <b>Kom i gang</b> og er logget ind. Der skal ikke bruges e-mail eller adgangskode. Koden står også som tekst, så den kan skrives ind under <b>Barn uden e-mail? Log ind med din kode</b> (fx når appen er lagt på hjemmeskærmen på en iPhone). Barnet kan se sin kode under Profil. Trykker du <b>Nyt login</b>, laves en ny kode, og den gamle holder op med at virke. Børn kan ikke selv melde andre ind.</li>
 <li><b>👪 Familie</b> sender et link til den anden forælder, bedsteforældre eller andre, der henter og bringer. De får samme adgang som dig: de kan se træninger, give afbud og får påmindelser. Linket virker én gang, så tryk igen for hver person.</li></ul>
 <p>Under barnet kan du se, hvem der har adgang, og fjerne en person med ✕. Er forældrene skilt, kan begge forældre have adgang, så den, der har barnet den uge, selv kan give afbud.</p>`,
   },

@@ -35,6 +35,8 @@ async function loadBase() {
   // Spillere uden login, der er overtaget af en rigtig bruger, skjules
   S.profiles = Object.fromEntries(profiles.filter((p) => !p.merged_into).map((p) => [p.id, p]));
   S.realMe = S.profiles[S.session.user.id] || null;
+  // Barn med eget login (ikke voksenmedlem): må ikke melde andre ind
+  try { S.isKid = (await q(sb.from('padel_club_kids').select('id,adult,status').eq('player_id', S.session.user.id))).some((k) => !k.adult && k.status !== 'udmeldt' && k.status !== 'afvist'); } catch { S.isKid = false; }
   if (S.realMe) applyTheme(S.realMe.theme);
   S.viewAs = readViewAs();
   S.me = S.viewAs ? S.profiles[S.viewAs] : S.realMe;

@@ -1443,6 +1443,13 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#nav a[href="#/admin"]');
   await page.waitForSelector('.ftiles');
   ok((await page.locator('.ftiles').innerText()).includes('2\nafventer'), 'kassereren ser 2 betalinger der afventer');
+  const allRows = await page.locator('[data-kfee]').count();
+  await page.click('[data-feefilter="afventer"]');
+  await page.waitForSelector('.feefilt');
+  ok((await page.locator('[data-kfee]').count()) === 2 && (await page.locator('.ftbtn.on').count()) === 1, 'tryk på "afventer" viser kun dem, der afventer');
+  await page.click('[data-feefilter="afventer"]');
+  await page.waitForFunction(() => !document.querySelector('.feefilt'));
+  ok((await page.locator('[data-kfee]').count()) === allRows, 'tryk igen viser alle');
   await page.locator('.krow:has-text("Ida Test") [data-kfee$="|betalt"]').click();
   await wait(400);
   await page.locator('.krow:has-text("Oscar Test") [data-kfee$="|betalt"]').click();
@@ -1540,6 +1547,26 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await pastGates();
   await page.waitForSelector('.tr');
   ok((await page.locator('.krow').first().innerText()).includes('(dig)'), 'barnet ser sine egne træninger');
+  ok(!(await page.locator('.mykids a[href^="#/klub-ind"]').count()), 'barnet har ingen knap til at melde ind');
+  await page.goto('http://localhost:8765/#/klub-ind');
+  await page.waitForSelector('.page.club');
+  ok((await text()).includes('din forælder, der melder ind') && !(await page.locator('#joinForm').count()), 'børn kan ikke melde andre ind');
+  await page.goto('http://localhost:8765/#/profil');
+  await page.waitForSelector('.kidcodebox');
+  const oscarCode = await page.evaluate(() => window.__mock.db().padel_club_kids.find((k) => k.name === 'Oscar Test').login_code);
+  ok((await page.locator('.kidcodebox b').innerText()).replace(/-/g, '').toLowerCase() === oscarCode, 'barnet kan se sin kode til login på Profil');
+  // Logget ud (fx app på hjemmeskærmen på iPhone): log ind ved at skrive koden
+  await page.evaluate(() => { sessionStorage.removeItem('mock-session'); localStorage.removeItem('fp-kidcode'); });
+  await page.goto('http://localhost:8765/');
+  await page.waitForSelector('#kidCode');
+  await page.click('#kidCode');
+  await page.fill('#kidForm input[name=code]', oscarCode.toUpperCase().replace(/(.{4})(?=.)/g, '$1-'));
+  await shot('klub-barn-kode');
+  await noOverflow('barn kode');
+  await page.click('#kidGo');
+  await pastGates();
+  await page.waitForSelector('.tr');
+  ok(await page.evaluate(() => JSON.parse(sessionStorage.getItem('mock-session'))?.user?.email?.startsWith('barn-')), 'barnet logger ind med koden (uden e-mail)');
   await shot('klub-barn');
   await noOverflow('klub barn');
 

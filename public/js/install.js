@@ -28,6 +28,8 @@ const skipped = () => { try { return +(localStorage.getItem(KEY) || 0) > Date.no
 // Skal velkomstsiden vises? (efter oprettelse/login, indtil man har installeret eller sprunget over)
 export const shouldShowInstall = () => { const h = installHow(); return h && h !== 'other' && !skipped(); };
 
+// Barn uden e-mail: koden, der skal skrives i appen på hjemmeskærmen (iPhone deler ikke login med Safari)
+const kidCode = () => { try { const c = localStorage.getItem('fp-kidcode'); return c ? c.toUpperCase().replace(/(.{4})(?=.)/g, '$1-') : ''; } catch { return ''; } };
 const SHARE = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 const PLUS = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" style="vertical-align:-3px"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M12 8v8M8 12h8"/></svg>';
 
@@ -45,7 +47,8 @@ export function renderInstall(done) {
   } else if (how === 'ios') {
     lead = 'Det tager 10 sekunder. Gør sådan her:';
     body = `<div class="gsteps">${step(1, `Tryk på <span class="gpill">${SHARE} Del</span> i Safari`)}${step(2, `Vælg <span class="gpill">${PLUS} Føj til hjemmeskærm</span>`)}${step(3, 'Tryk <b>Tilføj</b>, og åbn Padel fra hjemmeskærmen')}</div>
-      <p class="muted small">Første gang du åbner den fra hjemmeskærmen, skal du logge ind igen.</p>`;
+      ${kidCode() ? `<div class="kidcodebox"><small>Første gang du åbner den fra hjemmeskærmen, trykker du <b>Barn uden e-mail? Log ind med din kode</b> og skriver:</small><b>${kidCode()}</b><button class="btn sm" id="copyKid">Kopiér koden</button></div>`
+        : '<p class="muted small">Første gang du åbner den fra hjemmeskærmen, skal du logge ind igen.</p>'}`;
   } else if (how === 'ios-other' || how === 'inapp') {
     lead = 'Det kan ikke lade sig gøre herfra. Gør sådan her:';
     body = `<div class="gsteps">${step(1, how === 'inapp' ? `Tryk på <b>•••</b> eller "Åbn i browser" og vælg <b>${isIOS ? 'Safari' : 'Chrome'}</b>` : 'Åbn linket i <b>Safari</b>')}${step(2, 'Læg Padel på hjemmeskærmen derfra')}</div>
@@ -66,6 +69,7 @@ export function renderInstall(done) {
     deferred = null;
     if (r?.outcome === 'accepted') { skip(365); done(); } else renderInstall(done);
   });
+  document.getElementById('copyKid')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(kidCode()); toast('Koden er kopieret'); } catch { toast(`Koden er ${kidCode()}`); } });
   document.getElementById('copyLink')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(location.origin); toast('Linket er kopieret'); } catch { prompt('Kopiér linket', location.origin); }
   });

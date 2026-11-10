@@ -156,7 +156,7 @@ export async function viewTraining() {
     <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
     ${!trainer ? `<div class="card mykids"><div class="ftop"><b>${mineTitle(mine)}</b><a class="link sm" href="#/boern">Ret oplysninger ›</a></div>
       ${mine.map((k) => `<div class="krow"><span class="grow">${kidLabel(k)}<small class="muted">${esc([team(k.team_id)?.name, k.status === 'ansoegt' ? (k.waitlist ? 'venteliste' : 'venter på godkendelse') : k.trial ? 'prøvetræning' : ''].filter(Boolean).join(' · '))}</small></span></div>`).join('')}
-      <div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ ${hasAdults(g) ? 'Meld ind' : 'Meld et barn ind'}</a></div></div>` : ''}
+      ${S.isKid ? '' : `<div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ ${hasAdults(g) ? 'Meld ind' : 'Meld et barn ind'}</a></div>`}</div>` : ''}
   </div>`;
   bindTraining();
 }
@@ -511,6 +511,12 @@ const readKid = (root, i) => ({
 
 const myGroupsIds = () => S.members.filter((m) => m.player_id === S.me?.id && m.status === 'aktiv').map((m) => m.group_id);
 export async function viewClubJoin(g) {
+  // Børn med eget login melder ikke andre ind; det gør forældrene
+  if (S.isKid) {
+    app.innerHTML = `<div class="page club"><button class="back" onclick="history.back()">‹ Tilbage</button><h1>Meld ind</h1>
+      <div class="card empty"><p class="muted">Det er din forælder, der melder ind i klubben. Dine træninger står under Træning.</p><a class="btn primary" href="#/traening">Til Træning</a></div></div>`;
+    return;
+  }
   // Uden klub i adressen: vælg blandt de klubber, der kan findes i appen
   const pick = !g;
   let clubs = [];
@@ -627,6 +633,7 @@ export async function joinableClubs() {
   return [...mine, ...disc.filter((d) => !mine.some((m) => m.id === d.id))];
 }
 export async function discoverRow() {
+  if (S.isKid) return '';
   const list = await joinableClubs();
   if (!list.length) return '';
   const auds = await Promise.all(list.map((c) => q(sb.rpc('padel_group_audience', { g: c.id })).catch(() => 'boern')));
@@ -688,15 +695,21 @@ export async function myKidsSection(page = false) {
       <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">${me ? 'Meld dig ud' : `Meld ${esc(k.name.split(' ')[0])} ud`}</button></div>
     </details>`;
     }).join('')}
-    ${page && !S.myKids.every((k) => audience(k.group_id) === 'voksne') ? `<a class="btn ghost kidjoin" href="#/klub-ind">➕ ${S.myKids.some((k) => k.adult) ? 'Meld et barn ind' : 'Meld et barn mere ind'}</a>` : ''}`;
+    ${page && !S.isKid && !S.myKids.every((k) => audience(k.group_id) === 'voksne') ? `<a class="btn ghost kidjoin" href="#/klub-ind">➕ ${S.myKids.some((k) => k.adult) ? 'Meld et barn ind' : 'Meld et barn mere ind'}</a>` : ''}`;
 }
 
 export function bindMyKids(rerender) {
   const link = (code) => `${location.origin}/#/barn/${code}`;
   const kid = (id) => S.myKids.find((x) => x.id === id);
-  app.querySelectorAll('[data-kidlogin]').forEach((b) => (b.onclick = () => {
+  app.querySelectorAll('[data-kidlogin]').forEach((b) => (b.onclick = async () => {
     const k = kid(b.dataset.kidlogin);
-    showQR(link(k.login_code), `Eget login til ${k.name}`, `Lad ${k.name.split(' ')[0]} scanne koden med sin telefon og trykke Kom i gang. Der skal ikke bruges e-mail. Koden virker én gang.`);
+    // Har barnet allerede et login, laves en ny kode, så den gamle holder op med at virke
+    if (k.player_id) {
+      if (!confirm(`Lav en ny kode til ${k.name.split(' ')[0]}? Den gamle kode holder op med at virke.`)) return;
+      try { k.login_code = await q(sb.rpc('padel_club_kid_new_code', { p_kid: k.id })); } catch { return; }
+    }
+    const c = String(k.login_code || '').toUpperCase().replace(/(.{4})(?=.)/g, '$1-');
+    showQR(link(k.login_code), `Eget login til ${k.name}`, `Lad ${k.name.split(' ')[0]} scanne koden med sin telefon og trykke Kom i gang. Der skal ikke bruges e-mail. Koden kan også skrives ind i appen: ${c}`);
   }));
   app.querySelectorAll('[data-kidshare]').forEach((b) => (b.onclick = () => share(link(kid(b.dataset.kidshare).login_code), 'Her er dit eget login til padelklubben. Åbn linket på din telefon og tryk Kom i gang:')));
   app.querySelectorAll('[data-kidparent]').forEach((b) => (b.onclick = () => {
@@ -854,16 +867,24 @@ export function clubFeesTab() {
     </div>${curve}` : '';
   return `
     <div class="card feesum"><b>💳 Kontingent ${esc(gr.club_fee_label)} · ${kr(gr.club_fee || 0)}</b>
-      <div class="ftiles"><div><b class="ok">${n('betalt')}</b><small>betalt</small></div><div><b class="warnc">${n('afventer')}</b><small>afventer</small></div><div><b class="no">${n('ubetalt')}</b><small>mangler</small></div></div>
+      <div class="ftiles">${[['betalt', 'ok', 'betalt'], ['afventer', 'warnc', 'afventer'], ['ubetalt', 'no', 'mangler']].map(([st, c, l]) => `<button type="button" class="ftbtn ${S.feeFilter === st ? 'on' : ''}" data-feefilter="${st}" aria-pressed="${S.feeFilter === st}"><b class="${c}">${n(st)}</b><small>${l}</small></button>`).join('')}</div>
       <div class="mact"><button class="btn sm" id="feeRemind" ${n('ubetalt') ? '' : 'disabled'}>🔔 Påmind</button><button class="btn sm" id="feeCsv">⬇️ Liste</button></div>
       <p class="muted small">Påmindelsen sendes som notifikation til forældre, der ikke har betalt. Listen kan åbnes i Excel.</p></div>
     ${stats}
-    ${groups.map(({ t, ks }) => `<div class="card"><b>${t ? esc(t.name) : 'Uden hold'}</b>
+    ${S.feeFilter ? `<p class="feefilt"><span>Viser kun: <b>${{ betalt: 'Betalt', afventer: 'Afventer', ubetalt: 'Mangler' }[S.feeFilter]}</b> (${n(S.feeFilter)})</span><button type="button" class="link sm" data-feefilter="">Vis alle</button></p>` : ''}
+    ${groups.map(({ t, ks: all }) => ({ t, ks: S.feeFilter ? all.filter((k) => feeOf(k.id) === S.feeFilter) : all })).filter((x) => x.ks.length).map(({ t, ks }) => `<div class="card"><b>${t ? esc(t.name) : 'Uden hold'}</b>
       ${ks.map((k) => `<div class="krow"><span class="grow">${esc(k.name)} ${feeBadge(k)}<small class="muted">${esc(guardianNames(k.id))}</small></span>
         ${feeOf(k.id) === 'betalt' ? `<button class="btn sm" data-kfee="${k.id}|ubetalt">Fortryd</button>` : `<button class="btn sm primary" data-kfee="${k.id}|betalt">✓ Betalt</button>`}</div>`).join('')}</div>`).join('')}`;
 }
 
 export function bindClubFees(refresh) {
+  // De tre bokse filtrerer listen (tryk igen for at vise alle)
+  app.querySelectorAll('[data-feefilter]').forEach((b) => (b.onclick = () => {
+    const st = b.dataset.feefilter;
+    S.feeFilter = st && S.feeFilter !== st ? st : null;
+    refresh();
+    if (S.feeFilter) setTimeout(() => document.querySelector('.feefilt')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }));
   app.querySelectorAll('[data-kfee]').forEach((b) => (b.onclick = async () => {
     const [id, st] = b.dataset.kfee.split('|');
     busy(b, true);
