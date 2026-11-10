@@ -904,3 +904,17 @@ details.people { display: block; }
 
 .kidcodebox { background: var(--card2); border-radius: 12px; padding: 12px; margin-top: 12px; text-align: center; display: grid; gap: 8px; justify-items: center; }
 .kidcodebox > b { font-size: 24px; letter-spacing: 2px; font-family: ui-monospace, Menlo, monospace; }
+
+.remindset { margin: 8px 0; background: var(--card2); border-radius: 10px; padding: 10px 12px; }
+.remindset > summary { display: flex; justify-content: space-between; gap: 8px; align-items: center; cursor: pointer; list-style: none; font-size: 14px; }
+.remindset > summary::-webkit-details-marker { display: none; }
+.remindset form { margin-top: 8px; }
+.seg.four { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.remgrid { margin: 8px 0; display: grid; gap: 6px; }
+.remrow { display: grid; grid-template-columns: 64px repeat(7, 1fr); gap: 3px; align-items: center; }
+.remrow small { color: var(--muted); font-size: 11px; }
+.remday { position: relative; margin: 0; }
+.remday input { position: absolute; opacity: 0; inset: 0; }
+.remday span { display: block; text-align: center; padding: 7px 0; border-radius: 8px; border: 1px solid var(--line); font-weight: 700; font-size: 13px; background: var(--card); }
+.remday input:checked + span { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.remday input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }

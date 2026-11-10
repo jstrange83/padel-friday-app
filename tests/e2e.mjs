@@ -1534,6 +1534,27 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('[data-kidparent]', { state: 'attached' });
   await page.locator('details:has([data-kidparent]) > summary').first().click();
   ok((await page.locator('[data-kidparent]').first().innerText()).includes('Familie') && (await page.locator('.famlist').first().innerText()).includes('Pia') && (await page.locator('.famlist').first().innerText()).includes('(dig)') && (await page.locator('.famlist [data-famrm]').count()) >= 1, 'man kan se, hvem i familien der har adgang, og fjerne andre');
+  const rs = page.locator('details.remindset').first();
+  await rs.locator('summary').click();
+  await rs.locator('label:has(input[value="11111110000000"])').click();
+  await rs.locator('button.primary').click();
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_club_guardians.some((g) => g.user_id === 'u-nyfar' && g.remind_pattern === '11111110000000')), 'forælder vælger kun påmindelser i lige uger (fx 7/7)');
+  const kidCard = page.locator('details:has([data-kidparent])').first();
+  if ((await kidCard.getAttribute('open')) === null) await kidCard.locator('> summary').click();
+  const rs2 = page.locator('details.remindset').first();
+  if ((await rs2.getAttribute('open')) === null) await rs2.locator('summary').click();
+  ok((await rs2.locator('summary').innerText()).includes('Lige uger'), 'valget vises');
+  await rs2.locator('label:has(input[value="custom"])').click();
+  await rs2.locator('.remgrid').waitFor();
+  await rs2.locator('input[name=d12]').uncheck({ force: true });
+  await rs2.locator('input[name=d13]').uncheck({ force: true });
+  await rs2.locator('input[name=d7]').check({ force: true });
+  await shot('familie-paamindelser');
+  await noOverflow('familie påmindelser');
+  await rs2.locator('button.primary').click();
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_club_guardians.find((g) => g.user_id === 'u-nyfar').remind_pattern === '11111111000000'), 'egne dage, fx 9/5 med weekender');
   await noOverflow('familie');
   // Barnets eget login
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));

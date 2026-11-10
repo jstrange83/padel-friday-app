@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-10b', date: '10. november 2026', club: true, title: 'Familie og børns eget login',
-    items: ['👪 Under <b>Profil → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.'],
+    items: ['👪 Under <b>Profil → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.', '🔔 Skilte forældre (fx 7/7): hver forælder kan vælge kun at få påmindelser i sine egne uger eller dage, under <b>🔔 Påmindelser</b> ved barnet.'],
   },
   {
     id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Grafer på fremmøde og kontingent',

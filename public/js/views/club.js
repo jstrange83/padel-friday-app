@@ -652,6 +652,24 @@ export async function viewMyKids() {
   bindMyKids(viewMyKids);
 }
 
+// Påmindelser pr. forælder (fx skilte forældre med 7/7): hvilke dage vil jeg have påmindelser om barnet
+const REM_PRESETS = [['', 'Altid'], ['11111110000000', 'Lige uger'], ['00000001111111', 'Ulige uger'], ['custom', 'Vælg dage']];
+const WD1 = ['M', 'T', 'O', 'T', 'F', 'L', 'S'];
+const remindLabel = (p) => REM_PRESETS.find((x) => x[0] === (p || ''))?.[1] || 'Valgte dage';
+function remindForm(k) {
+  const p = k.remind || '', preset = REM_PRESETS.some((x) => x[0] === p) ? p : 'custom';
+  const bits = (p || '11111111111111').split('');
+  const wk = isoWeek(todayISO());
+  const row = (label, off) => `<div class="remrow"><small>${label}</small>${WD1.map((d, i) => `<label class="remday"><input type="checkbox" name="d${off + i}" ${bits[off + i] === '1' ? 'checked' : ''}><span>${d}</span></label>`).join('')}</div>`;
+  return `<details class="remindset"><summary><span>🔔 Påmindelser om ${esc(k.name.split(' ')[0])}: <b>${remindLabel(k.remind)}</b></span><span class="link sm">Ret</span></summary>
+    <form data-remindkid="${k.id}">
+      <p class="muted small">Har I fx 7/7 eller en anden ordning, kan du vælge kun at få påmindelser, når du har ${esc(k.name.split(' ')[0])}. Du kan stadig altid se træningerne og give afbud.</p>
+      <div class="seg four" role="radiogroup">${REM_PRESETS.map(([v, l]) => `<label><input type="radio" name="preset" value="${v}" ${v === preset ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div>
+      <div class="remgrid" ${preset === 'custom' ? '' : 'hidden'}>${row('Lige uger', 0)}${row('Ulige uger', 7)}</div>
+      <p class="muted small">Nu er det uge ${wk} (${wk % 2 ? 'ulige' : 'lige'} uge). Har ingen i familien valgt en dag, får alle påmindelsen.</p>
+      <button class="btn sm primary">Gem</button>
+    </form></details>`;
+}
 export async function myKidsSection(page = false) {
   let kids = [];
   try { kids = await q(sb.from('padel_club_kids').select('*').in('status', ['ansoegt', 'aktiv']).order('name')); } catch { return ''; }
@@ -674,7 +692,7 @@ export async function myKidsSection(page = false) {
   // Hvem har adgang til barnet (forældre, bedsteforældre m.fl.)
   let fam = [];
   try { fam = (await q(sb.rpc('padel_club_kid_family', { p_kids: mineK.map((k) => k.id) }))) || []; } catch {}
-  S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '', family: fam.filter((f) => f.kid_id === k.id && f.user_id !== k.player_id) }));
+  S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '', family: fam.filter((f) => f.kid_id === k.id && f.user_id !== k.player_id), remind: gds.find((x) => x.kid_id === k.id && x.user_id === S.me.id)?.remind_pattern || null }));
   return `${page ? '' : `<h3>${mineTitle(S.myKids).replace(/^\S+ /, '')}</h3>`}
     ${S.myKids.map((k, i) => {
       const me = k.adult && k.player_id === S.me.id;
@@ -691,7 +709,7 @@ export async function myKidsSection(page = false) {
         <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address, me)}<button class="btn primary">Gem</button></form></details>
       ${me ? '' : `<div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Familie</button></div>
       <p class="muted small">Med eget login kan barnet selv se træninger og give afbud (vis koden, eller <button class="link sm" data-kidshare="${k.id}">send linket</button>). Med <b>Familie</b> sender du et link til den anden forælder, bedsteforældre eller andre, der henter og bringer. De får samme adgang som dig.</p>
-      ${k.family.length > 1 ? `<div class="famlist"><small class="muted">Har adgang til ${esc(k.name.split(' ')[0])}:</small>${k.family.map((f) => `<span class="chip sm static">${esc(f.name || 'Ukendt')}${f.user_id === S.me.id ? ' (dig)' : ` <button type="button" class="link sm dn" data-famrm="${k.id}|${f.user_id}" aria-label="Fjern ${esc(f.name)}">✕</button>`}</span>`).join('')}</div>` : ''}`}
+      ${k.family.length > 1 ? `<div class="famlist"><small class="muted">Har adgang til ${esc(k.name.split(' ')[0])}:</small>${k.family.map((f) => `<span class="chip sm static">${esc(f.name || 'Ukendt')}${f.user_id === S.me.id ? ' (dig)' : ` <button type="button" class="link sm dn" data-famrm="${k.id}|${f.user_id}" aria-label="Fjern ${esc(f.name)}">✕</button>`}</span>`).join('')}</div>${remindForm(k)}` : ''}`}
       <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">${me ? 'Meld dig ud' : `Meld ${esc(k.name.split(' ')[0])} ud`}</button></div>
     </details>`;
     }).join('')}
@@ -716,6 +734,18 @@ export function bindMyKids(rerender) {
     const k = kid(b.dataset.kidparent);
     share(link(k.guardian_code), `Få adgang til ${k.name}s træninger i padelklubben. Opret dig (eller log ind) med linket:`);
   }));
+  app.querySelectorAll('form[data-remindkid]').forEach((f) => {
+    const grid = f.querySelector('.remgrid');
+    f.querySelectorAll('input[name=preset]').forEach((r) => (r.onchange = () => { grid.hidden = f.preset.value !== 'custom'; }));
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const v = f.preset.value;
+      const pat = v === 'custom' ? Array.from({ length: 14 }, (_, i) => (f[`d${i}`].checked ? '1' : '0')).join('') : v || null;
+      if (pat === '00000000000000') return toast('Vælg mindst én dag', true);
+      const btn = f.querySelector('button'); busy(btn, true);
+      try { await q(sb.rpc('padel_club_set_remind', { p_kid: f.dataset.remindkid, p_pattern: pat })); toast('Påmindelser er gemt'); rerender(); } catch { busy(btn, false); }
+    };
+  });
   app.querySelectorAll('[data-famrm]').forEach((b) => (b.onclick = async () => {
     const [kidId, user] = b.dataset.famrm.split('|');
     const k = kid(kidId), f = k?.family.find((x) => x.user_id === user);
