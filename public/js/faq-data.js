@@ -380,10 +380,11 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
-    q: 'Kan mit barn få sit eget login? Og den anden forælder?',
+    q: 'Kan mit barn få sit eget login? Og den anden forælder eller bedsteforældre?',
     a: `<p>Ja. Under <b>Profil → Mine børn</b> trykker du på barnet:</p>
 <ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon og opretter sig med. Så kan barnet selv se træninger og give afbud.</li>
-<li><b>👪 Forælder 2</b> sender et link til den anden forælder, som så får samme adgang som dig.</li></ul>`,
+<li><b>👪 Familie</b> sender et link til den anden forælder, bedsteforældre eller andre, der henter og bringer. De får samme adgang som dig: de kan se træninger, give afbud og får påmindelser. Linket virker én gang, så tryk igen for hver person.</li></ul>
+<p>Under barnet kan du se, hvem der har adgang, og fjerne en person med ✕. Er forældrene skilt, kan begge forældre have adgang, så den, der har barnet den uge, selv kan give afbud.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,

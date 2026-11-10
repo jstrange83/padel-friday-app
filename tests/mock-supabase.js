@@ -537,6 +537,13 @@ Object.assign(RPC, {
     Object.assign(k, { name: p_name.trim(), birth_date: p_birth_date, birth_year: p_birth_date ? +p_birth_date.slice(0, 4) : k.birth_year, gender: { mand: 'dreng', kvinde: 'pige' }[p_gender] || p_gender, photo_ok: p_photo_ok, address: p_address || null });
     upsert('padel_club_kid_info', ['kid_id'], { kid_id: p_kid, info: p_info?.trim() || null });
   },
+  padel_club_kid_family: ({ p_kids }) => db.padel_club_guardians.filter((g) => g.active !== false && p_kids.includes(g.kid_id) && db.padel_club_guardians.some((m) => m.kid_id === g.kid_id && m.user_id === uid() && m.active !== false))
+    .map((g) => ({ kid_id: g.kid_id, user_id: g.user_id, name: db.padel_profiles.find((p) => p.id === g.user_id)?.name || '' })),
+  padel_club_remove_guardian: ({ p_kid, p_user }) => {
+    if (!db.padel_club_guardians.some((m) => m.kid_id === p_kid && m.user_id === uid() && m.active !== false)) throw new Error('Det har du ikke adgang til');
+    if (p_user === uid()) throw new Error('Du kan ikke fjerne dig selv her');
+    db.padel_club_guardians.filter((g) => g.kid_id === p_kid && g.user_id === p_user).forEach((g) => (g.active = false));
+  },
   padel_club_set_team_trainers: ({ p_team, p_users }) => {
     if (!isAdm(teamGroup(p_team))) throw new Error('Kun klubbens admin');
     db.padel_club_team_trainers.filter((x) => x.team_id === p_team).forEach((x) => (x.active = p_users.includes(x.user_id)));

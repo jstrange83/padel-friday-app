@@ -1522,6 +1522,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await pastGates();
   await page.waitForSelector('.tr');
   ok((await text()).includes('oscar test') && !(await text()).includes('ida test'), 'anden forælder ser kun sit barn');
+  await page.goto('http://localhost:8765/#/profil');
+  await page.waitForSelector('[data-kidparent]', { state: 'attached' });
+  await page.locator('details:has([data-kidparent]) > summary').first().click();
+  ok((await page.locator('[data-kidparent]').first().innerText()).includes('Familie') && (await page.locator('.famlist').first().innerText()).includes('Pia') && (await page.locator('.famlist').first().innerText()).includes('(dig)') && (await page.locator('.famlist [data-famrm]').count()) >= 1, 'man kan se, hvem i familien der har adgang, og fjerne andre');
+  await noOverflow('familie');
   // Barnets eget login
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
   await page.goto('about:blank');

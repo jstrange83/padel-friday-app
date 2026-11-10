@@ -664,7 +664,10 @@ export async function myKidsSection(page = false) {
     const [teams, trainers, jt] = await Promise.all([q(sb.from('padel_club_teams').select('*').eq('group_id', g)).catch(() => []), q(sb.rpc('padel_club_trainer_contacts', { g })).catch(() => []), q(sb.rpc('padel_club_join_teams', { g })).catch(() => [])]);
     per[g] = { teams, trainers: trainers || [], jt: jt || [] };
   }
-  S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '' }));
+  // Hvem har adgang til barnet (forældre, bedsteforældre m.fl.)
+  let fam = [];
+  try { fam = (await q(sb.rpc('padel_club_kid_family', { p_kids: mineK.map((k) => k.id) }))) || []; } catch {}
+  S.myKids = mineK.map((k) => ({ ...k, info: infos.find((x) => x.kid_id === k.id)?.info || '', family: fam.filter((f) => f.kid_id === k.id && f.user_id !== k.player_id) }));
   return `${page ? '' : `<h3>${mineTitle(S.myKids).replace(/^\S+ /, '')}</h3>`}
     ${S.myKids.map((k, i) => {
       const me = k.adult && k.player_id === S.me.id;
@@ -679,8 +682,9 @@ export async function myKidsSection(page = false) {
       })() : ''}
       <details class="kidedit"><summary><span class="link sm">✏️ ${me ? 'Ret dine oplysninger' : `Ret ${esc(k.name.split(' ')[0])}s oplysninger`}</span></summary>
         <form data-kidform="${k.id}">${kidFormFields(k, 100 + i, !!group(k.group_id)?.club_collect_address || !!k.address, me)}<button class="btn primary">Gem</button></form></details>
-      ${me ? '' : `<div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Forælder 2</button></div>
-      <p class="muted small">Med eget login kan barnet selv se træninger og give afbud (vis koden, eller <button class="link sm" data-kidshare="${k.id}">send linket</button>). Den anden forælder får samme adgang som dig.</p>`}
+      ${me ? '' : `<div class="mact"><button class="btn sm" data-kidlogin="${k.id}">📱 ${k.player_id ? 'Nyt login' : 'Eget login'}</button><button class="btn sm" data-kidparent="${k.id}">👪 Familie</button></div>
+      <p class="muted small">Med eget login kan barnet selv se træninger og give afbud (vis koden, eller <button class="link sm" data-kidshare="${k.id}">send linket</button>). Med <b>Familie</b> sender du et link til den anden forælder, bedsteforældre eller andre, der henter og bringer. De får samme adgang som dig.</p>
+      ${k.family.length > 1 ? `<div class="famlist"><small class="muted">Har adgang til ${esc(k.name.split(' ')[0])}:</small>${k.family.map((f) => `<span class="chip sm static">${esc(f.name || 'Ukendt')}${f.user_id === S.me.id ? ' (dig)' : ` <button type="button" class="link sm dn" data-famrm="${k.id}|${f.user_id}" aria-label="Fjern ${esc(f.name)}">✕</button>`}</span>`).join('')}</div>` : ''}`}
       <div class="mact"><button class="link sm dn" data-kidleave="${k.id}">${me ? 'Meld dig ud' : `Meld ${esc(k.name.split(' ')[0])} ud`}</button></div>
     </details>`;
     }).join('')}
@@ -698,6 +702,12 @@ export function bindMyKids(rerender) {
   app.querySelectorAll('[data-kidparent]').forEach((b) => (b.onclick = () => {
     const k = kid(b.dataset.kidparent);
     share(link(k.guardian_code), `Få adgang til ${k.name}s træninger i padelklubben. Opret dig (eller log ind) med linket:`);
+  }));
+  app.querySelectorAll('[data-famrm]').forEach((b) => (b.onclick = async () => {
+    const [kidId, user] = b.dataset.famrm.split('|');
+    const k = kid(kidId), f = k?.family.find((x) => x.user_id === user);
+    if (!confirm(`Fjern ${f?.name || 'personen'}s adgang til ${k.name}?`)) return;
+    try { await q(sb.rpc('padel_club_remove_guardian', { p_kid: kidId, p_user: user })); toast('Adgangen er fjernet'); rerender(); } catch {}
   }));
   app.querySelectorAll('form[data-kidform]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();

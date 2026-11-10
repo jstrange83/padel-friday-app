@@ -882,3 +882,7 @@ details.people { display: block; }
 .htrack.sm { height: 6px; margin-top: 6px; }
 .htrack i { display: block; height: 100%; border-radius: 99px; }
 .ftiles b.high { color: var(--up); } .ftiles b.mid { color: var(--warn); } .ftiles b.low { color: var(--dn); }
+
+.famlist { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; }
+.famlist small { width: 100%; }
+.famlist .chip .link { padding: 0 0 0 4px; }
