@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-10b', date: '10. november 2026', club: true, title: 'Familie og børns eget login',
+    items: ['👪 Under <b>Profil → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.'],
+  },
+  {
     id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Fremmøde med grafer',
     items: ['📊 Under <b>Admin → Fremmøde</b> kan du nu se <b>alle hold samlet</b> eller ét hold ad gangen, med lagkager, en graf uge for uge og en bjælke pr. hold.'],
   },
@@ -68,7 +72,9 @@ const inCenter = (names) => S.members.some((m) => m.player_id === S.realMe?.id &
   && S.groupCenters.some((c) => c.group_id === m.group_id && c.enabled && names.includes(S.centers.find((x) => x.id === c.center_id)?.name)));
 // groups: true = kun for voksne i en almindelig gruppe (ikke dem, der kun er med i en juniorklub)
 const inGroup = () => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.some((g) => g.id === m.group_id && g.kind !== 'klub' && !g.archived));
-const forMe = () => NEWS.filter((n) => (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)) && (!n.groups || isSuper() || inGroup()));
+// club: true = kun for dem, der er med i en klub
+const inClub = () => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.some((g) => g.id === m.group_id && g.kind === 'klub' && !g.archived));
+const forMe = () => NEWS.filter((n) => (!n.club || isSuper() || inClub()) && (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)) && (!n.groups || isSuper() || inGroup()));
 export const latestNewsId = () => NEWS[0]?.id || '';
 
 // Nyheder jeg ikke har set. Har man aldrig set nogen, vises kun den seneste opdatering.

@@ -857,6 +857,22 @@ export function createClient() {
         return { data: {}, error: null };
       },
     },
+    // Edge-funktion: barnets login uden e-mail (samme regler som padel-kid-login)
+    functions: {
+      async invoke(name, { body } = {}) {
+        if (name !== 'padel-kid-login') return { data: null, error: { message: 'Ukendt funktion' } };
+        const k = db.padel_club_kids.find((x) => x.login_code === body?.code && ['ansoegt', 'aktiv'].includes(x.status) && !x.adult);
+        if (!k) return { data: null, error: { message: 'Linket virker ikke længere. Bed din forælder om et nyt.' } };
+        const email = `barn-${k.id}@born.padel-friday-app.vercel.app`;
+        let p = db.padel_profiles.find((x) => x.email === email);
+        if (k.player_id && !p) return { data: null, error: { message: 'Du har allerede et login med e-mail. Log ind med din e-mail og adgangskode.' } };
+        if (!p) { p = { id: 'u-barn-' + k.id.slice(0, 8), name: k.name, gender: k.gender === 'pige' ? 'kvinde' : 'mand', side: 'begge', elo: 1000, is_admin: false, role: 'bruger', email, news_seen: '9999' }; db.padel_profiles.push(p); }
+        k.player_id = p.id; k.login_code = uuid().replace(/-/g, '').slice(0, 12);
+        if (k.status === 'aktiv' && !db.padel_group_members.some((m) => m.group_id === k.group_id && m.player_id === p.id)) db.padel_group_members.push({ group_id: k.group_id, player_id: p.id, role: 'bruger', status: 'aktiv', elo: 1000 });
+        save();
+        return { data: { email, password: 'x', group: k.group_id, name: k.name }, error: null };
+      },
+    },
     from: (t) => new Query(t),
     // Billeder: gemmes kun i hukommelsen; stierne skal ligge i brugerens egen mappe
     storage: { from: () => ({

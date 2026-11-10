@@ -28,13 +28,15 @@ export function renderAuth(mode = 'login') {
   const signup = mode === 'signup';
   const invited = signup && /^#\/(velkommen|barn)/.test(location.hash);
   const ji = S.joinInfo;
-  const intro = ji?.kind === 'barn' ? `Hej ${esc(ji.kid.split(' ')[0])}! Opret din egen konto til <b>${esc(ji.name)}</b>, så kan du selv se dine træninger og give afbud.`
+  const intro = ji?.kind === 'barnmail' ? `Hej ${esc(ji.kid.split(' ')[0])}! Log ind med din e-mail, så kobles du på <b>${esc(ji.name)}</b>.`
     : ji?.kind === 'foraelder' ? `Du er inviteret som forælder til <b>${esc(ji.kid)}</b> i <b>${esc(ji.name)}</b>. Opret en konto, eller log ind hvis du har en.`
     : ji?.kind === 'klub' && ji.audience === 'voksne' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld dig bagefter ind.`
     : ji?.kind === 'klub' && ji.audience === 'begge' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld bagefter dig selv eller dit barn ind.`
     : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
     : invited ? 'Du er inviteret med til padel. Opret en konto, eller log ind hvis du har en, så kommer du med i gruppen.'
     : 'Spilledage, hold og rangliste til jeres padelgruppe.';
+  // Barnets eget login: ingen e-mail, bare ét tryk, så er barnet logget ind på telefonen
+  if (ji?.kind === 'barn') return renderKidLogin(ji);
   const replay = !app.querySelector('.authx');
   app.innerHTML = `
   <div class="auth authx">
@@ -104,5 +106,37 @@ export function renderNewPassword() {
     S.recovery = false;
     toast('Adgangskoden er ændret');
     hooks.boot();
+  };
+}
+
+function renderKidLogin(ji) {
+  const first = esc(ji.kid.split(' ')[0]);
+  app.innerHTML = `
+  <div class="auth authx">
+    <div class="hero" aria-hidden="true">${court()}</div>
+    <h1 class="word">Padel</h1>
+    <p class="intro">Hej ${first}! Tryk på knappen, så er du logget ind i <b>${esc(ji.name)}</b> på denne telefon. Du skal ikke bruge e-mail eller adgangskode.</p>
+    <button class="btn primary big" id="kidGo">🎾 Kom i gang</button>
+    <p class="muted small center">Bliver du logget ud, så bed din forælder om en ny kode under <b>Profil → Mine børn → Nyt login</b>.</p>
+    <p class="center"><button class="link sm" id="kidMail">Jeg har allerede et login med e-mail</button></p>
+  </div>`;
+  document.getElementById('kidMail').onclick = () => { S.joinInfo = { ...ji, kind: 'barnmail' }; renderAuth('login'); };
+  const btn = document.getElementById('kidGo');
+  btn.onclick = async () => {
+    busy(btn, true);
+    let code = null;
+    try { code = localStorage.getItem('fp-claim'); } catch {}
+    try {
+      const { data, error } = await sb.functions.invoke('padel-kid-login', { body: { code } });
+      if (error) {
+        let msg = error.message;
+        try { msg = (await error.context.json()).error || msg; } catch {}
+        throw new Error(msg);
+      }
+      try { localStorage.removeItem('fp-claim'); if (data.group) localStorage.setItem('fp-group', data.group); } catch {}
+      await q(sb.auth.signInWithPassword({ email: data.email, password: data.password }));
+      location.hash = '#/traening';
+      toast(`Velkommen, ${first} 🎾`);
+    } catch (e) { toast(e.message || 'Noget gik galt. Prøv igen', true); busy(btn, false); }
   };
 }

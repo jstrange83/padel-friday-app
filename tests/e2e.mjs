@@ -1531,21 +1531,11 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate(() => sessionStorage.removeItem('mock-session'));
   await page.goto('about:blank');
   await page.goto(`http://localhost:8765/#/barn/${codes[1]}`);
-  await page.waitForSelector('#authForm');
-  ok((await text()).includes('hej oscar'), 'barnets link hilser på barnet');
-  await wait(500);
-  if (!(await page.locator('button[type=submit]:has-text("Log ind")').count())) await page.click('#switch');
-  await page.waitForSelector('button[type=submit]:has-text("Log ind")');
-  await page.fill('input[name=email]', 'nyoscar@test');
-  await page.fill('input[name=password]', 'whatever');
-  await page.click('button[type=submit]');
-  await page.waitForSelector('#pf');
-  ok(await page.locator('#pf label:has-text("Højre")').count(), 'barnet vælger selv side på banen');
-  await page.fill('#pf input[name=name]', 'Oscar Test');
-  await page.fill('#pf input[name=phone]', '44556677');
-  await page.click('#pf label:has-text("Mand")');
-  await page.click('#pf label:has-text("Højre")');
-  await page.click('#pf button.primary');
+  await page.waitForSelector('#kidGo');
+  ok((await text()).includes('hej oscar') && !(await page.locator('input[name=email]').count()), 'barnets link hilser på barnet og kræver ingen e-mail');
+  await shot('klub-barn-login');
+  await noOverflow('barnets login');
+  await page.click('#kidGo');
   await pastGates();
   await page.waitForSelector('.tr');
   ok((await page.locator('.krow').first().innerText()).includes('(dig)'), 'barnet ser sine egne træninger');
@@ -1564,7 +1554,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#cmp button.primary');
   await page.waitForSelector('.thread .msg');
   ok((await page.locator('.thpeople').textContent()).includes('Brian'), 'træneren er med i samtalen');
-  ok((await page.evaluate(() => { const ns = window.__mock.db().padel_notifications.filter((n) => n.kind === 'besked'); return ['u-nyforaelder', 'u-nyfar', 'u-brian'].every((u) => ns.some((n) => n.user_id === u)) && !ns.some((n) => n.user_id === 'u-nyoscar'); })), 'begge forældre og træneren får besked, ikke afsenderen');
+  ok((await page.evaluate(() => { const ns = window.__mock.db().padel_notifications.filter((n) => n.kind === 'besked'); return ['u-nyforaelder', 'u-nyfar', 'u-brian'].every((u) => ns.some((n) => n.user_id === u)) && !ns.some((n) => n.user_id.startsWith('u-barn-')); })), 'begge forældre og træneren får besked, ikke afsenderen');
   await shot('besked-samtale');
   await noOverflow('samtale');
 

@@ -696,9 +696,9 @@ export function bindMyKids(rerender) {
   const kid = (id) => S.myKids.find((x) => x.id === id);
   app.querySelectorAll('[data-kidlogin]').forEach((b) => (b.onclick = () => {
     const k = kid(b.dataset.kidlogin);
-    showQR(link(k.login_code), `Eget login til ${k.name}`, `Lad ${k.name.split(' ')[0]} scanne koden med sin telefon og oprette sig. Koden virker én gang.`);
+    showQR(link(k.login_code), `Eget login til ${k.name}`, `Lad ${k.name.split(' ')[0]} scanne koden med sin telefon og trykke Kom i gang. Der skal ikke bruges e-mail. Koden virker én gang.`);
   }));
-  app.querySelectorAll('[data-kidshare]').forEach((b) => (b.onclick = () => share(link(kid(b.dataset.kidshare).login_code), 'Her er dit eget login til padelklubben. Opret dig med linket:')));
+  app.querySelectorAll('[data-kidshare]').forEach((b) => (b.onclick = () => share(link(kid(b.dataset.kidshare).login_code), 'Her er dit eget login til padelklubben. Åbn linket på din telefon og tryk Kom i gang:')));
   app.querySelectorAll('[data-kidparent]').forEach((b) => (b.onclick = () => {
     const k = kid(b.dataset.kidparent);
     share(link(k.guardian_code), `Få adgang til ${k.name}s træninger i padelklubben. Opret dig (eller log ind) med linket:`);
