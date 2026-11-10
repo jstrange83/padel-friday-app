@@ -830,11 +830,34 @@ export function clubFeesTab() {
   const n = (st) => act.filter((k) => feeOf(k.id) === st).length;
   const teams = C().teams.filter((t) => !t.archived);
   const groups = [...teams.map((t) => ({ t, ks: act.filter((k) => k.team_id === t.id) })), { t: null, ks: act.filter((k) => !teams.some((t) => t.id === k.team_id)) }].filter((x) => x.ks.length);
+  // Statistik: beløb, lagkage, pr. hold og indbetalinger over tid
+  const fee = +gr.club_fee || 0, paidN = n('betalt'), total = act.length;
+  const pctPaid = total ? Math.round((paidN / total) * 100) : 0;
+  const perTeam = groups.map(({ t, ks }) => ({ name: t ? t.name : 'Uden hold', n: ks.length, paid: ks.filter((k) => feeOf(k.id) === 'betalt').length }));
+  const paidDays = C().fees.filter((f) => f.status === 'betalt' && f.updated_at && act.some((k) => k.id === f.kid_id)).map((f) => f.updated_at.slice(0, 10)).sort();
+  let curve = '';
+  if (paidDays.length > 1 && total) {
+    const d0 = Date.parse(paidDays[0]), d1 = Math.max(Date.parse(todayISO()), Date.parse(paidDays.at(-1)));
+    const span = Math.max(1, d1 - d0), W = 300, H = 110;
+    const pts = paidDays.map((d, i) => [((Date.parse(d) - d0) / span) * W, H - ((i + 1) / total) * H]);
+    const path = `M0 ${H} ` + pts.map(([x, y], i) => `L${x.toFixed(1)} ${(i ? pts[i - 1][1] : H).toFixed(1)} L${x.toFixed(1)} ${y.toFixed(1)}`).join(' ') + ` L${W} ${pts.at(-1)[1].toFixed(1)}`;
+    curve = `<div class="card"><div class="mtitle">Indbetalinger over tid</div>
+      <svg class="feecurve" viewBox="-2 -6 304 126" preserveAspectRatio="none" role="img" aria-label="${paidN} af ${total} har betalt">
+        <line x1="0" y1="0" x2="300" y2="0" class="goal"/><path d="${path} L300 ${H} Z" class="area"/><path d="${path}" class="ln"/></svg>
+      <div class="curvex"><small>${fmtDay(paidDays[0])}</small><small>Mål: ${total} betalt</small><small>I dag</small></div></div>`;
+  }
+  const stats = total ? `<div class="card attcharts"><div class="mtitle">Overblik</div>
+      <div class="feemoney"><b>${kr(paidN * fee)}</b> <span class="muted">af ${kr(total * fee)} er betalt</span></div>
+      <span class="htrack"><i class="${pctClass(pctPaid)}" style="width:${pctPaid}%"></i></span>
+      <div class="donuts one">${donut([{ label: 'Betalt', n: paidN, c: 'var(--up)' }, { label: 'Afventer', n: n('afventer'), c: 'var(--warn)' }, { label: 'Mangler', n: n('ubetalt'), c: 'var(--dn)' }], `${pctPaid}%`, 'betalt')}</div>
+      ${perTeam.length > 1 ? `<div class="mtitle" style="margin-top:14px">Pr. hold</div>${perTeam.map((x) => { const p2 = Math.round((x.paid / x.n) * 100); return `<div class="hbar static"><span class="hname">${esc(x.name)} <small class="muted">${x.paid} af ${x.n}</small></span><span class="htrack"><i class="${pctClass(p2)}" style="width:${p2}%"></i></span><span class="pct ${pctClass(p2)}">${p2}%</span></div>`; }).join('')}` : ''}
+    </div>${curve}` : '';
   return `
     <div class="card feesum"><b>💳 Kontingent ${esc(gr.club_fee_label)} · ${kr(gr.club_fee || 0)}</b>
       <div class="ftiles"><div><b class="ok">${n('betalt')}</b><small>betalt</small></div><div><b class="warnc">${n('afventer')}</b><small>afventer</small></div><div><b class="no">${n('ubetalt')}</b><small>mangler</small></div></div>
       <div class="mact"><button class="btn sm" id="feeRemind" ${n('ubetalt') ? '' : 'disabled'}>🔔 Påmind</button><button class="btn sm" id="feeCsv">⬇️ Liste</button></div>
       <p class="muted small">Påmindelsen sendes som notifikation til forældre, der ikke har betalt. Listen kan åbnes i Excel.</p></div>
+    ${stats}
     ${groups.map(({ t, ks }) => `<div class="card"><b>${t ? esc(t.name) : 'Uden hold'}</b>
       ${ks.map((k) => `<div class="krow"><span class="grow">${esc(k.name)} ${feeBadge(k)}<small class="muted">${esc(guardianNames(k.id))}</small></span>
         ${feeOf(k.id) === 'betalt' ? `<button class="btn sm" data-kfee="${k.id}|ubetalt">Fortryd</button>` : `<button class="btn sm primary" data-kfee="${k.id}|betalt">✓ Betalt</button>`}</div>`).join('')}</div>`).join('')}`;

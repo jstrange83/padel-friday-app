@@ -886,3 +886,13 @@ details.people { display: block; }
 .famlist { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; }
 .famlist small { width: 100%; }
 .famlist .chip .link { padding: 0 0 0 4px; }
+
+/* Kontingent: statistik */
+.feemoney { margin: 6px 0 8px; } .feemoney b { font-size: 22px; }
+.attcharts .donuts.one { grid-template-columns: 1fr; max-width: 260px; margin: 14px auto 0; }
+.donuts.one .donut { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 14px; }
+.hbar.static { cursor: default; }
+.feecurve { width: 100%; height: 130px; display: block; margin-top: 8px; overflow: visible; }
+.feecurve .area { fill: var(--up); opacity: .18; } .feecurve .ln { fill: none; stroke: var(--up); stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.feecurve .goal { stroke: var(--muted); stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; opacity: .6; }
+.curvex { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 4px; }

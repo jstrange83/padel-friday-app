@@ -1047,7 +1047,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Fremmøde med grafer') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Grafer på fremmøde og kontingent') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1063,7 +1063,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a, .finegate');
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
-  ok(!(await page.locator('#newsModal').innerText()).includes('Fremmøde med grafer'), 'spillere ser ikke admin-nyheder');
+  ok(!(await page.locator('#newsModal').innerText()).includes('Grafer på fremmøde og kontingent'), 'spillere ser ikke admin-nyheder');
   await page.click('#newsModal [data-newslink]');
   await page.waitForSelector('[data-theme-key]');
   ok(!(await page.locator('#newsModal').count()) && page.url().includes('#/udseende'), 'knappen "Vælg farver" i nyheden fører til Udseende');
@@ -1455,6 +1455,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#feeCsv')]);
   const csv = fs.readFileSync(await dl.path(), 'utf8');
   ok(csv.includes('Ida Test') && csv.includes('Betalt') && csv.includes('Strandvejen'), 'liste til regnskabet kan hentes');
+  ok((await page.locator('.feemoney').innerText()).includes('600 kr.') && (await page.locator('.attcharts .donut').count()) === 1, 'kontingent: beløb betalt og lagkage');
   await shot('klub-kontingent');
   await noOverflow('klub kontingent');
 

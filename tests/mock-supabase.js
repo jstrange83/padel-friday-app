@@ -500,7 +500,7 @@ Object.assign(RPC, {
     const cur = db.padel_club_fees.find((x) => x.kid_id === p_kid && x.label === lbl);
     upsert('padel_club_fees', ['kid_id', 'label'], { kid_id: p_kid, label: lbl, status: cur?.status === 'betalt' ? 'betalt' : st });
   },
-  padel_club_fee_set: ({ p_kid, p_status }) => { const k = KID(p_kid); upsert('padel_club_fees', ['kid_id', 'label'], { kid_id: p_kid, label: db.padel_groups.find((x) => x.id === k.group_id).club_fee_label, status: p_status }); },
+  padel_club_fee_set: ({ p_kid, p_status }) => { const k = KID(p_kid); upsert('padel_club_fees', ['kid_id', 'label'], { kid_id: p_kid, label: db.padel_groups.find((x) => x.id === k.group_id).club_fee_label, status: p_status, updated_at: now() }); },
   padel_club_code_info: ({ p_code }) => {
     const k = db.padel_club_kids.find((x) => x.login_code === p_code || x.guardian_code === p_code);
     return k ? { kind: k.login_code === p_code ? 'barn' : 'foraelder', kid: k.name, club: db.padel_groups.find((x) => x.id === k.group_id).name, group_id: k.group_id } : null;

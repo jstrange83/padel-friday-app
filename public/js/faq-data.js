@@ -427,7 +427,7 @@ export const FAQ = [
     q: 'Hvem gør hvad i klubben?',
     a: `<ul><li><b>Admin</b> styrer klubbens indstillinger, kontingent, hold, trænere og kasserer og ser alle børn.</li>
 <li><b>Træner</b> styrer sine egne hold.</li>
-<li><b>Kasserer</b> ser og bekræfter kontingent, sender påmindelser og henter en liste til regnskabet (Admin → Kontingent).</li>
+<li><b>Kasserer</b> ser og bekræfter kontingent, sender påmindelser og henter en liste til regnskabet (Admin → Kontingent). Der er også et overblik med beløb, lagkage, pr. hold og indbetalinger over tid.</li>
 <li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Profil → Mine børn.</li></ul>
 <p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → Medlemmer → Trænere og kasserer). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
   },

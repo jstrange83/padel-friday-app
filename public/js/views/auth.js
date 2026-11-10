@@ -129,7 +129,7 @@ function renderKidLogin(ji) {
     try {
       const { data, error } = await sb.functions.invoke('padel-kid-login', { body: { code } });
       if (error) {
-        let msg = error.message;
+        let msg = 'Kunne ikke få forbindelse. Tjek internettet, og prøv igen.';
         try { msg = (await error.context.json()).error || msg; } catch {}
         throw new Error(msg);
       }

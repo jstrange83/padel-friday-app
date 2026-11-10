@@ -9,8 +9,8 @@ export const NEWS = [
     items: ['👪 Under <b>Profil → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.'],
   },
   {
-    id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Fremmøde med grafer',
-    items: ['📊 Under <b>Admin → Fremmøde</b> kan du nu se <b>alle hold samlet</b> eller ét hold ad gangen, med lagkager, en graf uge for uge og en bjælke pr. hold.'],
+    id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Grafer på fremmøde og kontingent',
+    items: ['📊 Under <b>Admin → Fremmøde</b> kan du nu se <b>alle hold samlet</b> eller ét hold ad gangen, med lagkager, en graf uge for uge og en bjælke pr. hold.', '💳 <b>Kontingent</b> har fået overblik: hvor mange kroner der er betalt, lagkage, pr. hold og indbetalinger over tid.'],
   },
   {
     id: '2026-11-07', date: '7. november 2026', title: 'Vælg dine egne farver',
