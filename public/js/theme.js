@@ -1,5 +1,5 @@
 // Udseende: farvetemaer. Gemmes på profilen (følger med på alle telefoner) og på telefonen (så det er der med det samme).
-import { sb, S, app, toast, q, esc } from './core.js';
+import { sb, S, app, toast, q, esc, isSuper } from './core.js';
 
 // [nøgle, navn, baggrund, kort, accent, lys?]
 export const THEMES = [
@@ -16,6 +16,8 @@ export const THEMES = [
   ['mint', 'Mint', '#ecfaf4', '#ffffff', '#0f766e', 1],
   ['sand', 'Sand', '#fbf5ec', '#ffffff', '#c2410c', 1],
   ['lavendel', 'Lavendel', '#f5f2ff', '#ffffff', '#6d28d9', 1],
+  // Kun for superadmin
+  ['brondby', 'Brøndby', '#062457', '#0b3270', '#ffd200', 0, 'super'],
 ];
 
 export function applyTheme(key) {
@@ -32,7 +34,7 @@ export function viewTheme() {
     <button class="back" onclick="location.hash='#/profil'">‹ Profil</button>
     <h1>🎨 Udseende</h1>
     <p class="muted">Vælg de farver, du kan lide. Det gælder kun for dig, og det følger med, hvis du logger ind på en anden telefon.</p>
-    ${[['Mørke', 0], ['Lyse', 1]].map(([h, light]) => `<h3>${h}</h3><div class="themes">${THEMES.filter((t) => !!t[5] === !!light).map(([k, name, bg, card, acc]) => `
+    ${[['Mørke', 0], ['Lyse', 1]].map(([h, light]) => `<h3>${h}</h3><div class="themes">${THEMES.filter((t) => !!t[5] === !!light && (!t[6] || isSuper() || t[0] === cur)).map(([k, name, bg, card, acc]) => `
       <button class="theme ${k === cur ? 'on' : ''}" data-theme-key="${k}" aria-pressed="${k === cur}">
         <div class="tprev" style="background:${bg}"><i style="background:${card}"></i><i style="background:${card};width:70%"></i><b style="background:${acc}"></b></div>
         <span>${esc(name)}${k === cur ? ' ✓' : ''}</span>

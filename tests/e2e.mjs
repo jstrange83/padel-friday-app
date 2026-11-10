@@ -1031,6 +1031,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/udseende');
   await page.waitForSelector('.themes');
   ok((await page.locator('.themes').count()) === 2 && (await page.locator('[data-theme-key]').count()) >= 13, 'temaer delt i Mørke og Lyse, med flere lyse');
+  ok((await page.locator('[data-theme-key="brondby"]').count()) === (await page.evaluate(async () => { const s = JSON.parse(sessionStorage.getItem('mock-session')); return window.__mock.db().padel_profiles.find((p) => p.id === s.user.id)?.is_superadmin ? 1 : 0; })), 'Brøndby-temaet kan kun vælges af superadmin');
   await shot('tema-valg');
   for (const k of ['himmel', 'mint', 'sand', 'lavendel', 'skov', 'rubin']) {
     await page.click(`[data-theme-key="${k}"]`);
