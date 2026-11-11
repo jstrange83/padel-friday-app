@@ -218,7 +218,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang',
     q: 'Kan påmindelser også komme på mail?',
-    a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får dem, der ikke har slået notifikationer til i appen, påmindelserne om træning på mail.</p>
+    a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail.</p>
 <p>Mailen kommer fra appen med gruppens navn som afsender, og svarer nogen på mailen, går svaret til den mail, admin har skrevet.</p>`,
   },
   {

@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-11', date: '11. november 2026', admin: true, title: 'Påmindelser på mail',
-    items: ['✉️ Under <b>Admin → Påmindelser på mail</b> kan du slå til, at dem uden notifikationer får påmindelser om træning på mail. Mailen kommer med gruppens navn, og svar går til gruppens egen mail.'],
+    items: ['✉️ Under <b>Admin → Påmindelser på mail</b> kan du slå til, at dem, der ikke har svaret på en træning, også får påmindelsen på mail. Mailen kommer med gruppens navn, og svar går til gruppens egen mail.'],
   },
   {
     id: '2026-11-10b', date: '10. november 2026', club: true, title: 'Familie og børns eget login',
