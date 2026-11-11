@@ -119,6 +119,7 @@ function playersTab() {
     <div class="card invitebar"><div><b>${esc(group()?.name || '')}</b> <small class="muted">· ${club ? `${players.length} voksne og juniorer med login` : players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       ${club ? `<p class="muted small">${audience() === 'voksne' ? 'Del linket med spillerne. De opretter sig og melder sig selv ind, og I godkender under Spillere.' : audience() === 'begge' ? 'Del linket med spillere og forældre. Voksne melder sig selv ind, forældre melder deres børn ind, og I godkender under Spillere.' : 'Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn.'} Trænere og bestyrelse bruger samme link og trykker <b>Bed om adgang</b>, så godkender I dem her.</p>` : ''}
       <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button>${club ? '' : '<button class="btn sm" id="newPlayerBtn">➕ Opret</button>'}<button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
+    ${isAdmin() ? mailCard() : ''}
     ${club ? clubSettingsCard() + clubStaffCard() : `${createPlayerBox()}
     <details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Gruppens indstillinger</b><small class="muted">Rangliste: ${{ alle: 'alle', gruppe: 'kun gruppen', ingen: 'ingen' }[group()?.ranking_mode || 'alle']} · Bøder: ${group()?.fines_enabled ? 'til' : 'fra'}</small></summary>
     <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
@@ -339,6 +340,12 @@ function bind() {
   app.querySelectorAll('input[name=rankmode]').forEach((r) => (r.onchange = async () => {
     try { await q(sb.rpc('padel_set_ranking_mode', { g, p_mode: r.value })); toast({ alle: 'Ranglisten viser alle spillere', gruppe: 'Ranglisten viser kun gruppen', ingen: 'Gruppen har nu ingen rangliste' }[r.value]); await refresh(); } catch {}
   }));
+  const mf = document.getElementById('mailForm');
+  if (mf) mf.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = mf.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_set_group_mail', { g: S.groupId, p_enabled: mf.on.checked, p_reply_to: mf.reply.value })); toast(mf.on.checked ? 'Mail-påmindelser er slået til' : 'Mail-påmindelser er slået fra'); await refresh(); } catch { busy(btn, false); }
+  };
   const bf = document.getElementById('ballFee');
   if (bf) bf.onsubmit = async (e) => { e.preventDefault(); try { await q(sb.rpc('padel_set_ball_fee', { g: S.groupId, p_fee: +bf.fee.value || null })); toast('Gemt'); await refresh(); } catch {} };
   const fo = document.getElementById('finesOn');
@@ -449,4 +456,16 @@ function bind() {
     const n = prompt('Navn på centret');
     if (n?.trim()) { await q(sb.from('padel_centers').insert({ name: n.trim() })); refresh(); }
   };
+}
+
+// Mail-påmindelser: til dem, der ikke har notifikationer slået til. Sendes fra appens mail med gruppens navn; svar går til gruppens mail.
+function mailCard() {
+  const gr = group() || {};
+  return `<details class="card gset mailset"><summary><b>✉️ Påmindelser på mail</b><small class="muted">${gr.mail_enabled ? 'Til' : 'Fra'}</small></summary>
+    <form id="mailForm">
+      <p class="muted small">Påmindelser om træning sendes også som mail til dem, der ikke har slået notifikationer til i appen. Mailen kommer fra <b>${esc(gr.name || '')}</b>, og svarer nogen på den, går svaret til mailen herunder.</p>
+      <label class="switch"><input type="checkbox" name="on" ${gr.mail_enabled ? 'checked' : ''}><span>Send påmindelser på mail</span></label>
+      <label>Svar går til <small class="muted">(gruppens egen mail)</small><input name="reply" type="email" value="${esc(gr.mail_reply_to || '')}" placeholder="fx klubben@gmail.com"></label>
+      <button class="btn sm primary">Gem</button>
+    </form></details>`;
 }

@@ -1042,13 +1042,24 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(300);
   ok(!(await page.evaluate(() => document.documentElement.dataset.theme)), 'tilbage til standard');
 
+  // Påmindelser på mail (gruppens admin)
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('details.mailset');
+  await page.click('details.mailset > summary');
+  await page.check('#mailForm input[name=on]');
+  await page.fill('#mailForm input[name=reply]', 'fredag@test.dk');
+  await page.click('#mailForm button');
+  await wait(500);
+  ok(await page.evaluate(() => { const g = window.__mock.db().padel_groups.find((x) => x.id === 'g-fre'); return g.mail_enabled === true && g.mail_reply_to === 'fredag@test.dk'; }), 'admin slår påmindelser på mail til med gruppens svar-mail');
+  await noOverflow('mail indstillinger');
   // Nyt i appen: popup én gang efter en større opdatering; spillere ser ikke admin-nyheder
   await loginAs('jimmy@test');
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = '2026-10-24'; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = '2026-10-24'; window.__mock.save(); });
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Grafer på fremmøde og kontingent') && nm.includes('egne farver'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Påmindelser på mail') && nm.includes('Grafer på fremmøde og kontingent'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1155,7 +1166,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await noOverflow('klub hold og tider');
   // Kontingent og info
   await page.click('[data-tab="spillere"]');
-  await page.click('details.gset:not(.staff) summary');
+  await page.click('details.gset:not(.staff):not(.mailset) summary');
   await page.fill('#clubSet input[name=fee]', '600');
   await page.fill('#clubSet input[name=label]', 'Efterår 2026');
   await page.fill('#clubSet input[name=url]', 'https://qr.mobilepay.dk/box/test');
@@ -1165,7 +1176,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#clubSet input[name=hours]', '48');
   await page.click('#clubSet button');
   await wait(500);
-  ok((await page.locator('details.gset:not(.staff) summary').innerText()).includes('600'), 'kontingent sat op');
+  ok((await page.locator('details.gset:not(.staff):not(.mailset) summary').innerText()).includes('600'), 'kontingent sat op');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_absence_hours, clubId)) === 48, 'afbudsfrist sat til 48 timer');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_fee_account, clubId)) === 'Reg. 1234 konto 0012345678', 'kontonummer til kontingent er gemt');
   // Klubben kan findes i appen: andre ser en lille linje under Profil, som kan lukkes

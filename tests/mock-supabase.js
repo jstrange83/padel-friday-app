@@ -540,6 +540,7 @@ Object.assign(RPC, {
   },
   padel_club_kid_new_code: ({ p_kid }) => { if (!kidMine(p_kid)) throw new Error('Det har du ikke adgang til'); const k = KID(p_kid); k.login_code = uuid().replace(/-/g, '').slice(0, 12); return k.login_code; },
   padel_club_set_remind: ({ p_kid, p_pattern }) => { const g = db.padel_club_guardians.find((m) => m.kid_id === p_kid && m.user_id === uid() && m.active !== false); if (!g) throw new Error('Det har du ikke adgang til'); g.remind_pattern = p_pattern === '11111111111111' ? null : p_pattern; },
+  padel_set_group_mail: ({ g, p_enabled, p_reply_to }) => { if (!isAdm(g)) throw new Error('Kun gruppens admin'); const r = (p_reply_to || '').trim(); if (r && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(r)) throw new Error('Mailadressen ser forkert ud'); Object.assign(db.padel_groups.find((x) => x.id === g), { mail_enabled: !!p_enabled, mail_reply_to: r || null }); },
   padel_club_kid_family: ({ p_kids }) => db.padel_club_guardians.filter((g) => g.active !== false && p_kids.includes(g.kid_id) && db.padel_club_guardians.some((m) => m.kid_id === g.kid_id && m.user_id === uid() && m.active !== false))
     .map((g) => ({ kid_id: g.kid_id, user_id: g.user_id, name: db.padel_profiles.find((p) => p.id === g.user_id)?.name || '' })),
   padel_club_remove_guardian: ({ p_kid, p_user }) => {
