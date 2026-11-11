@@ -463,7 +463,7 @@ function mailCard() {
   const gr = group() || {};
   return `<details class="card gset mailset"><summary><b>✉️ Påmindelser på mail</b><small class="muted">${gr.mail_enabled ? 'Til' : 'Fra'}</small></summary>
     <form id="mailForm">
-      <p class="muted small">Dem, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, får også påmindelsen på mail (dagen før, og når en træner trykker 🔔). Mailen kommer fra <b>${esc(gr.name || '')}</b>, og svarer nogen på den, går svaret til mailen herunder.</p>
+      <p class="muted small">Dem, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, får også påmindelsen på mail: 3 dage før (falder det i weekenden, om fredagen), dagen før, og når en træner trykker 🔔. Mailen kommer fra <b>${esc(gr.name || '')}</b>, og svarer nogen på den, går svaret til mailen herunder.</p>
       <label class="switch"><input type="checkbox" name="on" ${gr.mail_enabled ? 'checked' : ''}><span>Send påmindelser på mail</span></label>
       <label>Svar går til <small class="muted">(gruppens egen mail)</small><input name="reply" type="email" value="${esc(gr.mail_reply_to || '')}" placeholder="fx klubben@gmail.com"></label>
       <button class="btn sm primary">Gem</button>

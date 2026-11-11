@@ -218,7 +218,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang',
     q: 'Kan påmindelser også komme på mail?',
-    a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail.</p>
+    a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail. Mailen kommer 3 dage før træningen (falder det i weekenden, kommer den om fredagen) og igen dagen før.</p>
 <p>Mailen kommer fra appen med gruppens navn som afsender, og svarer nogen på mailen, går svaret til den mail, admin har skrevet.</p>`,
   },
   {
@@ -446,7 +446,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Får jeg en påmindelse før træning? Og hvad er afbudsfristen?',
-    a: `<p>Hvis klubben har slået det til, får du en notifikation om eftermiddagen dagen før træning. Har du ikke svaret, bliver du bedt om at trykke Kommer eller Afbud. Har du givet afbud, får du ingen påmindelse.</p>
+    a: `<p>Hvis klubben har slået det til, får du en notifikation om eftermiddagen dagen før træning. Har du ikke svaret, får du også en påmindelse 3 dage før (falder det i weekenden, om fredagen), og du bliver bedt om at trykke Kommer eller Afbud. Har klubben slået mail til, kommer de påmindelser også på mail. Har du givet afbud, får du ingen påmindelse.</p>
 <p>Klubben kan sætte en <b>afbudsfrist</b>, fx 2 timer før. Du kan stadig give afbud efter fristen, men så får holdets trænere besked, og du kan skrive en kort grund.</p>`,
   },
   {
