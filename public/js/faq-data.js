@@ -224,6 +224,7 @@ export const FAQ = [
     cat: 'Roller og adgang',
     q: 'Kan påmindelser også komme på mail?',
     a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail. Mailen kommer 3 dage før træningen (falder det i weekenden, kommer den om fredagen) og igen dagen før.</p>
+<p>I en spillegruppe som Fredagspadel får dem, der ikke er tilmeldt næste spilledag, en mail 4 dage før (mandag for en fredag), 2 dage før og dagen før, med hvor mange spillere der mangler. Er dagen fuld, kommer der ingen mail.</p>
 <p>Mailen kommer fra appen med gruppens navn som afsender, og svarer nogen på mailen, går svaret til den mail, admin har skrevet.</p>`,
   },
   {

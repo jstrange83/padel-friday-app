@@ -14,7 +14,7 @@ export const NEWS = [
   },
   {
     id: '2026-11-11', date: '11. november 2026', admin: true, title: 'Påmindelser på mail',
-    items: ['✉️ Under <b>Admin → Påmindelser på mail</b> kan du slå til, at dem, der ikke har svaret på en træning, også får påmindelsen på mail. Mailen kommer med gruppens navn, og svar går til gruppens egen mail.'],
+    items: ['✉️ Under <b>Admin → Påmindelser på mail</b> kan du slå til, at dem, der ikke har svaret på en træning, også får påmindelsen på mail. I en spillegruppe får dem, der ikke er tilmeldt, en mail 4 dage før, 2 dage før og dagen før spilledagen. Mailen kommer med gruppens navn, og svar går til gruppens egen mail.'],
   },
   {
     id: '2026-11-10b', date: '10. november 2026', club: true, title: 'Familie og børns eget login',

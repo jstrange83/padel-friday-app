@@ -463,8 +463,9 @@ function mailCard() {
   const gr = group() || {};
   return `<details class="card gset mailset"><summary><b>✉️ Påmindelser på mail</b><small class="muted">${gr.mail_enabled ? 'Til' : 'Fra'}</small></summary>
     <form id="mailForm">
-      <p class="muted small">Dem, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, får også påmindelsen på mail: 3 dage før (falder det i weekenden, om fredagen), dagen før, og når en træner trykker 🔔. Mailen kommer fra <b>${esc(gr.name || '')}</b>, og svarer nogen på den, går svaret til mailen herunder.</p>
-      <label class="switch"><input type="checkbox" name="on" ${gr.mail_enabled ? 'checked' : ''}><span>Send påmindelser på mail</span></label>
+      <p class="muted small">${isClub() ? 'Dem, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, får også påmindelsen på mail: 3 dage før (falder det i weekenden, om fredagen), dagen før, og når en træner trykker 🔔.'
+        : 'Dem i gruppen, der ikke er tilmeldt næste spilledag, får en mail 4 dage før (for en fredag: mandag), 2 dage før (onsdag) og dagen før (torsdag), med hvor mange spillere der mangler. Første mail takker for sidst eller fortæller, hvad de gik glip af, og teksterne skifter fra uge til uge. Er dagen fuld, sendes der ingen mail.'} Mailen kommer fra <b>${esc(gr.name || '')}</b>, og svarer nogen på den, går svaret til mailen herunder.</p>
+      <label class="switch"><input type="checkbox" name="on" ${gr.mail_enabled ? 'checked' : ''}><span>Send ${isClub() ? 'påmindelser' : 'mails om spilledage'} på mail</span></label>
       <label>Svar går til <small class="muted">(gruppens egen mail)</small><input name="reply" type="email" value="${esc(gr.mail_reply_to || '')}" placeholder="fx klubben@gmail.com"></label>
       <button class="btn sm primary">Gem</button>
     </form></details>`;
