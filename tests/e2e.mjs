@@ -1771,6 +1771,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#todoModal [data-todo]');
   await page.waitForSelector('.plist.noteam');
   ok((await page.locator('.plist.noteam').innerText()).includes('Uden Hold'), '"Tag stilling nu" viser børn uden hold');
+  if (await page.locator('[data-kteam="none"]').count()) {
+    await page.click('[data-kteam="none"]');
+    await page.waitForSelector('.kteam-opt.on[data-kteam="none"]');
+    ok((await page.locator('details.plist').count()) === 1 && (await page.locator('details.plist.noteam').count()) === 1, 'vælg et hold: kun de børn vises');
+    await shot('klub-boern-hold');
+    await noOverflow('børn pr. hold');
+    await page.click('[data-kteam=""]');
+    await page.waitForSelector('.kteam-opt.on[data-kteam=""]');
+  }
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
   await pastGates();

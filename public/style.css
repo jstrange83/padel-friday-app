@@ -990,3 +990,19 @@ details.people { display: block; }
   .sidetop .link { display: inline-block; margin-top: 8px; }
   .page.events.wide .evlist { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
 }
+
+/* Børn pr. hold: vælg et hold og se kun det */
+.kteams { padding: 12px; }
+.kteams .mtitle { margin: 2px 4px 8px; }
+.kteam-opt { display: flex; width: 100%; align-items: center; gap: 10px; padding: 10px 12px; margin: 2px 0; border: 0; border-radius: 10px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.kteam-opt span { flex: 1; min-width: 0; }
+.kteam-opt b { color: var(--muted); font-size: 14px; }
+.kteam-opt.on { background: var(--accent); color: var(--accent-ink); }
+.kteam-opt.on b { color: var(--accent-ink); }
+@media (max-width: 1099px) {
+  .kteams { display: flex; gap: 6px; overflow-x: auto; padding: 8px; scrollbar-width: none; }
+  .kteams .mtitle { display: none; }
+  .kteam-opt { width: auto; flex: none; margin: 0; background: var(--card2); white-space: nowrap; padding: 8px 12px; font-size: 14px; }
+  .kteam-opt span { flex: none; }
+}
+@media (min-width: 1100px) { .page.admin .abody.tab-boern { columns: auto; } }

@@ -818,7 +818,8 @@ export function clubKidsTab() {
       <div class="kpend"><div><b>${esc(k.name)}</b><small class="muted">${esc(team(k.team_id)?.name || 'Intet hold')} → <b>${esc(team(k.wish_team).name)}</b> · ønsket af ${esc(k.adult ? 'spilleren selv' : guardianNames(k.id))}</small></div>
         <div class="mact"><button class="btn sm ghost" data-wishno="${k.id}">Afvis ønsket</button><button class="btn sm primary" data-wishok="${k.id}">Flyt til ${esc(team(k.wish_team).name)}</button></div></div>`).join('')}</div>` : ''}
     ${!isAdmin() && myAssigned().length ? `<p class="muted small">Du ser dine egne hold: ${teams.map((t) => esc(t.name)).join(', ')}.</p>` : ''}
-    ${byTeam.map(({ t, ks }) => `<details class="card plist ${t ? '' : 'noteam'}" ${S.kidsOpen?.[t?.id || 'none'] ?? !t ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : '⚠️ Mangler hold'} (${ks.length})</b>${t ? '' : '<small class="muted">Tryk på barnet, vælg hold og tryk Gem</small>'}</summary>
+    ${kidsWrapStart(byTeam, act)}
+    ${byTeam.filter(({ t }) => !S.kidTeam || (t?.id || 'none') === S.kidTeam).map(({ t, ks }) => `<details class="card plist ${t ? '' : 'noteam'}" ${S.kidTeam || (S.kidsOpen?.[t?.id || 'none'] ?? !t) ? 'open' : ''} data-kt="${t?.id || 'none'}"><summary><b>${t ? esc(t.name) : '⚠️ Mangler hold'} (${ks.length})</b>${t ? '' : '<small class="muted">Tryk på barnet, vælg hold og tryk Gem</small>'}</summary>
       <div class="list compact">${ks.map((k, i) => `<details class="prow"><summary><span class="grow"><b>${esc(k.name)}</b>${k.trial ? ' <span class="badge trial">Prøve</span>' : ''}${kidFlags(k)}${k.trial ? '' : feeBadge(k)}<small>${kidMeta(k)}</small></span><span class="muted">›</span></summary>
         <form class="ppanel kedit" data-kedit="${k.id}">
           ${infoOf(k.id) ? `<div class="infobox">⚠️ ${esc(infoOf(k.id))}</div>` : ''}
@@ -828,12 +829,25 @@ export function clubKidsTab() {
           ${kidFormFields({ ...k, info: infoOf(k.id) }, 200 + i, collect || !!k.address)}
           <label>Hold${teamSel(k, 'name="team"')}</label>
           <div class="mact"><button type="button" class="btn sm ghost danger" data-kout="${k.id}">Meld ud</button><button class="btn sm primary">Gem</button></div>
-        </form></details>`).join('')}</div></details>`).join('') || (pend.length ? '' : `<div class="card empty"><p class="muted">${hasAdults() ? 'Ingen spillere endnu. Del invitationslinket under fanen Medlemmer, så spillere og forældre kan melde sig ind.' : 'Ingen børn endnu. Del invitationslinket under fanen Medlemmer, så forældrene kan melde deres børn ind.'}</p></div>`)}`;
+        </form></details>`).join('')}</div></details>`).join('') || (pend.length ? '' : `<div class="card empty"><p class="muted">${hasAdults() ? 'Ingen spillere endnu. Del invitationslinket under fanen Medlemmer, så spillere og forældre kan melde sig ind.' : 'Ingen børn endnu. Del invitationslinket under fanen Medlemmer, så forældrene kan melde deres børn ind.'}</p></div>`)}
+    ${kidsWrapEnd(byTeam, act)}`;
 }
+// Vælg hold: alle børn, eller kun ét hold. På computeren i højre side, på telefonen som knapper øverst.
+function kidsTeamPick(byTeam, act) {
+  if (byTeam.length < 2) return '';
+  const cur = S.kidTeam || '';
+  const opt = (id, label, n) => `<button type="button" class="kteam-opt ${cur === id ? 'on' : ''}" data-kteam="${id}"><span>${label}</span><b>${n}</b></button>`;
+  return `<div class="card kteams"><div class="mtitle">${hasAdults() ? 'Spillere' : 'Børn'} pr. hold</div>
+    ${opt('', 'Alle hold', byTeam.reduce((a, x) => a + x.ks.length, 0))}
+    ${byTeam.map(({ t, ks }) => opt(t?.id || 'none', t ? esc(t.name) : '⚠️ Mangler hold', ks.length)).join('')}</div>`;
+}
+const kidsWrapStart = (byTeam, act) => (isWide() && byTeam.length > 1 ? '<div class="wcols"><div class="wmain">' : kidsTeamPick(byTeam, act));
+const kidsWrapEnd = (byTeam, act) => (isWide() && byTeam.length > 1 ? `</div><aside class="wside">${kidsTeamPick(byTeam, act)}</aside></div>` : '');
 
 export function bindClubKids(refresh) {
   const kid = (id) => C().kids.find((k) => k.id === id);
   app.querySelectorAll('details[data-kt]').forEach((d) => (d.ontoggle = () => { (S.kidsOpen ||= {})[d.dataset.kt] = d.open; }));
+  app.querySelectorAll('[data-kteam]').forEach((b) => (b.onclick = () => { S.kidTeam = b.dataset.kteam || null; refresh(); }));
   app.querySelectorAll('[data-kdo]').forEach((b) => (b.onclick = async () => {
     const [id, act] = b.dataset.kdo.split('|'), k = kid(id);
     const teamId = app.querySelector(`[data-pteam="${id}"]`)?.value || k.team_id || null;
@@ -1384,7 +1398,7 @@ export function showClubTodo() {
   document.body.appendChild(wrap);
   wrap.querySelector('#todoLater').onclick = () => wrap.remove();
   wrap.querySelectorAll('[data-todo]').forEach((b) => (b.onclick = () => {
-    wrap.remove(); setGroup(b.dataset.todo); S.adminTab = 'boern'; S.kidsOpen = { none: true };
+    wrap.remove(); setGroup(b.dataset.todo); S.adminTab = 'boern'; S.kidsOpen = { none: true }; S.kidTeam = null;
     if (location.hash === '#/admin') hooks.route?.(); else location.hash = '#/admin';
   }));
   return true;
