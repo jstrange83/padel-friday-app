@@ -22,7 +22,17 @@ export async function viewRanking() {
   let unit = '', note = '';
   if (kind === 'maaned') { unit = 'point'; note = `Flest point vundet i ${MONTHS[now.getMonth()]}.`; rows = rows.filter((r) => r.n && r.val); }
   if (kind === 'aeg') { unit = 'æg'; note = 'Flest sæt vundet 6‑0 (eller 7‑0) i Ét sæt pr. runde og Klassisk.'; rows = rows.filter((r) => r.val > 0); }
-  if (kind === 'streak') { unit = 'i træk'; note = 'Flest kampe vundet i træk lige nu. Længste står under navnet.'; rows = rows.filter((r) => r.n); }
+  // Streak: sejre i træk, eller spilledage i træk i gruppen (fx fredage; ordet følger gruppens spilledag)
+  let dayWord = 'spilledage';
+  if (kind === 'streak') {
+    const ds = await q(sb.rpc('padel_day_streaks', { g: S.groupId })).catch(() => null);
+    dayWord = ds?.word || 'spilledage';
+    if (S.streakKind === 'dage' && ds) {
+      const byId = Object.fromEntries(data.map((r) => [r.id, r]));
+      rows = ds.rows.map((d) => ({ id: d.id, name: byId[d.id]?.name || S.profiles[d.id]?.name || '?', gender: byId[d.id]?.gender || S.profiles[d.id]?.gender, val: d.cur, n: 1, best: d.best })).filter((r) => r.best);
+      unit = 'i træk'; note = `Flest ${dayWord} i træk lige nu i ${esc(group()?.name || 'gruppen')}. Længste står under navnet.`;
+    } else { unit = 'i træk'; note = 'Flest kampe vundet i træk lige nu. Længste står under navnet.'; rows = rows.filter((r) => r.n); }
+  }
   if (S.filter !== 'alle') rows = rows.filter((p) => p.gender === S.filter);
   rows.sort((a, b) => b.val - a.val || (b.best || 0) - (a.best || 0) || a.name.localeCompare(b.name));
   const plain = kind === 'point';
@@ -50,6 +60,7 @@ export async function viewRanking() {
     <div class="tabbar">${TABS.map(([k, t]) => `<button class="tab ${kind === k ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>
     <div class="chips">${[['alle', 'Alle'], ['mand', 'Mænd'], ['kvinde', 'Kvinder']].map(([k, v]) =>
       `<button class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${v}</button>`).join('')}</div>
+    ${kind === 'streak' ? `<div class="chips">${[['sejre', '🏅 Sejre i træk'], ['dage', `📅 ${dayWord[0].toUpperCase() + dayWord.slice(1)} i træk`]].map(([k, v]) => `<button class="chip ${(S.streakKind || 'sejre') === k ? 'on' : ''}" data-sk="${k}">${v}</button>`).join('')}</div>` : ''}
     ${note ? `<p class="muted small">${note}</p>` : ''}
     <div class="list">${active.map(row).join('') || '<p class="muted pad">Ingen endnu.</p>'}</div>
     ${fresh.length ? `<details class="faq fresh"><summary>Ikke spillet endnu (${fresh.length})</summary><div>${fresh.map((p) =>
@@ -58,6 +69,7 @@ export async function viewRanking() {
   </div>`;
   app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
   app.querySelectorAll('[data-kind]').forEach((b) => (b.onclick = () => { S.rankKind = b.dataset.kind; viewRanking(); }));
+  app.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => { S.streakKind = b.dataset.sk; viewRanking(); }));
 }
 
 export async function viewPlayer(id) {

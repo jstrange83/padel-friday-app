@@ -1,6 +1,11 @@
 // Spørgsmål og svar til FAQ under profilen. Hold teksterne korte og i samme tone som appen.
 export const FAQ = [
   {
+    cat: 'Point og rangliste', group: true,
+    q: 'Hvad er Streak på ranglisten?',
+    a: `<p>Under <b>🔥 Streak</b> kan du vælge <b>Sejre i træk</b> (flest kampe vundet i træk lige nu) eller fx <b>Fredage i træk</b> (flest spilledage i træk, hvor man har været med). Ordet følger gruppens spilledag, så i en lørdagsgruppe hedder det Lørdage i træk. Den længste streak står under navnet.</p>`,
+  },
+  {
     cat: 'Point og rangliste',
     q: 'Hvordan fungerer point på ranglisten?',
     a: `<p>Alle starter på <b>1000 point</b>. Efter hver godkendt kamp får vinderholdet point, og taberholdet mister lige så mange.</p>

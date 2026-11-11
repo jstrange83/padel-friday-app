@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-11c', date: '11. november 2026', groups: true, title: 'Fredage i træk',
+    items: ['🔥 Under <b>Rangliste → Streak</b> kan du nu også se, hvem der har været med flest fredage i træk.'],
+  },
+  {
     id: '2026-11-11b', date: '11. november 2026', title: 'Flottere på computeren',
     items: ['💻 På en computer har appen nu menuen i venstre side og bruger hele skærmen: spilledage og træninger i flere kolonner, dagsplanen med pris og tilmeldte ved siden af, top 5 på ranglisten, og admin i to spalter. På telefonen er alt som før.'],
   },

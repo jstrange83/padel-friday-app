@@ -280,6 +280,11 @@ try {
   ok((await text()).includes('kamp'), 'ranglisten viser kampe');
   await shot('rangliste');
   for (const k of ['maaned', 'aeg', 'streak']) { await page.click(`[data-kind="${k}"]`); await wait(300); }
+  await page.click('[data-sk="dage"]');
+  await wait(400);
+  ok(/i træk/.test(await page.locator('[data-sk="dage"]').innerText()) && (await page.locator('.list .row').count()) >= 1, 'streak: flest spilledage i træk (fx fredage)');
+  await page.click('[data-sk="sejre"]');
+  await wait(300);
   ok((await page.locator('.list .row').count()) >= 1, 'ranglistefaner (måned, æg, streak) virker');
   await page.click('[data-kind="maaned"]');
   await wait(300);
