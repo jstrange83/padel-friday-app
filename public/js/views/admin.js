@@ -30,7 +30,7 @@ export async function viewAdmin() {
     <h1>Admin</h1>
     ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
     ${club && ['boern', 'hold', 'kontingent', 'fremmode'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
-    ${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}
+    <div class="abody tab-${S.adminTab}">${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}</div>
   </div>`;
   app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
   app.querySelector('.tab.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });

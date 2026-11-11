@@ -116,7 +116,7 @@ try {
   await page.reload();
   await page.waitForSelector('.pricecard');
   ok(await page.locator('.pricecard [data-paidfor="u-1"].on').count() === 1 && await page.locator('.pricecard details.bookedby').count() === 1, 'admin ser, hvem der har betalt, og "booket af" er foldet sammen, når dagsplanen er lavet');
-  ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner');
+  ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner: ' + await page.locator('.rtabs .rtab').count() + ' ' + await page.evaluate(() => JSON.stringify(window.__mock.db().padel_events.map((e) => [e.format, e.round_minutes, e.duration_minutes]))));
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
   ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
@@ -1059,7 +1059,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Påmindelser på mail') && nm.includes('Grafer på fremmøde og kontingent'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Påmindelser på mail') && nm.includes('Flottere på computeren'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1559,9 +1559,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await rs2.locator('summary').innerText()).includes('Lige uger'), 'valget vises');
   await rs2.locator('label:has(input[value="custom"])').click();
   await rs2.locator('.remgrid').waitFor();
-  await rs2.locator('input[name=d12]').uncheck({ force: true });
-  await rs2.locator('input[name=d13]').uncheck({ force: true });
-  await rs2.locator('input[name=d7]').check({ force: true });
+  await rs2.locator('label.remday:has(input[name=d7])').click();
   await shot('familie-paamindelser');
   await noOverflow('familie påmindelser');
   await rs2.locator('button.primary').click();

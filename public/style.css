@@ -919,3 +919,74 @@ details.people { display: block; }
 .remday input:checked + span { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .remday input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
 :root[data-theme="brondby"] { --bg: #062457; --card: #0b3270; --card2: #12408a; --line: #1f55a8; --text: #ffffff; --muted: #aec4ea; --accent: #ffd200; --accent-ink: #062457; }
+
+/* ---------- Computer (stor skærm): bred side, kolonner og flot menu. Telefonen er uændret. ---------- */
+.navfoot { display: none; }
+@media (min-width: 900px) {
+  #nav { padding-bottom: 14px; }
+  #nav .navfoot { display: flex; margin-top: auto; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; background: var(--card); color: var(--text); }
+  #nav .navfoot:hover { background: var(--card2); }
+  .navav { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-style: normal; font-weight: 800; font-size: 14px; }
+  .navwho { min-width: 0; display: flex; flex-direction: column; }
+  .navwho b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .navwho small { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (min-width: 1100px) {
+  body { padding-left: 250px; }
+  #nav { width: 250px; padding: 28px 16px 16px; }
+  #nav::before { font-size: 26px; padding-bottom: 24px; }
+  #viewAsBar, #editBar { margin-left: -250px; padding-left: calc(250px + 16px); }
+  #toast { left: calc(50% + 125px); }
+  .page { max-width: 980px; padding: 40px 48px 56px; }
+  .page.wide, .page.events, .page.admin, .page.profile, .page.fines { max-width: 1320px; }
+  h1 { font-size: 34px; }
+  .card { padding: 18px 20px; }
+  /* To kolonner: indhold til venstre, fast sidepanel til højre */
+  .wcols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 400px); gap: 28px; align-items: start; margin-top: 8px; }
+  .wmain > .card:first-child, .wside > .card:first-child, .wside > h3:first-child { margin-top: 0; }
+  .wside { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow: auto; padding-right: 2px; scrollbar-width: thin; }
+  .wside h3:first-child { margin-top: 4px; }
+  /* Spilledage: kort i et gitter */
+  .page.events .evlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; margin: 14px 0; }
+  .page.events .evlist .ev { margin: 0; min-height: 96px; }
+  .page.events .past .evlist { opacity: .85; }
+  /* Træning: træninger i to kolonner */
+  .page.club.wide .trlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; align-items: start; }
+  .page.club.wide .trlist > .card, .page.club.wide .trlist > div > .card { margin: 0; }
+  .page.club.wide .trlist > .btn, .page.club.wide .trlist > .card.empty { grid-column: 1 / -1; }
+  /* Admin, profil og bødekasse: kortene i to spalter */
+  .page.admin .abody, .page.profile, .page.fines { columns: 2 440px; column-gap: 28px; }
+  .page.admin .abody > *, .page.profile > *, .page.fines > * { break-inside: avoid; }
+  .page.admin .abody > .card:first-child, .page.admin .abody > details:first-child { margin-top: 0; }
+  .page.admin .abody > .chips, .page.admin .abody > .teamsel, .page.admin .abody > .feesum, .page.admin .abody > .feefilt,
+  .page.admin .abody.tab-fremmode > .feesum,
+  .page.profile > .me-card, .page.fines > h1, .page.fines > .chips, .page.fines > .muted, .page.fines > .warnbox { column-span: all; }
+  .page.admin .abody h3, .page.profile h3 { break-after: avoid; }
+  .page.profile > h3 { margin-top: 0; padding-top: 14px; }
+  .page.profile .me-card { padding: 24px; }
+  /* Fremmøde og kontingent: graferne får plads */
+  .abody .attcharts .donuts { gap: 24px; }
+  .abody .wbars { height: 190px; }
+  /* Tabeller og lister bliver luftigere */
+  .tabbar { max-width: 100%; }
+  .page.admin .tabbar { display: inline-flex; flex-wrap: wrap; }
+  .page.admin .tab { flex: none; padding: 10px 16px; }
+  /* Login: banen og formularen side om side */
+  .authx { max-width: 1080px; display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 64px; align-items: center; padding-top: 80px; }
+  .authx .hero { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
+  .authx > :not(.hero) { grid-column: 2; }
+}
+@media (min-width: 1500px) {
+  .page.wide, .page.events, .page.admin, .page.profile, .page.fines { max-width: 1440px; }
+  .wcols { grid-template-columns: minmax(0, 1fr) 440px; }
+}
+
+@media (min-width: 1100px) {
+  .sidetop .toprow { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-top: 1px solid var(--line); }
+  .sidetop .toprow:first-of-type { border-top: 0; }
+  .sidetop .toprow:hover { background: var(--card2); border-radius: 8px; }
+  .sidetop .toprow.me { color: var(--accent); }
+  .sidetop .tn { width: 26px; height: 26px; border-radius: 50%; background: var(--card2); display: grid; place-items: center; font-weight: 800; font-size: 13px; }
+  .sidetop .link { display: inline-block; margin-top: 8px; }
+  .page.events.wide .evlist { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+}

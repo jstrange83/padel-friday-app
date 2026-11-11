@@ -165,6 +165,13 @@ hooks.loadBase = loadBase;
 hooks.renderNav = () => renderNav();
 hooks.route = () => route();
 
+
+// Computer: navn og gruppe nederst i menuen i venstre side (skjult på telefonen)
+const navFoot = () => {
+  const me = S.realMe; if (!me) return '';
+  const ini = me.name.split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase();
+  return `<a class="navfoot" href="#/profil"><i class="navav">${esc(ini)}</i><span class="navwho"><b>${esc(me.name)}</b><small>${esc(group()?.name || '')}</small></span></a>`;
+};
 function renderNav() {
   if (!S.groupId) { navEl.innerHTML = ''; return; }
   if (isClub()) return renderClubNav();
@@ -180,7 +187,7 @@ function renderNav() {
     (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
-  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
 }
 
 // Juniorklub: Træning, Opslag, Profil og (for trænere) Admin
@@ -192,7 +199,7 @@ function renderClubNav() {
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
     (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
-  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('');
+  navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
 }
 
 // Profilen er slettet: tilbyd at genaktivere (samme point som før; man skal godkendes i gruppen igen)
@@ -276,6 +283,11 @@ sb.auth.onAuthStateChange((ev, session) => {
   S.session = session;
   if (ev === 'PASSWORD_RECOVERY') S.recovery = true;
   if (['INITIAL_SESSION', 'SIGNED_IN', 'SIGNED_OUT', 'PASSWORD_RECOVERY'].includes(ev)) setTimeout(boot, 0);
+});
+// Skift mellem telefon- og computerlayout, når vinduet ændrer størrelse
+window.matchMedia?.('(min-width: 1100px)').addEventListener?.('change', () => {
+  // Kun sider med eget computerlayout (ikke formularer, så intet går tabt)
+  if (S.me && !document.querySelector('.modal') && /^(#\/(fredage|fredag\/[^/]+|traening)?)?$/.test(location.hash) && !document.querySelector('.page form:focus-within')) route();
 });
 window.addEventListener('hashchange', () => {
   if (/^#\/(velkommen|barn)\//.test(location.hash)) return boot();

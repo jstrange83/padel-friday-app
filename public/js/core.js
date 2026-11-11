@@ -28,6 +28,8 @@ export const ROLE = { bruger: 'Bruger', superbruger: 'Superbruger', admin: 'Admi
 // I en klub (juniorklub) hedder rollerne noget andet: superbruger = træner
 export const ROLE_CLUB = { bruger: 'Medlem', superbruger: 'Træner', admin: 'Admin' };
 export const roleNames = (g = S.groupId) => (isClub(g) ? ROLE_CLUB : ROLE);
+// Computer med stor skærm: sider kan vises i flere kolonner (telefonen er uændret)
+export const isWide = () => !!window.matchMedia?.('(min-width: 1100px)').matches;
 export const isClub = (g = S.groupId) => S.groups.find((x) => x.id === g)?.kind === 'klub';
 
 // ---------- Grupper og roller ----------

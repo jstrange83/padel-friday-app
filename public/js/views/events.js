@@ -1,5 +1,5 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios } from '../core.js';
+import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
 import { pushPromptCard, bindPushPrompt } from './notify.js';
@@ -60,18 +60,34 @@ export async function viewEvents() {
       ${btn}</a>`;
   };
   const coming = [...running, ...upcoming];
+  // Computer: sidepanel med top 5 på ranglisten og din placering
+  const sidePanel = () => {
+    if (!isWide() || (group()?.ranking_mode === 'ingen' && !isAdmin())) return '';
+    const ps = activeMembers().map((m) => S.profiles[m.player_id]).filter((p) => p && !p.deleted_at).sort((a, b) => groupElo(b.id) - groupElo(a.id));
+    if (!ps.length) return '';
+    const myRank = ps.findIndex((p) => p.id === S.me?.id);
+    return `<aside class="wside">
+      <div class="card sidetop"><div class="mtitle">🏆 Top 5 i ${esc(group()?.name || 'gruppen')}</div>
+        ${ps.slice(0, 5).map((p, i) => `<a class="toprow ${p.id === S.me?.id ? 'me' : ''}" href="#/spiller/${p.id}"><span class="tn">${i + 1}</span><span class="grow">${esc(p.name)}</span><b>${groupElo(p.id)}</b></a>`).join('')}
+        ${myRank >= 5 ? `<a class="toprow me" href="#/spiller/${S.me.id}"><span class="tn">${myRank + 1}</span><span class="grow">Dig</span><b>${groupElo(S.me.id)}</b></a>` : ''}
+        <a class="link sm" href="#/rangliste">Hele ranglisten ›</a></div>
+    </aside>`;
+  };
+  const side = sidePanel();
   app.innerHTML = `
-  <div class="page">
+  <div class="page events${side ? ' wide' : ''}">
     <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1><div class="tools"><a class="icon bell" href="#/beskeder" aria-label="Beskeder">🔔${S.unread && !S.viewAs ? `<b class="navbadge">${S.unread}</b>` : ''}</a>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div></div>
     ${groupBar(viewEvents)}
+    ${side ? '<div class="wcols"><div class="wmain">' : ''}
     ${pendingCard()}
     ${pushPromptCard()}
     ${noticeCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
-    ${coming.map(card).join('') || (isAdmin()
+    ${coming.length ? `<div class="evlist">${coming.map(card).join('')}</div>` : (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
-    ${past.length ? `<details class="past"><summary>Tidligere (${past.length})</summary>${past.map(card).join('')}</details>` : ''}
+    ${past.length ? `<details class="past"><summary>Tidligere (${past.length})</summary><div class="evlist">${past.map(card).join('')}</div></details>` : ''}
+    ${side ? `</div>${side}</div>` : ''}
   </div>`;
   const quick = async (e, fn) => {
     e.preventDefault(); e.stopPropagation();

@@ -222,6 +222,11 @@ export const FAQ = [
 <p>Mailen kommer fra appen med gruppens navn som afsender, og svarer nogen på mailen, går svaret til den mail, admin har skrevet.</p>`,
   },
   {
+    cat: 'Tilmelding og konto',
+    q: 'Kan jeg bruge appen på computeren?',
+    a: `<p>Ja. Åbn <b>padel-friday-app.vercel.app</b> i din browser og log ind som på telefonen. På en stor skærm ligger menuen i venstre side, og siderne bruger hele bredden: spilledage og træninger i flere kolonner, dagsplanen med pris og tilmeldte ved siden af, og admin i to spalter.</p>`,
+  },
+  {
     cat: 'Bødekasse',
     q: 'Får jeg automatisk en bøde, hvis jeg melder fra?',
     a: `<p>Ja, hvis gruppen har en takst, der er sat til <b>automatisk</b>. Som standard koster det <b>Afbud efter tilmelding</b>, når du melder fra, og <b>Afbud på dagen</b>, hvis du melder fra samme dag. Appen skriver beløbet, før du bekræfter afmeldingen.</p>

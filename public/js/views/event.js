@@ -1,7 +1,7 @@
 // En spilledag: din næste kamp, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
   sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
-  esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay,
+  esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -497,7 +497,16 @@ function render(data) {
   const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0 || c.base > 0;
   c.started = started;
   c.raw = data;
-  app.innerHTML = `
+  const fineBox = c.run && group(c.ev.group_id)?.fines_enabled ? '<details class="card givebox" id="evFine"><summary><b>💸 Giv en bøde</b></summary><div id="evFineBody"><p class="muted">Henter takster…</p></div></details>' : '';
+  // Computer: dagens kampe til venstre, pris, tilmeldte og bøder til højre
+  app.innerHTML = isWide() ? `
+  <div class="page event wide">
+    ${header(c)}
+    <div class="wcols">
+      <div class="wmain">${approvals(c)}${myNight(c, st)}${timer(c)}${runBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
+      <aside class="wside">${priceCard(c)}${signupsSection(c)}${fineBox}</aside>
+    </div>
+  </div>` : `
   <div class="page event">
     ${header(c)}
     ${approvals(c)}
@@ -506,7 +515,7 @@ function render(data) {
     ${timer(c)}
     ${runBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
-    ${c.run && group(c.ev.group_id)?.fines_enabled ? '<details class="card givebox" id="evFine"><summary><b>💸 Giv en bøde</b></summary><div id="evFineBody"><p class="muted">Henter takster…</p></div></details>' : ''}
+    ${fineBox}
   </div>`;
   bind(c);
 }

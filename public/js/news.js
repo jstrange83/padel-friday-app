@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-11b', date: '11. november 2026', title: 'Flottere på computeren',
+    items: ['💻 På en computer har appen nu menuen i venstre side og bruger hele skærmen: spilledage og træninger i flere kolonner, dagsplanen med pris og tilmeldte ved siden af, top 5 på ranglisten, og admin i to spalter. På telefonen er alt som før.'],
+  },
+  {
     id: '2026-11-11', date: '11. november 2026', admin: true, title: 'Påmindelser på mail',
     items: ['✉️ Under <b>Admin → Påmindelser på mail</b> kan du slå til, at dem, der ikke har svaret på en træning, også får påmindelsen på mail. Mailen kommer med gruppens navn, og svar går til gruppens egen mail.'],
   },

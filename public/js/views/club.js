@@ -1,6 +1,6 @@
 // Klub (juniorklub): træningstider med afbud og fremmøde, opslag fra trænerne, indmeldelse af børn og kontingent.
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
-import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode } from '../core.js';
+import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide } from '../core.js';
 import { showQR } from '../qr.js';
 import { parseSession, SR, listen } from '../sessionvoice.js';
 
@@ -133,9 +133,7 @@ export async function viewTraining() {
     .sort((a, b) => a.day.localeCompare(b.day) || a.t.localeCompare(b.t));
   const unpaid = gr.club_fee_label && gr.club_fee ? active.filter((k) => !k.trial && feeOf(k.id) !== 'betalt') : [];
 
-  app.innerHTML = `
-  <div class="page club">
-    <div class="head"><h1>Træning</h1></div>
+  const trTop = `
     ${groupBar(viewTraining)}
     ${!trainer && mine.length && gr.club_welcome && !welcomeSeen(g) ? `<div class="card welcomecard"><div class="ftop"><b>👋 Velkommen i ${esc(gr.name)}</b><button class="link sm" id="welcomeOk">Luk</button></div><p>${rich(gr.club_welcome)}</p></div>` : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && !k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
@@ -148,15 +146,29 @@ export async function viewTraining() {
     ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
     ${active.filter((k) => k.trial).map((k) => `<div class="card infobox">👋 <b>${esc(k.name)}</b> er til prøvetræning${team(k.team_id) ? ` på ${esc(team(k.team_id).name)}` : ''}. Træneren melder ${k.player_id === S.me?.id ? 'dig' : 'barnet'} ind, når I er klar.</div>`).join('')}
     ${!trainer && items.some((x) => x.o) ? '<p class="muted small trhint">Svar ved hver træning: tryk <b>✓ Kommer</b> eller <b>Afbud</b>. Træneren kan se, hvem der har svaret.</p>' : ''}
+`;
+  const trList = `
     ${items.length ? items.map((x) => (x.e ? eventCard(x.e, trainer || myRight('arrangementer'), active, today) : trainer ? trainerCard(x.o, today) : parentCard(x.o, active, today))).join('')
       : `<div class="card empty"><p class="muted">${trainer ? (liveTeams.length ? 'Ingen træninger i perioden. Træningstiderne sættes under Admin → Hold og tider.' : 'Opret hold og træningstider under <a href="#/admin">Admin → Hold og tider</a>.')
         : active.length ? 'Der er ingen træninger de næste uger.' : mine.length ? `Træningerne kommer her, når ${mine.some((k) => k.player_id === S.me?.id) ? 'du' : 'barnet'} er godkendt og sat på et hold.` : 'Du har ikke meldt nogen ind endnu.'}</p></div>`}
     ${items.length ? `<button class="btn ghost" id="trMore">Vis flere uger</button>` : ''}
+`;
+  const trSide = `
     ${!trainer ? trainersCard(teamIds) : ''}
     <p class="center"><button class="link sm" id="calLink">📅 Få træningerne i din kalender</button></p>
     ${!trainer ? `<div class="card mykids"><div class="ftop"><b>${mineTitle(mine)}</b><a class="link sm" href="#/boern">Ret oplysninger ›</a></div>
       ${mine.map((k) => `<div class="krow"><span class="grow">${kidLabel(k)}<small class="muted">${esc([team(k.team_id)?.name, k.status === 'ansoegt' ? (k.waitlist ? 'venteliste' : 'venter på godkendelse') : k.trial ? 'prøvetræning' : ''].filter(Boolean).join(' · '))}</small></span></div>`).join('')}
       ${S.isKid ? '' : `<div class="mact"><a class="btn" href="#/klub-ind/${g}">➕ ${hasAdults(g) ? 'Meld ind' : 'Meld et barn ind'}</a></div>`}</div>` : ''}
+`;
+  // Computer: træningerne i to kolonner, trænere, kalender og mine børn i højre side
+  app.innerHTML = isWide() && !trainer ? `
+  <div class="page club wide">
+    <div class="head"><h1>Træning</h1></div>
+    <div class="wcols"><div class="wmain">${trTop}<div class="trlist">${trList}</div></div><aside class="wside">${trSide}</aside></div>
+  </div>` : `
+  <div class="page club${isWide() ? ' wide' : ''}">
+    <div class="head"><h1>Træning</h1></div>
+    ${trTop}${isWide() ? `<div class="trlist">${trList}</div>` : trList}${trSide}
   </div>`;
   bindTraining();
 }
