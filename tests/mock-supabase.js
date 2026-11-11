@@ -187,7 +187,8 @@ const signoffType = (evId, pid) => {
   const ss = db.padel_signups.filter((x) => x.event_id === evId).sort((a, b) => a.created_at.localeCompare(b.created_at) || a.player_id.localeCompare(b.player_id));
   const me_ = ss.find((x) => x.player_id === pid);
   if (!me_ || Date.parse(me_.created_at) > tick - 15 * 60e3) return null;
-  if (ss.indexOf(me_) >= 4 * Math.min(Math.floor(ss.length / 4), (ev.court_ids || []).length)) return null;
+  const cap = 4 * (ev.court_ids || []).length;
+  if (cap && ss.indexOf(me_) >= cap) return null;
   const ts = db.padel_fine_types.filter((t) => t.group_id === ev.group_id && t.active && !t.per_minute);
   const sameDay = new Date(tick).toISOString().slice(0, 10) >= ev.starts_at.slice(0, 10);
   return ((sameDay && ts.find((t) => t.auto === 'afbud_dagen')) || ts.find((t) => t.auto === 'afbud'))?.id || null;

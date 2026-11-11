@@ -219,7 +219,7 @@ export const FAQ = [
     cat: 'Bødekasse',
     q: 'Får jeg automatisk en bøde, hvis jeg melder fra?',
     a: `<p>Ja, hvis gruppen har en takst, der er sat til <b>automatisk</b>. Som standard koster det <b>Afbud efter tilmelding</b>, når du melder fra, og <b>Afbud på dagen</b>, hvis du melder fra samme dag. Appen skriver beløbet, før du bekræfter afmeldingen.</p>
-<p>Der kommer ingen bøde, hvis du står på venteliste, eller hvis du melder fra inden for 15 minutter efter, du meldte dig til (fx hvis du trykkede forkert). Admin kan altid annullere en bøde.</p>`,
+<p>Det gælder alle tilmeldte, også selvom banen ikke er fyldt op endnu. Der kommer kun ingen bøde, hvis alle dagens baner er fyldt, og du står på ventelisten, eller hvis du melder fra inden for 15 minutter efter, du meldte dig til (fx hvis du trykkede forkert). Admin kan altid annullere en bøde.</p>`,
   },
   {
     cat: 'Bødekasse',
