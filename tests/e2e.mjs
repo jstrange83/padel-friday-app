@@ -834,6 +834,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/profil');
   await page.waitForSelector('#editMode');
+  await page.click('#testAppRow'); ok(await page.locator('.qrmodal svg').count() === 1, 'superadmin kan vise QR til test-appen'); await page.click('.qrmodal button');
   ok(!(await page.locator('#editBar').count()), 'redigering er slået fra som standard');
   await page.check('#editMode');
   await wait(300);

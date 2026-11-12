@@ -2,6 +2,7 @@
 import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
+import { showQR } from '../qr.js';
 import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated } from '../core.js';
 import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn, setEditMode } from '../editmode.js';
@@ -74,6 +75,7 @@ export function renderProfile(isNew) {
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${club && !viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Træninger i min kalender</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>
+      ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="testAppRow"><span class="grow">🤖 Test-app til Android (QR)</span><span class="muted">›</span></a>' : ''}
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
     </div>
     ${!viewing && hasElevated() ? `<div class="card modecard"><b>👁 Visning</b>
@@ -133,6 +135,8 @@ function bind(isNew) {
   if (em) em.onchange = () => { setEditMode(em.checked); toast(em.checked ? 'Redigering er slået til' : 'Redigering er slået fra'); };
   app.querySelectorAll('input[name=vmode]').forEach((r) => (r.onchange = () => { setViewMode(r.value); toast({ super: 'Du ser appen som superadmin', mine: 'Du ser appen med dine egne roller', bruger: 'Du ser appen som almindelig bruger' }[r.value]); hooks.boot(); }));
   document.getElementById('calRow')?.addEventListener('click', (e) => { e.preventDefault(); showCalendar(); });
+  // Kun superadmin: QR-kode til test-appen, som en anden scanner med sin Android-telefon
+  document.getElementById('testAppRow')?.addEventListener('click', (e) => { e.preventDefault(); showQR(location.origin + '/app/', 'Test-app til Android', 'Scan koden med Android-telefonens kamera. Siden viser, hvordan appen installeres.'); });
   document.getElementById('deleteMe')?.addEventListener('click', async (e) => {
     const who = S.viewAs ? S.me.name : 'din profil';
     if (!confirm(`Slet ${who}?\n\n${S.viewAs ? 'Spilleren' : 'Du'} forsvinder fra grupperne og ranglisten. Point og kampe gemmes: ${S.viewAs ? 'kommer spilleren' : 'kommer du'} igen (samme mail eller telefonnummer), er pointene de samme.`)) return;
