@@ -1115,3 +1115,43 @@ html.inapp body { overscroll-behavior-y: contain; }
 .sw.own input { width: 36px; height: 36px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
 .centermode { margin-top: 10px; }
 .importbox textarea { width: 100%; margin: 6px 0; }
+
+/* Forsiden før login */
+.lmore { margin-top: 18px; }
+.landing { max-width: 1080px; margin: 0 auto; padding: 8px 16px calc(40px + env(safe-area-inset-bottom)); }
+.landing h2 { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(32px, 8vw, 48px); line-height: 1; letter-spacing: -.5px; margin: 0 0 16px; }
+.landing h3 { font-size: 19px; text-transform: none; letter-spacing: 0; color: var(--text); margin: 6px 0 6px; }
+.lsec { margin: 48px 0; }
+.lshots { margin: 24px -16px 0; }
+.lscroll { display: flex; gap: 14px; overflow-x: auto; padding: 4px 16px 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.lscroll::-webkit-scrollbar { display: none; }
+.lscroll img { flex: 0 0 auto; width: min(62vw, 260px); height: auto; border-radius: 18px; scroll-snap-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.lsteps { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.lsteps li { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border-radius: var(--r); padding: 16px; }
+.lsteps .n { flex: 0 0 34px; width: 34px; height: 34px; align-self: flex-start; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 900; display: grid; place-items: center; }
+.lsteps p, .lcard p { margin: 4px 0 0; color: var(--muted); }
+.laud { display: grid; gap: 12px; }
+.lcard { background: var(--card); border-radius: var(--r); padding: 18px; }
+.lcard .lic { font-size: 30px; }
+.lcard ul { margin: 12px 0 0; padding-left: 20px; }
+.lcard li { margin: 5px 0; }
+.lcta { color: var(--muted); margin-top: 16px; }
+.lcta a, .lfoot a { color: var(--accent); }
+.lfaq { background: var(--card); border-radius: 12px; padding: 14px 16px; margin: 8px 0; }
+.lfaq summary { cursor: pointer; font-weight: 700; }
+.lfaq p { margin: 10px 0 0; color: var(--muted); }
+.lend { text-align: center; background: var(--card); border-radius: var(--r); padding: 28px 18px; }
+.lend p { color: var(--muted); margin: 0 0 16px; }
+.lend .mact { justify-content: center; flex-wrap: wrap; gap: 10px; }
+.lend .btn { width: auto; padding: 12px 20px; min-height: 46px; }
+.lfoot { color: var(--muted); font-size: 14px; display: grid; gap: 6px; text-align: center; padding-top: 24px; border-top: 1px solid var(--line); }
+@media (min-width: 900px) {
+  .lsteps { grid-template-columns: repeat(4, 1fr); }
+  .lsteps li { flex-direction: column; }
+  .laud { grid-template-columns: repeat(3, 1fr); }
+  .lshots { margin: 40px 0 0; }
+  .lscroll { display: grid; grid-template-columns: repeat(6, 1fr); overflow: visible; padding: 4px 0 12px; }
+  .lscroll img { width: 100%; }
+}
+.lend .btn { min-width: 220px; }
+.lnext { margin: 14px 0 0 !important; } .lnext a { color: var(--accent); }

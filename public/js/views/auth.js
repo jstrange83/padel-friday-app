@@ -1,5 +1,6 @@
 // Login, opret konto og ny adgangskode.
 import { sb, S, app, hooks, esc, toast, q, busy, rememberMe } from '../core.js';
+import { landingHtml, bindLanding } from './landing.js';
 
 // Padelbane i perspektiv med én bold, der hopper ind (kun ved åbning)
 const court = () => {
@@ -34,12 +35,14 @@ export function renderAuth(mode = 'login') {
     : ji?.kind === 'klub' && ji.audience === 'begge' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld bagefter dig selv eller dit barn ind.`
     : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
     : invited ? 'Du er inviteret med til padel. Opret en konto, eller log ind hvis du har en, så kommer du med i gruppen.'
-    : 'Spilledage, hold og rangliste til jeres padelgruppe.';
+    : 'Spilledage, hold og rangliste til private padelgrupper, klubber, foreninger og padelcentre.';
+  // Forsiden med beskrivelse vises kun på hjemmesiden for nye besøgende (ikke i appen og ikke fra en invitation)
+  const landing = !invited && !ji && !window.Capacitor?.isNativePlatform?.();
   // Barnets eget login: ingen e-mail, bare ét tryk, så er barnet logget ind på telefonen
   if (ji?.kind === 'barn') return renderKidLogin(ji);
   const replay = !app.querySelector('.authx');
   app.innerHTML = `
-  <div class="auth authx">
+  <div class="auth authx" id="top">
     <div class="hero" aria-hidden="true">${court()}</div>
     <h1 class="word">Padel</h1>
     <p class="intro">${intro}</p>
@@ -56,7 +59,12 @@ export function renderAuth(mode = 'login') {
       ${signup ? '' : '<button class="link" type="button" id="forgot">Glemt adgangskode?</button>'}
     </form>
     <p class="center"><button class="link sm" type="button" id="kidCode">🧒 Barn uden e-mail? Log ind med din kode</button></p>
-  </div>`;
+    ${landing ? '<p class="center lmore"><a class="link sm" href="#hvad">Hvad er Padelklubben? ↓</a></p>' : ''}
+  </div>${landing ? `<div id="hvad">${landingHtml()}</div>` : ''}`;
+  if (landing) {
+    bindLanding(() => renderAuth('signup'));
+    app.querySelector('.lmore a')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('hvad')?.scrollIntoView({ behavior: 'smooth' }); });
+  }
   // Bolden hopper kun første gang (ikke når man skifter fane), og aldrig hvis man har bedt om mindre bevægelse
   if (!replay || matchMedia('(prefers-reduced-motion: reduce)').matches) {
     app.querySelectorAll('.court animate, .court animateMotion').forEach((a) => { a.setAttribute('dur', '0.001s'); });

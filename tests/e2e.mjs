@@ -60,6 +60,16 @@ try {
   await page.goto('http://localhost:8765/');
   await page.waitForSelector('#authForm');
   await shot('login');
+  // Forsiden før login: beskrivelse af appen under log ind
+  ok(await page.locator('.landing .lcard').count() === 3 && (await page.locator('.landing').innerText()).includes('Padelcentre'), 'forsiden beskriver appen for grupper, klubber og centre');
+  await page.locator('.landing .lfaq summary').first().click();
+  await noOverflow('forside');
+  await page.screenshot({ path: path.join(shots, 'forside-hel.png'), fullPage: true });
+  await page.click('[data-lsignup]');
+  await page.waitForSelector('.authtabs button.on:has-text("Opret konto")');
+  ok(true, 'Opret konto nederst på forsiden skifter til opret konto');
+  await page.locator('.authtabs button:has-text("Log ind")').click();
+  await page.waitForSelector('#authForm');
   await page.fill('input[name=email]', 'jimmy@test');
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
