@@ -14,6 +14,7 @@ import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { viewNotices, loadUnread } from './views/notify.js';
 import { pushUndecided, refreshNativePush } from './push.js';
+import { anyRight } from './views/rights.js';
 import { viewTheme, applyTheme } from './theme.js';
 import { maybeShowNews, viewNews } from './news.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
@@ -53,6 +54,10 @@ async function loadBase() {
   // Beskeder til superadmin (fx når en slettet spiller kommer igen)
   S.notices = [];
   if (S.realMe?.is_superadmin && viewMode() === 'super') { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
+  // Rettigheder med flueben (Admin → Rettigheder)
+  S.rights = {};
+  // Under "Se som" vises den andens rettigheder (fx revisoren, der kan se kontingent)
+  if (S.realMe) { try { S.rights = Object.fromEntries((await q(S.viewAs ? sb.rpc('padel_user_rights_v2', { p_user: S.viewAs }) : sb.rpc('padel_my_rights_v2'))).map((x) => [x.group_id, x.rights])); } catch {} }
   if (S.realMe) await Promise.all([loadUnread(), loadClubPending(), pushUndecided().then((v) => { S.pushUndecided = v; }).catch(() => {})]);
   if (S.realMe) refreshNativePush();
 }
@@ -210,7 +215,7 @@ function renderClubNav() {
   const cur = location.hash || '#/traening';
   const pend = S.viewAs ? 0 : (S.clubPending || 0) + pendingForMe().length + (S.notices?.length || 0);
   const items = [['#/traening', '🎾', 'Træning'], ['#/opslag', '📣', 'Opslag'], ['#/profil', '👤', 'Profil']];
-  if (canRun() || hasAnyRight() || pend) items.push(['#/admin', '⚙️', 'Admin']);
+  if (canRun() || hasAnyRight() || pend || anyRight()) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
     (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
@@ -270,7 +275,7 @@ const ROUTES = {
   beskeder: () => viewNotices(),
   udseende: () => viewTheme(),
   nyt: () => viewNews(app),
-  admin: () => (isAdmin() || isSuper() || (isClub() && (canRun() || hasAnyRight())) ? viewAdmin() : ROUTES.fredage()),
+  admin: () => (isAdmin() || isSuper() || anyRight() || (isClub() && (canRun() || hasAnyRight())) ? viewAdmin() : ROUTES.fredage()),
   privatliv: () => viewPrivacy(),
   boern: () => viewMyKids(),
   traening: () => (isClub() ? viewTraining() : viewEvents()),

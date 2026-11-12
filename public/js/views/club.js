@@ -1,7 +1,8 @@
 // Klub (juniorklub): træningstider med afbud og fremmøde, opslag fra trænerne, indmeldelse af børn og kontingent.
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
-import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide } from '../core.js';
+import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide, rightIn } from '../core.js';
 import { showQR } from '../qr.js';
+import { rightsOf, saveRights } from './rights.js';
 import { parseSession, SR, listen } from '../sessionvoice.js';
 
 // ---------- Datoer (altid dansk tid) ----------
@@ -82,11 +83,11 @@ const evDay = (iso) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Cope
 const infoOf = (kid) => C().kidInfo.find((x) => x.kid_id === kid)?.info || '';
 // Træner for et bestemt hold: admin, eller træner sat på holdet (en træner uden hold må alle hold)
 const myAssigned = () => C().teamTrainers.filter((x) => x.user_id === S.me?.id && C().teams.some((t) => t.id === x.team_id && !t.archived));
-export const isTeamTrainer = (t) => isAdmin() || (roleIn(S.me?.id) === 'superbruger' && (!myAssigned().length || myAssigned().some((x) => x.team_id === t)));
+export const isTeamTrainer = (t) => isAdmin() || rightIn('traening') || (roleIn(S.me?.id) === 'superbruger' && (!myAssigned().length || myAssigned().some((x) => x.team_id === t)));
 const myTeams = () => C().teams.filter((t) => !t.archived && isTeamTrainer(t.id));
 // Rettigheder formanden har givet (bestyrelse m.fl.). Admin har alle. Visning "Bruger" slår dem fra.
 const RIGHT_COL = { kontingent: 'treasurer', opslag: 'can_post', arrangementer: 'can_events', godkende: 'can_approve' };
-export const myRight = (r, g = S.groupId) => isAdmin(g) || (!S.viewAs && viewMode() !== 'bruger' && !!S.clubRights?.find((x) => x.group_id === g)?.[RIGHT_COL[r]]);
+export const myRight = (r, g = S.groupId) => isAdmin(g) || rightIn(r === 'godkende' ? 'medlemmer' : r, g) || (!S.viewAs && viewMode() !== 'bruger' && !!S.clubRights?.find((x) => x.group_id === g)?.[RIGHT_COL[r]]);
 export const isTreasurer = (g = S.groupId) => myRight('kontingent', g);
 export const hasAnyRight = (g = S.groupId) => Object.keys(RIGHT_COL).some((r) => myRight(r, g));
 const trainersOf = (t) => C().trainers.filter((x) => x.team_ids.includes(t));
@@ -967,14 +968,13 @@ export function bindClubFees(refresh) {
 export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor'];
 // Kasserer og revisor får kun adgang til kontingent
 const MONEY_TITLES = ['Kasserer', 'Revisor'];
-const RIGHTS = [['treasurer', '💳 Kontingent'], ['can_post', '📣 Opslag til alle'], ['can_events', '📅 Arrangementer'], ['can_approve', '✅ Godkende børn']];
 export function clubStaffCard() {
   if (!isAdmin()) return '';
   const g = S.groupId;
   const mem = S.members.filter((m) => m.group_id === g && m.status === 'aktiv' && S.profiles[m.player_id]);
   const st = (id) => C().staff.find((x) => x.user_id === id) || {};
   const ids = new Set([...mem.filter((m) => ['admin', 'superbruger'].includes(m.role)).map((m) => m.player_id),
-    ...C().staff.filter((x) => x.board_title || RIGHTS.some(([k]) => x[k])).map((x) => x.user_id), ...(S.staffAdd ? [S.staffAdd] : [])]);
+    ...C().staff.filter((x) => x.board_title).map((x) => x.user_id), ...(S.staffAdd ? [S.staffAdd] : [])]);
   const people = [...ids].filter((id) => S.profiles[id] && mem.some((m) => m.player_id === id))
     .sort((a, b) => (BOARD_TITLES.indexOf(st(a).board_title) + 1 || 99) - (BOARD_TITLES.indexOf(st(b).board_title) + 1 || 99) || nameOf(a).localeCompare(nameOf(b)));
   const others = mem.map((m) => m.player_id).filter((id) => !ids.has(id)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
@@ -982,16 +982,15 @@ export function clubStaffCard() {
   const role = (id) => mem.find((m) => m.player_id === id)?.role;
   const teamsOf = (id) => C().teamTrainers.filter((x) => x.user_id === id).map((x) => team(x.team_id)).filter((t) => t && !t.archived).map((t) => t.name);
   const board = people.filter((id) => st(id).board_title);
-  return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍💼 Bestyrelse og rettigheder</b><small class="muted">${board.length ? board.map((id) => `${esc(st(id).board_title)}: ${esc(nameOf(id).split(' ')[0])}`).join(' · ') : 'Ingen bestyrelse endnu'}</small></summary>
-    <p class="muted small">Vælg post i bestyrelsen, og hvad hver person må i appen. Formanden bliver automatisk admin. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Bestyrelsen vises med kontaktinfo under Opslag.</p>
+  return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍💼 Bestyrelse og børneattest</b><small class="muted">${board.length ? board.map((id) => `${esc(st(id).board_title)}: ${esc(nameOf(id).split(' ')[0])}`).join(' · ') : 'Ingen bestyrelse endnu'}</small></summary>
+    <p class="muted small">Vælg post i bestyrelsen og datoen for børneattest. Formanden bliver automatisk admin. Bestyrelsen vises med kontaktinfo under Opslag. Hvad hver person må, vælger du under 🔑 Rettigheder.</p>
     ${people.map((id) => `<form class="staffrow" data-staff="${id}">
       <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin · alle rettigheder' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
       <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option ${st(id).board_title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      ${role(id) === 'admin' ? '' : `<div class="checks rights">${RIGHTS.map(([k, l]) => { const fixed = MONEY_TITLES.includes(st(id).board_title); return `<label><input type="checkbox" name="${k}" ${(fixed ? k === 'treasurer' : st(id)[k]) ? 'checked' : ''} ${fixed ? 'disabled' : ''}><span>${l}</span></label>`; }).join('')}</div>
-      <small class="muted rightsnote" ${MONEY_TITLES.includes(st(id).board_title) ? '' : 'hidden'}>Kasserer og revisor får automatisk adgang til kontingent, og kun det.</small>`}
+      ${role(id) === 'admin' ? '' : `<small class="muted rightsnote">${MONEY_TITLES.includes(st(id).board_title) ? 'Kasserer og revisor får automatisk adgang til kontingent. ' : ''}Hvad personen må, vælger du under <a href="#/admin" data-gorights>🔑 Rettigheder</a>.</small>`}
       <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
-      <div class="mact">${st(id).board_title || RIGHTS.some(([k]) => st(id)[k]) ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
+      <div class="mact">${st(id).board_title ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
     ${others.length ? `<form class="frow" id="addStaff"><label class="grow">Tilføj en person<select name="u"><option value="">Vælg…</option>${others.map((id) => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label><button class="btn sm">Tilføj</button></form>` : ''}
   </details>`;
 }
@@ -1000,17 +999,17 @@ export function bindClubStaff(refresh) {
   const d = app.querySelector('details.staff');
   if (!d) return;
   d.ontoggle = () => (S.staffOpen = d.open);
-  app.querySelectorAll('form[data-staff]').forEach((f) => (f.title.onchange = () => {
-    const fixed = MONEY_TITLES.includes(f.title.value);
-    f.querySelectorAll('.rights input').forEach((x) => { x.disabled = fixed; if (fixed) x.checked = x.name === 'treasurer'; });
-    const n = f.querySelector('.rightsnote'); if (n) n.hidden = !fixed;
-  }));
+  app.querySelectorAll('[data-gorights]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); S.adminTab = 'rettigheder'; refresh(); }));
   app.querySelectorAll('form[data-staff]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
-    const v = (k) => !!f.elements[k]?.checked;
+    // Rettighederne ændres ikke her (det sker under Rettigheder). Kasserer og revisor får kontingent.
+    let r = rightsOf(f.dataset.staff);
+    if (MONEY_TITLES.includes(f.title.value)) r = ['kontingent'];
+    const v = (k) => r.includes(k);
     try {
-      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('treasurer'), p_post: v('can_post'), p_events: v('can_events'), p_approve: v('can_approve'), p_cert_date: f.cert.value || null }));
+      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('kontingent'), p_post: v('opslag'), p_events: v('arrangementer'), p_approve: v('medlemmer'), p_cert_date: f.cert.value || null }));
+      if (MONEY_TITLES.includes(f.title.value)) await saveRights(f.dataset.staff, r);
       const chair = f.title.value === 'Formand';
       S.staffAdd = null; toast(chair ? 'Gemt. Formanden er nu klubbens admin med alle rettigheder' : 'Gemt');
       if (chair) await hooks.loadBase();
@@ -1023,6 +1022,7 @@ export function bindClubStaff(refresh) {
     busy(b, true);
     try {
       await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: id, p_title: null, p_treasurer: false, p_post: false, p_events: false, p_approve: false, p_cert_date: C().certs.find((x) => x.user_id === id)?.cert_date || null }));
+      await saveRights(id, []);
       toast(`${nameOf(id)} er fjernet fra bestyrelsen`); await loadClub(S.groupId); await refresh();
     } catch { busy(b, false); }
   }));

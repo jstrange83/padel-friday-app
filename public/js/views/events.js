@@ -1,5 +1,5 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo } from '../core.js';
+import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canPlan, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
 import { pushPromptCard, bindPushPrompt } from './notify.js';
@@ -77,14 +77,14 @@ export async function viewEvents() {
   const side = sidePanel();
   app.innerHTML = `
   <div class="page events${side ? ' wide' : ''}">
-    <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1><div class="tools"><a class="icon bell" href="#/beskeder" aria-label="Beskeder">🔔${S.unread && !S.viewAs ? `<b class="navbadge">${S.unread}</b>` : ''}</a>${isAdmin() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div></div>
+    <div class="head"><h1>${esc(group()?.name || 'Spilledage')}</h1><div class="tools"><a class="icon bell" href="#/beskeder" aria-label="Beskeder">🔔${S.unread && !S.viewAs ? `<b class="navbadge">${S.unread}</b>` : ''}</a>${canPlan() && coming.length ? '<a class="btn primary sm" href="#/ny-fredag">+ Ny</a>' : ''}</div></div>
     ${groupBar(viewEvents)}
     ${side ? '<div class="wcols"><div class="wmain">' : ''}
     ${pendingCard()}
     ${pushPromptCard()}
     ${noticeCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
-    ${coming.length ? `<div class="evlist">${coming.map(card).join('')}</div>` : (isAdmin()
+    ${coming.length ? `<div class="evlist">${coming.map(card).join('')}</div>` : (canPlan()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
     ${past.length ? `<details class="past"><summary>Tidligere (${past.length}${past.some((e) => e.cancelled_at) ? ` · ${past.filter((e) => e.cancelled_at).length} aflyst` : ''})</summary><div class="evlist">${past.map(card).join('')}</div></details>` : ''}
@@ -148,7 +148,7 @@ function toLocalInput(d) {
 // Opret nye fredage, eller ret en eksisterende (ev)
 export async function viewEventForm(ev) {
   if (ev) S.groupId = ev.group_id;
-  if (!isAdmin()) return (location.hash = '#/fredage');
+  if (!canPlan()) return (location.hash = '#/fredage');
   // Kun de centre gruppen må bruge
   const allowed = groupCenterIds();
   const centers = S.centers.filter((c) => allowed.includes(c.id) || c.id === ev?.center_id);

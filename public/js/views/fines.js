@@ -1,6 +1,6 @@
 // Bødekasse pr. gruppe. Admin slår den til og fra og bestemmer taksterne.
 // Admin og superbruger giver bøder og godkender betalinger. Spilleren melder selv "Jeg har betalt".
-import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBar, isAdmin, canRun, activeMembers, plural, openMobilePay } from '../core.js';
+import { sb, S, app, hooks, esc, nameOf, toast, q, busy, fmtDate, group, groupBar, isAdmin, canRun, rightIn, activeMembers, plural, openMobilePay } from '../core.js';
 import { editBtn } from '../editmode.js';
 
 export const kr = (n) => `${new Intl.NumberFormat('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(+n || 0)} kr.`;
@@ -63,7 +63,7 @@ export async function viewFines() {
   const g = S.groupId, gr = group();
   const admin = isAdmin(), run = canRun(), me = S.me.id;
   // Godkender betalinger: admin eller den, admin har gjort bødeansvarlig
-  const approver = admin || S.members.some((m) => m.group_id === g && m.player_id === me && m.status === 'aktiv' && m.fines_manager);
+  const approver = admin || rightIn('boeder', g) || S.members.some((m) => m.group_id === g && m.player_id === me && m.status === 'aktiv' && m.fines_manager);
   if (!gr?.fines_enabled && !admin) {
     app.innerHTML = `<div class="page">${groupBar(viewFines)}<h1>Bødekasse</h1><p class="muted">${esc(gr?.name || 'Gruppen')} har ikke en bødekasse.</p></div>`;
     return;

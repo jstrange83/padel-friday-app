@@ -1,50 +1,92 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
-  sb, S, app, hooks, hasSuggest, liveGroups, GENDER, SIDE, roleNames, roleIn, isSuper, isAdmin, canRun, isClub, member, group, groupBar, groupCenterIds, setGroup,
+  sb, S, app, hooks, hasSuggest, liveGroups, GENDER, SIDE, roleNames, roleIn, isSuper, isAdmin, canRun, isClub, hasRight, member, group, groupBar, groupCenterIds, setGroup,
   esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
 } from '../core.js';
 import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
+import { rightsTab, bindRights, loadGroupRights, rightsCount } from './rights.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
 import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, hasAdults, audience } from './club.js';
 
+// Admin starter med en oversigt (fliser). Hver flise åbner sin del med en tilbage-knap.
+function adminSections() {
+  const club = isClub() && S.groupId, adm = (isAdmin() && S.groupId) || isSuper();
+  const pend = club ? S.clubPendingBy?.[S.groupId] || 0 : S.members.filter((m) => m.group_id === S.groupId && m.status === 'afventer' && S.profiles[m.player_id]).length;
+  const nPlayers = S.members.filter((m) => m.group_id === S.groupId && m.status === 'aktiv').length;
+  const nr = rightsCount();
+  return [
+    club && (canRun() || myRight('godkende')) ? ['boern', hasAdults() ? '🎾' : '👧', hasAdults() ? 'Spillere' : 'Børn', pend ? `${pend} venter på svar` : 'Godkend og sæt på hold', pend] : null,
+    club && canRun() ? ['hold', '🗓', 'Hold og tider', 'Hold, træningstider og trænere'] : null,
+    club && canRun() ? ['fremmode', '📊', 'Fremmøde', 'Hvem kom til træning'] : null,
+    club && isTreasurer() ? ['kontingent', '💳', 'Kontingent', 'Hvem har betalt'] : null,
+    adm || (club && canRun()) || (!club && hasRight('medlemmer')) ? ['spillere', '👥', club ? 'Medlemmer' : 'Spillere', !club && pend ? `${pend} venter på svar` : `${nPlayers} med · invitation`, club ? 0 : pend] : null,
+    adm && S.groupId ? ['rettigheder', '🔑', 'Rettigheder', nr ? `${nr} ${nr === 1 ? 'person har' : 'personer har'} flueben` : 'Hvem må hvad'] : null,
+    adm && S.groupId ? ['indstillinger', '⚙️', 'Indstillinger', club ? 'Klubben, bestyrelse, mails' : 'Rangliste, bolde, bøder, mails'] : null,
+    isSuper() ? ['grupper', '🗂', 'Grupper', 'Alle grupper og klubber (superadmin)'] : null,
+    isSuper() ? ['baner', '🎾', 'Centre og baner', 'Superadmin'] : null,
+    isSuper() && hasSuggest() ? ['forslag', '💡', 'Forslag', 'Forslagskassen'] : null,
+  ].filter(Boolean);
+}
+
 export async function viewAdmin() {
-  // Faner: Spillere (gruppens admin), Grupper og Baner (kun superadmin). I en klub: Børn og Hold og tider (trænere)
   const club = isClub() && S.groupId;
-  const tabs = [
-    club && (canRun() || myRight('godkende')) ? ['boern', `${hasAdults() ? '🎾 Spillere' : '👧 Børn'}${S.clubPendingBy?.[S.groupId] ? ` (${S.clubPendingBy[S.groupId]})` : ''}`] : null,
-    club && canRun() ? ['hold', '🗓 Hold og tider'] : null,
-    club && canRun() ? ['fremmode', '📊 Fremmøde'] : null,
-    club && isTreasurer() ? ['kontingent', '💳 Kontingent'] : null,
-    // Klubbens trænere ser også Medlemmer (invitationslink og kontaktinfo), men kan ikke ændre roller
-    (isAdmin() && S.groupId) || isSuper() || (club && canRun()) ? ['spillere', club ? '👥 Medlemmer' : '👥 Spillere'] : null,
-    isSuper() ? ['grupper', '🗂 Grupper'] : null, isSuper() ? ['baner', '🎾 Baner'] : null, isSuper() && hasSuggest() ? ['forslag', '💡 Forslag'] : null].filter(Boolean);
-  if (!tabs.some(([k]) => k === S.adminTab)) S.adminTab = tabs[0]?.[0];
-  if (S.adminTab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
-  if (club && ['boern', 'hold', 'kontingent', 'spillere'].includes(S.adminTab)) { await loadClub(S.groupId); await loadClubPending(); }
-  if (club && S.adminTab === 'fremmode') await loadAttendance(S.attWeeks || 8);
-  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab }[S.adminTab];
-  app.innerHTML = `
+  if (isAdmin() && S.groupId && !S.groupRights?.[S.groupId]) await loadGroupRights();
+  const secs = adminSections();
+  if (S.adminTab && !secs.some(([k]) => k === S.adminTab)) S.adminTab = null;
+  // Kun én del: gå direkte til den
+  if (!S.adminTab && secs.length === 1) S.adminTab = secs[0][0];
+  const tab = S.adminTab;
+  if (tab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
+  if (club && ['boern', 'hold', 'kontingent', 'spillere', 'indstillinger'].includes(tab)) { await loadClub(S.groupId); await loadClubPending(); }
+  if (club && tab === 'fremmode') await loadAttendance(S.attWeeks || 8);
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab }[tab];
+  const sec = secs.find(([k]) => k === tab);
+  app.innerHTML = tab ? `
+  <div class="page admin">
+    <div class="ahead">${secs.length > 1 ? '<button class="back" id="adminHome">‹ Admin</button>' : ''}<h1>${sec ? `${sec[1]} ${sec[2]}` : 'Admin'}</h1></div>
+    ${secs.length > 1 ? `<div class="tabbar">${secs.map(([k, ic, t, , n]) => `<button class="tab ${k === tab ? 'on' : ''}" data-tab="${k}">${ic} ${t}${n ? ` (${n})` : ''}</button>`).join('')}</div>` : ''}
+    ${!['grupper', 'baner', 'forslag', 'spillere'].includes(tab) ? groupBar(viewAdmin) : ''}
+    <div class="abody tab-${tab}">${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}</div>
+  </div>` : `
   <div class="page admin">
     <h1>Admin</h1>
-    ${tabs.length > 1 ? `<div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.adminTab ? 'on' : ''}" data-tab="${k}">${t}</button>`).join('')}</div>` : ''}
-    ${club && ['boern', 'hold', 'kontingent', 'fremmode'].includes(S.adminTab) ? groupBar(viewAdmin) : ''}
-    <div class="abody tab-${S.adminTab}">${body ? body() : '<p class="muted">Du har ikke adgang til admin.</p>'}</div>
+    ${groupBar(viewAdmin)}
+    ${S.groupId ? `<p class="muted asub">${esc(group()?.name || '')}</p>` : ''}
+    <div class="atiles">${secs.map(([k, ic, t, sub, n]) => `<button class="atile ${n ? 'hot' : ''}" data-tab="${k}"><span class="aic">${ic}</span><b>${t}</b><small>${sub}</small>${n ? `<i class="navbadge">${n}</i>` : ''}</button>`).join('')}</div>
+    ${!secs.length ? '<p class="muted">Du har ikke adgang til admin.</p>' : ''}
   </div>`;
-  app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); }));
+  app.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { S.adminTab = b.dataset.tab; viewAdmin(); scrollTo(0, 0); }));
+  const home = document.getElementById('adminHome'); if (home) home.onclick = () => { S.adminTab = null; viewAdmin(); scrollTo(0, 0); };
   app.querySelector('.tab.on')?.scrollIntoView({ block: 'nearest', inline: 'center' });
-  if (S.adminTab === 'forslag') bindSuggestTab(viewAdmin);
+  if (!tab) return;
+  if (tab === 'forslag') bindSuggestTab(viewAdmin);
   const clubRefresh = async () => { await viewAdmin(); hooks.renderNav?.(); };
-  if (S.adminTab === 'boern') bindClubKids(clubRefresh);
-  if (S.adminTab === 'hold') bindClubTeams(clubRefresh);
-  if (S.adminTab === 'kontingent') bindClubFees(clubRefresh);
-  if (S.adminTab === 'fremmode') bindClubAttendance(clubRefresh);
-  if (S.adminTab === 'spillere' && club) { bindClubSettings(clubRefresh); bindClubStaff(clubRefresh); }
+  if (tab === 'boern') bindClubKids(clubRefresh);
+  if (tab === 'hold') bindClubTeams(clubRefresh);
+  if (tab === 'kontingent') bindClubFees(clubRefresh);
+  if (tab === 'fremmode') bindClubAttendance(clubRefresh);
+  if (tab === 'indstillinger' && club) { bindClubSettings(clubRefresh); bindClubStaff(clubRefresh); }
+  if (tab === 'rettigheder') bindRights(viewAdmin);
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { S.gmemOpen = false; setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
   app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });
   bind();
+}
+
+// ---------- Indstillinger for gruppen eller klubben ----------
+function settingsTab() {
+  if (isClub()) return `${mailCard()}${clubSettingsCard()}${clubStaffCard()}`;
+  return `${mailCard()}
+    <div class="card gset"><b>⚙️ Gruppens indstillinger</b>
+    <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
+      ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
+      <p class="muted small">Én fælles rangliste med samme point i alle grupper. Vælg om gruppen ser alle, kun sine egne, eller ingen (kampene giver stadig point).</p></div>
+    <form class="frow ballfee" id="ballFee"><label class="grow">🎾 Bolde pr. spiller (kr.) <small class="muted">lægges oveni banelejen</small><input name="fee" type="number" min="0" value="${group()?.ball_fee ?? ''}" placeholder="Fx 15"></label><button class="btn sm">Gem</button></form>
+    <div class="finesrow"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
+      <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
+    </div>`;
 }
 
 // ---------- Spillere i den valgte gruppe ----------
@@ -108,30 +150,18 @@ function playersTab() {
   const pending = gm.filter((m) => m.status === 'afventer' && S.profiles[m.player_id]);
   const players = gm.filter((m) => m.status === 'aktiv' && S.profiles[m.player_id]).map((m) => S.profiles[m.player_id]).sort((a, b) => a.name.localeCompare(b.name));
   const badge = (p) => { const r = roleIn(p.id); return r && r !== 'bruger' ? ` <span class="badge role-${r}">${roleNames()[r]}</span>` : ''; };
-  const club = isClub(), adm = isAdmin() || isSuper();
+  const club = isClub(), adm = isAdmin() || isSuper(), memR = adm || (!club && hasRight('medlemmer'));
   return `
     ${playersBar()}
-    ${adm && pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
+    ${memR && pending.length ? `<div class="card pendingbox"><b>⏳ Venter på godkendelse (${pending.length})</b>${pending.map((m) => {
       const p = S.profiles[m.player_id];
       return `<div class="hitrow"><span class="grow">${esc(p.name)}<small class="muted"> · ${GENDER[p.gender]} · ${SIDE[p.side]}${phoneOf(p.id) ? ` · ${fmtPhone(phoneOf(p.id))}` : ''}</small></span>
         ${club ? `<div class="mact"><button class="btn sm ghost" data-decline="${p.id}">Afvis</button><button class="btn sm" data-approve="${p.id}">Medlem</button><button class="btn sm primary" data-approve="${p.id}" data-arole="superbruger">Træner</button></div>` : `<button class="btn sm primary" data-approve="${p.id}">Godkend</button><button class="btn sm ghost" data-decline="${p.id}">Afvis</button>`}</div>`;
     }).join('')}</div>` : ''}
     <div class="card invitebar"><div><b>${esc(group()?.name || '')}</b> <small class="muted">· ${club ? `${players.length} voksne og juniorer med login` : players.length === 1 ? '1 spiller' : `${players.length} spillere`}</small></div>
       ${club ? `<p class="muted small">${audience() === 'voksne' ? 'Del linket med spillerne. De opretter sig og melder sig selv ind, og I godkender under Spillere.' : audience() === 'begge' ? 'Del linket med spillere og forældre. Voksne melder sig selv ind, forældre melder deres børn ind, og I godkender under Spillere.' : 'Del linket med forældrene. De opretter sig og melder deres barn ind, og I godkender under Børn.'} Trænere og bestyrelse bruger samme link og trykker <b>Bed om adgang</b>, så godkender I dem her.</p>` : ''}
-      <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button>${club ? '' : '<button class="btn sm" id="newPlayerBtn">➕ Opret</button>'}<button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
-    ${isAdmin() ? mailCard() : ''}
-    ${club ? clubSettingsCard() + clubStaffCard() : `${createPlayerBox()}
-    <details class="card gset" ${S.gsetOpen ? 'open' : ''}><summary><b>⚙️ Gruppens indstillinger</b><small class="muted">Rangliste: ${{ alle: 'alle', gruppe: 'kun gruppen', ingen: 'ingen' }[group()?.ranking_mode || 'alle']} · Bøder: ${group()?.fines_enabled ? 'til' : 'fra'}</small></summary>
-    <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
-      ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
-      <p class="muted small">Én fælles rangliste med samme point i alle grupper. Vælg om gruppen ser alle, kun sine egne, eller ingen (kampene giver stadig point).</p></div>
-    <form class="frow ballfee" id="ballFee"><label class="grow">🎾 Bolde pr. spiller (kr.) <small class="muted">lægges oveni banelejen</small><input name="fee" type="number" min="0" value="${group()?.ball_fee ?? ''}" placeholder="Fx 15"></label><button class="btn sm">Gem</button></form>
-    <div class="finesrow"><label class="switch"><input type="checkbox" id="finesOn" ${group()?.fines_enabled ? 'checked' : ''}><span>💸 Bødekasse</span></label>
-      <p class="muted small">${group()?.fines_enabled ? 'Slået til. Alle i gruppen kan se bødekassen. <a href="#/boeder">Gå til bødekassen ›</a>' : 'Slået fra. Slå den til, så kan admin og superbrugere give bøder, og alle i gruppen kan se dem.'}</p></div>
-    </details>`}
-
-
-
+      <div class="mact"><button class="btn sm" id="inviteQR" aria-label="Vis QR-kode">▦ QR</button>${club || !memR ? '' : '<button class="btn sm" id="newPlayerBtn">➕ Opret</button>'}<button class="btn sm primary" id="invite">📤 Inviter</button></div></div>
+    ${club || !memR ? '' : createPlayerBox()}
     <details class="card plist" ${S.playersOpen ? 'open' : ''}><summary><b>👥 ${club ? 'Medlemmer' : 'Spillere'} (${players.length})</b></summary>
     ${club && adm ? '<p class="muted small">Gør trænerne til <b>Træner</b>. Trænere kan godkende børn, sætte hold og tider, krydse fremmøde af og skrive opslag.</p>' : ''}
     <input type="search" id="playerSearch" placeholder="🔍 Find…" autocomplete="off">
@@ -147,7 +177,7 @@ function playersTab() {
             ${p.id !== S.me.id ? `<button class="btn sm" data-viewas="${p.id}">Se som</button>` : ''}
             ${club ? '' : `<a class="btn sm" href="#/spiller/${p.id}">Statistik</a>`}
           </div>
-          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button></div>${p.is_superadmin ? '' : `<div class="mact"><button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller helt</button></div>`}` : ''}` : ''}
+          ${p.id !== S.me.id ? `<div class="mact"><button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button></div>${p.is_superadmin ? '' : `<div class="mact"><button class="btn sm ghost danger" data-delplayer="${p.id}">Slet spiller helt</button></div>`}` : ''}` : memR && roleIn(p.id) !== 'admin' ? `<div class="mact"><button class="btn sm" data-edit="${p.id}">Ret</button>${p.id !== S.me.id ? `<button class="btn sm ghost danger" data-remove="${p.id}">Fjern fra gruppen</button>` : ''}</div>` : ''}
         </div>
       </details>`).join('') || '<p class="muted pad">Ingen spillere endnu. Tryk Inviter.</p>'}</div></details>`;
 }

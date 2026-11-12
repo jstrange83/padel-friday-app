@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-12c', date: '12. november 2026', admin: true, title: 'Ny Admin med rettigheder',
+    items: ['🧭 <b>Admin</b> starter nu med en oversigt, hvor hver del har sin egen flise. Det, der venter på dig, er markeret.', '🔑 Under <b>Admin → Rettigheder</b> sætter du flueben ved, hvad hver person må. I en klub fx <b>Træninger</b> (se alle hold og krydse fremmøde af), <b>Medlemmer</b>, <b>Kontingent</b>, <b>Opslag</b> og <b>Arrangementer</b>. I en spillegruppe <b>Køre spilledagen</b>, <b>Spilledage</b>, <b>Spillere</b> og <b>Bødekasse</b>.', '⚙️ Indstillinger, mails og bestyrelse ligger nu under <b>Admin → Indstillinger</b>.'],
+  },
+  {
     id: '2026-11-12b', date: '12. november 2026', title: 'Notifikationer i Android-appen',
     items: ['🔔 Bruger du <b>Padelklubben-appen fra Google Play</b>, kan du nu få notifikationer på telefonen. Opdater appen, tryk <b>🔔</b> og slå <b>Notifikationer på denne enhed</b> til. Tryk på en notifikation for at komme direkte til siden.', '📡 Mister telefonen nettet, står der nu en rød bjælke øverst, og siden opdateres selv, når nettet er tilbage.'],
   },

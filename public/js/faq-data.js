@@ -245,7 +245,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang',
     q: 'Kan påmindelser også komme på mail?',
-    a: `<p>Ja. Under <b>Admin → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail. Mailen kommer 3 dage før træningen (falder det i weekenden, kommer den om fredagen) og igen dagen før.</p>
+    a: `<p>Ja. Under <b>Admin → ⚙️ Indstillinger → ✉️ Påmindelser på mail</b> kan gruppens admin slå det til. Så får alle, der ikke har svaret <b>Kommer</b> eller <b>Afbud</b> til en træning, også påmindelsen på mail, uanset om de har notifikationer slået til. Dem, der har svaret, får ingen mail. Mailen kommer 3 dage før træningen (falder det i weekenden, kommer den om fredagen) og igen dagen før.</p>
 <p>I en spillegruppe som Fredagspadel får dem, der ikke er tilmeldt næste spilledag, en mail 4 dage før (mandag for en fredag), 2 dage før og dagen før, med hvor mange spillere der mangler. Er dagen fuld, kommer der ingen mail.</p>
 <p>Mailen kommer fra appen med gruppens navn som afsender, og svarer nogen på mailen, går svaret til den mail, admin har skrevet.</p>`,
   },
@@ -408,7 +408,7 @@ export const FAQ = [
     q: 'Kan voksne også melde sig ind i en klub?',
     a: `<p>Ja, hvis klubben også er for voksne. Åbn klubbens link, opret dig, og vælg <b>Mig selv</b> på indmeldelsen. Navnet tages fra din profil, og du udfylder fødselsdato, køn, billeder og evt. hvad trænerne skal vide. I en klub for både børn og voksne kan du også vælge <b>Et barn</b> og melde dine børn ind samme sted.</p>
 <p>En træner godkender dig og sætter dig på et hold. Bagefter svarer du selv <b>✓ Kommer</b> eller <b>Afbud</b> under Træning, ligesom forældre gør for deres børn. Dine oplysninger retter du under <b>Profil → Mit medlemskab</b>.</p>
-<p>Klubbens admin vælger under <b>Admin → Medlemmer → Klubbens indstillinger</b>, om klubben er for børn, voksne eller begge dele.</p>`,
+<p>Klubbens admin vælger under <b>Admin → ⚙️ Indstillinger → Klubbens indstillinger</b>, om klubben er for børn, voksne eller begge dele.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -429,7 +429,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan betaler jeg kontingent?',
     a: `<p>Når klubben har sat kontingent op, står det øverst under <b>Træning</b>. Tryk <b>💳 MobilePay</b> for at betale til klubbens MobilePay Box, eller <b>Har betalt</b> hvis du har betalt på anden måde. Har klubben skrevet et <b>kontonummer</b>, står det også der: overfør beløbet, skriv barnets navn i beskeden, og tryk <b>Har betalt</b>. Kassereren hakker betalingen af under Kontingent, når pengene er kommet.</p>
-<p>Klubbens admin skriver kontonummeret under <b>Admin → Medlemmer → Klubbens indstillinger</b>.</p>`,
+<p>Klubbens admin skriver kontonummeret under <b>Admin → ⚙️ Indstillinger → Klubbens indstillinger</b>.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -468,7 +468,7 @@ export const FAQ = [
 <li><b>Træner</b> styrer sine egne hold.</li>
 <li><b>Kasserer</b> ser og bekræfter kontingent, sender påmindelser og henter en liste til regnskabet (Admin → Kontingent). Der er også et overblik med beløb, lagkage, pr. hold og indbetalinger over tid.</li>
 <li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Profil → Mine børn.</li></ul>
-<p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → Medlemmer → Trænere og kasserer). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
+<p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → ⚙️ Indstillinger → Bestyrelse og børneattest). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -504,10 +504,14 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
-    a: `<p>Klubbens admin (typisk formanden) går til <b>Admin → Medlemmer → Bestyrelse og rettigheder</b>. For hver person vælger man:</p>
-<ul><li><b>Post i bestyrelsen</b>: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk kun adgang til kontingent.</li>
-<li><b>Rettigheder</b>: 💳 kontingent, 📣 opslag til alle, 📅 arrangementer og ✅ godkende børn.</li></ul>
-<p>Vælger man posten <b>Formand</b>, bliver personen automatisk klubbens admin med alle rettigheder. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
+    a: `<p><b>Bestyrelsen</b>: Klubbens admin (typisk formanden) går til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og vælger post: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk adgang til kontingent. Vælger man <b>Formand</b>, bliver personen klubbens admin.</p>
+<p><b>Rettigheder</b>: Under <b>Admin → 🔑 Rettigheder</b> sætter man flueben ved, hvad hver person må:</p>
+<ul><li>🗓 <b>Træninger</b>: se alle hold og tilmeldinger og krydse fremmøde af, ligesom en træner.</li>
+<li>🧒 <b>Medlemmer</b>: godkende nye og sætte dem på hold.</li>
+<li>💳 <b>Kontingent</b>: se og registrere, hvem der har betalt.</li>
+<li>📣 <b>Opslag</b>: skrive opslag til hele klubben.</li>
+<li>🎉 <b>Arrangementer</b>: oprette og styre arrangementer.</li></ul>
+<p>Det gemmes med det samme. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -530,7 +534,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan kommer en ny træner eller et bestyrelsesmedlem med i klubben?',
     a: `<p>Send klubbens invitationslink (Admin → Medlemmer → Inviter). Både admin og trænere kan finde linket og QR-koden dér. Personen opretter sig og trykker <b>🙋 Bed om adgang</b> nederst på siden, hvor man ellers melder et barn ind.</p>
-<p>Klubbens admin får en besked og godkender under <b>Admin → Medlemmer → Venter på godkendelse</b>, enten som <b>Træner</b> eller <b>Medlem</b>. En post i bestyrelsen vælges bagefter under Bestyrelse og rettigheder.</p>`,
+<p>Klubbens admin får en besked og godkender under <b>Admin → Medlemmer → Venter på godkendelse</b>, enten som <b>Træner</b> eller <b>Medlem</b>. En post i bestyrelsen vælges bagefter under Admin → ⚙️ Indstillinger → Bestyrelse og børneattest, og hvad personen må, under Admin → 🔑 Rettigheder.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -575,6 +579,17 @@ export const FAQ = [
     q: 'Kan jeg sende et billede i en samtale?',
     a: `<p>Ja. Tryk <b>📷 Billede</b> under beskeden eller svaret, og vælg et billede eller tag et med kameraet. Du kan skrive tekst til, eller bare sende billedet alene. Tryk på et billede i samtalen for at se det stort.</p>
 <p>Billederne gøres mindre, før de sendes, og kan kun ses af dem, der er med i samtalen.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Kan jeg give nogen lov til mere uden at gøre dem til admin?',
+    a: `<p>Ja. Gå til <b>Admin → 🔑 Rettigheder</b>, find personen og sæt flueben ved det, de må. Det gemmes med det samme, og <b>Ingen</b> fjerner det hele igen.</p>
+<p>I en spillegruppe kan du give:</p>
+<ul><li>▶️ <b>Køre spilledagen</b>: starte runder, rette hold, til- og afmelde andre og godkende resultater (det samme som en superbruger).</li>
+<li>📅 <b>Spilledage</b>: oprette og rette spilledage.</li>
+<li>👥 <b>Spillere</b>: godkende nye spillere og rette deres oplysninger (men ikke ændre roller).</li>
+<li>💸 <b>Bødekasse</b>: godkende bøder og betalinger.</li></ul>
+<p>I en klub kan du give Træninger, Medlemmer, Kontingent, Opslag og Arrangementer. Admin må altid alt.</p>`,
   },
   {
     cat: 'Roller og adgang',

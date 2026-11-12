@@ -2,7 +2,7 @@
 import {
   sb, S, app, hooks, isSuper, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
-  haptic,
+  haptic, canPlan,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -106,7 +106,7 @@ function context({ ev, signups, matches, changes, log }) {
     planOutdated: futureRounds.length > 0 && ev.status !== 'afsluttet' &&
       (L.playing.some((p) => !planPlayers.has(p)) || [...planPlayers].some((p) => !L.playing.includes(p)) ||
        futureRounds.some((r) => rounds[r].length > courts.length || rounds[r].some((m) => !ev.court_ids.includes(m.court_id)))),
-    run: canRun(), admin: isAdmin(),
+    run: canRun(), admin: canPlan(),
   };
 }
 
@@ -464,9 +464,9 @@ function standingsSection(c, st) {
       <div class="delta ${signCls(t.pts)}">${st.estimate ? '≈' : ''}${sign(t.pts)}</div></div>`).join('')}
   </div>` : '';
   const ranked = !isAm ? '' : `<div class="card ranked">${ev.ranked
-    ? `✅ Dagen tæller på den officielle rangliste.${admin ? '<button class="btn sm" id="unrank">Fjern fra ranglisten</button>' : ''}`
+    ? `✅ Dagen tæller på den officielle rangliste.${isAdmin() ? '<button class="btn sm" id="unrank">Fjern fra ranglisten</button>' : ''}`
     : `ℹ️ Americano tæller ikke på ranglisten, før en admin tilføjer dagen.${st.confirmed ? ' Kolonnen "Point" viser cirka, hvad hver spiller ville få.' : ''}
-       ${admin && st.confirmed ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>`;
+       ${isAdmin() && st.confirmed ? '<button class="btn primary" id="rank">Tilføj til officiel rangliste</button>' : ''}`}</div>`;
   return table + ranked;
 }
 

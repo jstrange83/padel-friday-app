@@ -57,15 +57,21 @@ export const roleIn = (pid, g = S.groupId) => {
   return r && !S.viewAs && pid === S.realMe?.id && viewMode() === 'bruger' ? 'bruger' : r;
 };
 // Har jeg (rigtigt) nogen admin-, træner- eller superadmin-rolle et sted? Så kan jeg skifte visning
-export const hasElevated = () => !!S.realMe?.is_superadmin || S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && m.role !== 'bruger') || !!S.clubRights?.length;
+export const hasElevated = () => !!S.realMe?.is_superadmin || S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && m.role !== 'bruger') || !!S.clubRights?.length || Object.values(S.rights || {}).some((r) => r.length);
+// Rettigheder admin har givet med flueben (Admin → Rettigheder). Visning "Bruger" slår dem fra; under "Se som" er det den andens.
+// Gruppe: koere, spilledage, medlemmer, boeder. Klub: traening, medlemmer, kontingent, opslag, arrangementer
+export const rightIn = (r, g = S.groupId) => viewMode() !== 'bruger' && !!S.rights?.[g]?.includes(r);
 export const roleOf = (p, g = S.groupId) => roleIn(p?.id, g) || 'bruger';
 export const isAdmin = (g = S.groupId) => isSuper() || roleIn(S.me?.id, g) === 'admin';
+export const hasRight = (r, g = S.groupId) => isAdmin(g) || rightIn(r, g);
+// Må oprette og rette spilledage
+export const canPlan = (g = S.groupId) => hasRight('spilledage', g);
 // Må køre en fredag: starte runder, rette hold, til-/afmelde andre, godkende resultater
-export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g));
+export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g)) || rightIn('koere', g) || rightIn('traening', g);
 // Spillere der venter på at komme med i en gruppe, jeg er admin for
 // Forslagskassen vises først, når databasen har den (kolonnen findes i indstillingerne)
 export const hasSuggest = () => S.settings && 'feedback_after_matches' in S.settings;
-export const pendingForMe = () => S.members.filter((m) => m.status === 'afventer' && !S.groups.find((g) => g.id === m.group_id)?.archived && isAdmin(m.group_id) && S.profiles[m.player_id]);
+export const pendingForMe = () => S.members.filter((m) => m.status === 'afventer' && !S.groups.find((g) => g.id === m.group_id)?.archived && hasRight('medlemmer', m.group_id) && S.profiles[m.player_id]);
 // Grupper jeg kan vælge imellem
 // Arkiverede grupper er væk for alle (superadmin kan hente dem tilbage under Admin → Grupper)
 export const liveGroups = () => S.groups.filter((g) => !g.archived);

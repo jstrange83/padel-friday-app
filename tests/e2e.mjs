@@ -364,6 +364,7 @@ try {
   await page.click('#pf button.primary');
   await wait(400);
   await page.click('#nav a:has-text("Admin")');
+  await page.click('[data-tab="spillere"]');
   await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
   await page.locator('.prow summary').first().click();
   ok((await page.locator('.prow[open] .contact').innerText()).includes('12 34 56 78'), 'nummer vises for admin med ring/SMS');
@@ -379,6 +380,7 @@ try {
 
   // Admin: se som
   await page.click('#nav a:has-text("Admin")');
+  await page.click('[data-tab="spillere"]');
   await page.waitForSelector('.prow');
   await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
   await page.locator('.prow summary').nth(1).click();
@@ -556,6 +558,7 @@ try {
   ok((await page.locator('.approvals').innerText()).includes('Test Anne'), 'Spilledage viser, at Anne vil være med');
   await shot('godkend-spilledage');
   await page.click('#nav a:has-text("Admin")');
+  await page.click('[data-tab="spillere"]');
   await page.waitForSelector('[data-approve]');
   await shot('godkend');
   await page.click('[data-approve]');
@@ -591,12 +594,15 @@ try {
   // Bødekasse: admin slår til, giver bøde, spilleren melder betalt, admin godkender
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/admin');
-  await page.waitForSelector('.page.admin');
+  await page.waitForSelector('.atiles');
+  ok(await page.locator('.atile').count() >= 4, 'Admin starter med en oversigt med fliser');
+  await shot('admin-oversigt');
+  await page.click('[data-tab="spillere"]');
   await page.click('[data-pgroup="g-fre"]');
   await wait(300);
   ok(await page.locator('details.plist:not([open])').count() === 1, 'spillerlisten under Admin er foldet sammen');
   ok(!(await page.locator('#nav').innerText()).includes('Bøder'), 'bødekassen er slået fra som standard');
-  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
+  await page.waitForSelector('[data-tab="indstillinger"]'); await page.click('[data-tab="indstillinger"]'); await page.waitForSelector('#finesOn');
   await page.check('#finesOn');
   await wait(500);
   ok((await page.locator('#nav').innerText()).includes('Bøder'), 'Bøder kommer i menuen, når den slås til');
@@ -782,6 +788,7 @@ try {
   // Opret spiller uden login, tilmeld ham, og lad ham overtage profilen, når han opretter sig
   await page.goto('http://localhost:8765/#/admin');
   await page.waitForSelector('.page.admin');
+  await page.click('[data-tab="spillere"]');
   await page.click('[data-pgroup="g-fre"]');
   await wait(300);
   await page.click('#newPlayerBtn');
@@ -996,7 +1003,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('.list').innerText()).includes('Test Anders'), 'fælles rangliste viser spillere fra alle grupper');
   ok(!(await page.locator('[data-kind="center"]').count()) && !(await page.locator('#tvEvent').count()), 'center-rangliste og TV-skærm er skjult for almindelige brugere');
   await page.goto('http://localhost:8765/#/admin');
-  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
+  await page.waitForSelector('[data-tab="indstillinger"]'); await page.click('[data-tab="indstillinger"]'); await page.waitForSelector('#finesOn');
   await page.click('.rankmode label:has-text("Kun gruppen")');
   await wait(500);
   await page.goto('http://localhost:8765/#/rangliste');
@@ -1004,7 +1011,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(400);
   ok(!(await page.locator('.page').innerText()).includes('Test Anders'), '"Kun gruppen" viser kun gruppens spillere');
   await page.goto('http://localhost:8765/#/admin');
-  await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
+  await page.waitForSelector('[data-tab="indstillinger"]'); await page.click('[data-tab="indstillinger"]'); await page.waitForSelector('#finesOn');
   await page.click('.rankmode label:has-text("Ingen")');
   await wait(500);
   await loginAs('jimmy@test');
@@ -1101,6 +1108,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   // Påmindelser på mail (gruppens admin)
   await loginAs('jimmy@test');
   await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('[data-tab="indstillinger"]'); await page.click('[data-tab="indstillinger"]');
   await page.waitForSelector('details.mailset');
   await page.click('details.mailset > summary');
   await page.check('#mailForm input[name=on]');
@@ -1109,13 +1117,37 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(500);
   ok(await page.evaluate(() => { const g = window.__mock.db().padel_groups.find((x) => x.id === 'g-fre'); return g.mail_enabled === true && g.mail_reply_to === 'fredag@test.dk'; }), 'admin slår påmindelser på mail til med gruppens svar-mail');
   await noOverflow('mail indstillinger');
+  // Rettigheder med flueben: Bo får lov til at oprette spilledage
+  await page.click('[data-tab="rettigheder"]');
+  await page.waitForSelector('#rightsFind');
+  await page.fill('#rightsFind', 'Test Bo');
+  await page.click('[data-radd="u-2"]');
+  await page.waitForSelector('.rcard[data-ruser="u-2"]');
+  await page.locator('.rcard[data-ruser="u-2"] label:has(input[data-rk="spilledage"])').click();
+  await wait(500);
+  ok(await page.evaluate(() => (window.__mock.db().padel_rights_v2 || []).find((x) => x.group_id === 'g-fre' && x.user_id === 'u-2')?.rights.includes('spilledage')), 'admin giver Bo rettigheden Spilledage med ét flueben');
+  await shot('admin-rettigheder');
+  await noOverflow('rettigheder');
+  await loginAs('test2@fredagspadel.test');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('.page h1');
+  await wait(300);
+  ok(await page.locator('a[href="#/ny-fredag"]').count() > 0, 'Bo kan nu oprette spilledage');
+  ok(!(await page.locator('#nav').innerText()).includes('Admin'), 'Bo får ikke Admin i menuen for kun at kunne oprette spilledage');
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('[data-tab="rettigheder"]'); await page.click('[data-tab="rettigheder"]');
+  await page.waitForSelector('.rcard[data-ruser="u-2"]');
+  await page.click('.rcard[data-ruser="u-2"] [data-rnone]');
+  await wait(400);
+  ok(await page.evaluate(() => !(window.__mock.db().padel_rights_v2 || []).find((x) => x.user_id === 'u-2')?.rights.length), 'rettigheden kan fjernes igen med Ingen');
   // Nyt i appen: popup én gang efter en større opdatering; spillere ser ikke admin-nyheder
   await loginAs('jimmy@test');
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = '2026-10-24'; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = '2026-10-24'; window.__mock.save(); });
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Aflyste spilledage') && nm.includes('Flottere på computeren'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Ny Admin med rettigheder') && nm.includes('Aflyste spilledage'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1225,7 +1257,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await shot('klub-hold-tider');
   await noOverflow('klub hold og tider');
   // Kontingent og info
-  await page.click('[data-tab="spillere"]');
+  await page.click('[data-tab="indstillinger"]');
   await page.click('details.gset:not(.staff):not(.mailset) summary');
   await page.fill('#clubSet input[name=fee]', '600');
   await page.fill('#clubSet input[name=label]', 'Efterår 2026');
@@ -1260,8 +1292,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate((g) => localStorage.setItem('fp-group', g), clubId);
   await page.goto('http://localhost:8765/#/admin');
   await page.reload();
-  await page.waitForSelector('.tabbar');
-  await page.click('[data-tab="spillere"]');
+  await page.waitForSelector('[data-tab="indstillinger"]');
+  await page.click('[data-tab="indstillinger"]');
   await page.click('details.staff summary');
   await page.locator('form[data-staff="u-brian"] input[name=cert]').fill('2026-09-01');
   await page.locator('form[data-staff="u-brian"] button').click();
@@ -1330,6 +1362,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('#nav a[href="#/admin"] .navbadge').innerText()) === '2', 'træneren ser tal for nye indmeldelser');
   ok(lastTodo.includes('2 nye børn venter'), 'træneren får en popup om nye børn, når appen åbnes: ' + lastTodo);
   await page.click('#nav a[href="#/admin"]');
+  await page.click('[data-tab="boern"]');
   await page.waitForSelector('.kpend');
   await shot('klub-godkend');
   ok(await page.locator('.kpend:has-text("Ida Test") .badge.trial').count(), 'ønske om prøvetræning vises for træneren');
@@ -1479,7 +1512,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('details.tr.event').count()) === 1, 'arrangement oprettet');
   ok(!(await page.locator('details.tr.event .byline').count()), 'en træner ser ikke, hvem der har oprettet');
   await page.click('#nav a[href="#/admin"]');
-  await page.waitForSelector('.tabbar');
+  await page.waitForSelector('[data-tab]');
   ok(!(await page.locator('[data-tab="kontingent"]').count()) && (await page.locator('[data-tab="spillere"]').count()) === 1, 'træneren ser ikke kontingent, men gerne Medlemmer');
   await page.click('[data-tab="boern"]');
   await page.click('details.plist summary');
@@ -1493,15 +1526,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate((g) => localStorage.setItem('fp-group', g), clubId);
   await page.goto('http://localhost:8765/#/admin');
   await page.reload();
-  await page.waitForSelector('[data-tab="spillere"]');
-  await page.click('[data-tab="spillere"]');
+  await page.waitForSelector('[data-tab="indstillinger"]');
+  await page.click('[data-tab="indstillinger"]');
   await page.click('details.staff summary');
   await page.locator('#addStaff select').selectOption({ label: 'Pia Forælder' });
   await page.click('#addStaff button');
   await page.waitForSelector('form[data-staff="u-nyforaelder"]');
   const pf = page.locator('form[data-staff="u-nyforaelder"]');
   await pf.locator('select[name=title]').selectOption('Kasserer');
-  ok(await pf.locator('input[name=treasurer]').isChecked() && await pf.locator('input[name=can_post]').isDisabled() && !(await pf.locator('input[name=can_post]').isChecked()), 'kasserer får automatisk kun adgang til kontingent');
+  ok((await pf.locator('.rightsnote').innerText()).includes('Rettigheder'), 'bestyrelsen viser, at rettigheder vælges under Rettigheder');
   await pf.locator('button.primary').click();
   await wait(500);
   ok((await page.evaluate(() => { const x = window.__mock.db().padel_club_staff.find((y) => y.user_id === 'u-nyforaelder'); return x?.board_title === 'Kasserer' && x.treasurer && !x.can_post && !x.can_events && !x.can_approve; })), 'Pia sat som kasserer i bestyrelsen med ret til kontingent (og kun det)');
@@ -1773,7 +1806,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate((g) => localStorage.setItem('fp-group', g), klubId);
   await page.goto('http://localhost:8765/#/admin');
   await page.reload();
-  await page.waitForSelector('.tabbar');
+  await page.waitForSelector('[data-tab]');
   await page.click('[data-tab="spillere"]');
   await page.waitForSelector('.pendingbox');
   ok((await page.locator('.pendingbox').innerText()).includes('Dan Træner'), 'admin ser træneren under Venter på godkendelse');
@@ -1799,7 +1832,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate((g) => localStorage.setItem('fp-group', g), klubId);
   await page.goto('http://localhost:8765/#/admin');
   await page.reload();
-  await page.waitForSelector('.tabbar');
+  await page.waitForSelector('[data-tab]');
   await page.click('[data-tab="hold"]');
   await page.waitForSelector('#newTeam');
   ok(await page.locator('details.welcomeset').count() === 1, 'en træner kan også skrive velkomstbeskeden');
@@ -1938,6 +1971,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await pastGates();
   ok(lastTodo.includes('ny') || lastTodo === '' , 'træneren åbner appen');
   await page.goto('http://localhost:8765/#/admin');
+  await page.click('[data-tab="boern"]');
   await page.waitForSelector('.kpend:has-text("Vera Voksen")');
   ok((await page.locator('[data-tab="boern"]').innerText()).includes('Spillere'), 'fanen hedder Spillere i en klub med voksne');
   const vp = await page.locator('.kpend:has-text("Vera Voksen")').innerText();
@@ -1977,6 +2011,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a');
   await pastGates();
   await page.goto('http://localhost:8765/#/admin');
+  await page.click('[data-tab="boern"]');
   await page.waitForSelector('.wishbox [data-wishok]');
   await shot('klub-oenske-hold');
   await page.click('.wishbox [data-wishok]');

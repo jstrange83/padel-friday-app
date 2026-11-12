@@ -791,6 +791,22 @@ Object.assign(RPC, {
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
     if (p_title === 'Formand') GM(g, p_user).role = 'admin';
   },
+  // Rettigheder med flueben (padel_rights_v2)
+  padel_my_rights_v2: () => (db.padel_rights_v2 || []).filter((x) => x.user_id === uid() && x.rights.length && GM(x.group_id, uid())?.status === 'aktiv').map((x) => ({ group_id: x.group_id, rights: x.rights })),
+  padel_user_rights_v2: ({ p_user }) => (db.padel_rights_v2 || []).filter((x) => x.user_id === p_user && x.rights.length && isAdm(x.group_id) && GM(x.group_id, p_user)?.status === 'aktiv').map((x) => ({ group_id: x.group_id, rights: x.rights })),
+  padel_group_rights_v2: ({ g }) => { if (!isAdm(g)) throw new Error('Kun gruppens admin'); return (db.padel_rights_v2 || []).filter((x) => x.group_id === g).map((x) => ({ user_id: x.user_id, rights: x.rights })); },
+  padel_set_rights_v2: ({ g, p_user, p_rights }) => {
+    if (!isAdm(g)) throw new Error('Kun gruppens admin kan give rettigheder');
+    const club = db.padel_groups.find((x) => x.id === g)?.kind === 'klub';
+    const cat = club ? ['traening', 'medlemmer', 'kontingent', 'opslag', 'arrangementer'] : ['koere', 'spilledage', 'medlemmer', 'boeder'];
+    const r = [...new Set((p_rights || []).filter((x) => cat.includes(x)))].sort();
+    db.padel_rights_v2 ||= [];
+    upsert('padel_rights_v2', ['group_id', 'user_id'], { group_id: g, user_id: p_user, rights: r });
+    if (club) {
+      const cur = db.padel_club_staff.find((x) => x.group_id === g && x.user_id === p_user) || {};
+      upsert('padel_club_staff', ['group_id', 'user_id'], { ...cur, group_id: g, user_id: p_user, treasurer: r.includes('kontingent'), can_post: r.includes('opslag'), can_events: r.includes('arrangementer'), can_approve: r.includes('medlemmer'), board_title: cur.board_title || null });
+    }
+  },
   padel_club_board_contacts: ({ g }) => db.padel_club_staff.filter((x) => x.group_id === g && x.board_title).map((x) => ({ user_id: x.user_id, name: db.padel_profiles.find((p) => p.id === x.user_id)?.name, title: x.board_title, phone: db.padel_contacts.find((c) => c.player_id === x.user_id)?.phone || null })),
 });
 
