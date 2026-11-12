@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "622097852208",
+    "project_id": "padelklubben-3f660",
+    "storage_bucket": "padelklubben-3f660.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:622097852208:android:c0e2713ca973afe5150af5",
+        "android_client_info": {
+          "package_name": "dk.padelklubben.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC81cxzUOW9g2JqAdCFg8YLV7feeDyI3HY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
