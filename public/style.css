@@ -921,7 +921,7 @@ details.people { display: block; }
 :root[data-theme="brondby"] { --bg: #062457; --card: #0b3270; --card2: #12408a; --line: #1f55a8; --text: #ffffff; --muted: #aec4ea; --accent: #ffd200; --accent-ink: #062457; }
 
 /* ---------- Computer (stor skærm): bred side, kolonner og flot menu. Telefonen er uændret. ---------- */
-.navfoot { display: none; }
+#nav .navfoot { display: none; }
 @media (min-width: 900px) {
   #nav { padding-bottom: 14px; }
   #nav .navfoot { display: flex; margin-top: auto; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; background: var(--card); color: var(--text); }

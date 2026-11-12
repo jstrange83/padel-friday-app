@@ -284,6 +284,7 @@ try {
   await shot('afsluttet');
 
   // Rangliste
+  { const vw = page.viewportSize().width; const shown = await page.locator("#nav .navfoot").isVisible(); ok(vw >= 900 ? shown : !shown, vw >= 900 ? "navn og gruppe i menuen på computer" : "intet navn i bundmenuen på telefon"); }
   await page.click('#nav a:has-text("Rangliste")');
   await wait(400);
   ok((await text()).includes('kamp'), 'ranglisten viser kampe');
