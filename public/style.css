@@ -1006,3 +1006,31 @@ details.people { display: block; }
   .kteam-opt span { flex: none; }
 }
 @media (min-width: 1100px) { .page.admin .abody.tab-boern { columns: auto; } }
+
+/* Kampdetaljer */
+.mdcard { max-height: 88vh; overflow: auto; }
+.mdcourt { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; border: 2px solid var(--line); border-radius: 16px; overflow: hidden; margin: 12px 0 16px; background: var(--bg); }
+.mdside { display: grid; grid-template-rows: 1fr 1fr; }
+.mdside .mdcell + .mdcell { border-top: 2px solid var(--line); }
+.mdcell { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 14px 8px; min-height: 74px; gap: 2px; }
+.mdcell b { font-size: 16px; line-height: 1.2; }
+.mdcell small { font-size: 13px; font-weight: 700; }
+.mdcell.me b { background: var(--accent); color: var(--accent-ink); border-radius: 10px; padding: 3px 10px; }
+.mdside.won .mdcell b:not(.me b) { color: var(--text); }
+.mdside:not(.won) .mdcell b { opacity: .8; }
+.mdnet { position: relative; width: 6px; background: var(--line); }
+.mdcourt:has(.mdside.won) .mdnet { background: var(--accent); }
+.mdscore { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--card); border: 2px solid var(--line); border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 18px; white-space: nowrap; }
+.mdset { display: grid; grid-template-columns: 54px 1fr auto 1fr; gap: 8px; align-items: center; padding: 10px 8px; border-radius: 12px; }
+.mdset.on { background: var(--card2); }
+.mdteam { display: flex; flex-direction: column; font-size: 14px; line-height: 1.25; min-width: 0; }
+.mdteam.r { text-align: right; color: var(--muted); }
+.mdsc { display: flex; align-items: center; gap: 6px; }
+.mdsc b { background: var(--bg); border-radius: 999px; padding: 4px 10px; }
+.mdsc i { font-style: normal; font-weight: 800; font-size: 13px; }
+.mdpts { background: var(--bg); border-radius: 14px; padding: 12px 14px; margin-top: 14px; }
+.mdrow { display: flex; gap: 10px; align-items: center; padding: 6px 0; font-size: 15px; }
+.mdrow.me .grow { color: var(--accent); font-weight: 700; }
+.mdrow b { min-width: 44px; text-align: right; }
+.mdcard .up, .mdpts .up { color: var(--up); } .mdcard .dn, .mdpts .dn { color: var(--dn); }
+@media (max-width: 360px) { .mdset { grid-template-columns: 1fr auto 1fr; } .mdset > small { display: none; } }

@@ -247,6 +247,15 @@ try {
   ok(ps === '2-6,6-2,6-2,6-2', 'sagt resultat: første tal er ens eget hold (' + ps + ')');
   await page.evaluate(() => window.scrollTo(0, 0));
   await shot('godkend-rettelse');
+  // Kampdetaljer på en spillet kamp: banen, point før og efter
+  for (const t of await page.locator('.rtab').all()) { if (await page.locator('[data-act="detail"]').count()) break; await t.click(); await wait(200); }
+  ok((await page.locator('[data-act="detail"]').count()) > 0, 'spillede kampe har et link til detaljer');
+  await page.locator('[data-act="detail"]').first().click();
+  await page.waitForSelector('.mdcourt');
+  ok((await page.locator('.mdcell').count()) === 4 && /→/.test(await page.locator('.mdpts').innerText()), 'kampdetaljer viser banen og point før → efter');
+  await shot('kampdetaljer');
+  await noOverflow('kampdetaljer');
+  await page.click('#mdClose');
   await page.locator(`#m-${cm.id} [data-act=reject]`).click();
   await wait(500);
   await openAll();

@@ -2,6 +2,11 @@
 export const FAQ = [
   {
     cat: 'Point og rangliste', group: true,
+    q: 'Hvordan ser jeg, hvad en kamp gav i point?',
+    a: `<p>Tryk <b>📊 Detaljer</b> på en spillet kamp. Så ser du banen med holdene og resultatet, hvad hver spiller fik eller mistede, og point før → efter kampen. Du kan også se dine kampe på samme bane den dag, runde for runde.</p>`,
+  },
+  {
+    cat: 'Point og rangliste', group: true,
     q: 'Hvad er Streak på ranglisten?',
     a: `<p>Under <b>🔥 Streak</b> kan du vælge <b>Sejre i træk</b> (flest kampe vundet i træk lige nu) eller fx <b>Fredage i træk</b> (flest spilledage i træk, hvor man har været med). Ordet følger gruppens spilledag, så i en lørdagsgruppe hedder det Lørdage i træk. Den længste streak står under navnet.</p>`,
   },

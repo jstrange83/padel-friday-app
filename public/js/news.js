@@ -5,8 +5,8 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
-    id: '2026-11-11c', date: '11. november 2026', groups: true, title: 'Fredage i træk',
-    items: ['🔥 Under <b>Rangliste → Streak</b> kan du nu også se, hvem der har været med flest fredage i træk.'],
+    id: '2026-11-11c', date: '11. november 2026', groups: true, title: 'Fredage i træk og kampdetaljer',
+    items: ['🔥 Under <b>Rangliste → Streak</b> kan du nu også se, hvem der har været med flest fredage i træk.', '📊 Tryk <b>Detaljer</b> på en spillet kamp for at se banen, resultatet og point før → efter for alle fire.'],
   },
   {
     id: '2026-11-11b', date: '11. november 2026', title: 'Flottere på computeren',

@@ -380,8 +380,9 @@ function matchCard(c, m) {
   } else {
     const d = delta[m.id + m.a_left];
     if (d !== undefined) status = `<span class="badge">Point ${sign(d)} / ${sign(-d)}</span>`;
+    links = `<button class="link sm" data-act="detail" data-id="${m.id}">📊 Detaljer</button>`;
     // Spillet kamp: kun små links, så listen er kort
-    if (run || myTeam) links = `<button class="link sm" data-act="enter" data-id="${m.id}">Ret</button>`;
+    if (run || myTeam) links += `<button class="link sm" data-act="enter" data-id="${m.id}">Ret</button>`;
     if (run) links += `<button class="link sm dn" data-act="reset" data-id="${m.id}">Nulstil</button>`;
   }
   const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
@@ -738,6 +739,7 @@ function bind(c) {
   app.querySelectorAll('[data-act]').forEach((b) => (b.onclick = async () => {
     const id = b.dataset.id, a = b.dataset.act;
     const near = () => b.closest('.match, .mine-card')?.querySelector(`form.enter[data-id="${id}"]`) || form('enter', id);
+    if (a === 'detail') { showMatchDetail(c, matches.find((x) => x.id === id)); return; }
     if (a === 'enter') { const f = near(); f.hidden = !f.hidden; if (!f.hidden) f.a.focus(); return; }
     if (a === 'teams') { const f = form('editteams', id); f.hidden = !f.hidden; return; }
     if (a === 'voice') {
@@ -826,4 +828,52 @@ function bind(c) {
     const f = form('enter', id);
     if (f && a.textContent.includes('Indtast')) { f.hidden = false; setTimeout(() => f.a.focus(), 400); }
   }));
+}
+
+// Kampdetaljer: banen med holdene og point, og hvordan pointene ændrede sig. Plus spillerens kampe på samme bane i dag.
+function showMatchDetail(c, m) {
+  if (!m) return;
+  const { me, matches } = c;
+  const ch = (c.raw?.changes || []).filter((x) => x.match_id === m.id);
+  const dOf = (pid) => ch.find((x) => x.player_id === pid)?.delta;
+  const fmtD = (d) => (d == null ? '' : `${d > 0 ? '+' : d < 0 ? '−' : '±'}${Math.abs(d)}`);
+  const cls = (d) => (d > 0 ? 'up' : d < 0 ? 'dn' : '');
+  const aWon = m.score_a > m.score_b, bWon = m.score_b > m.score_a;
+  const cell = (pid) => `<div class="mdcell ${pid === me ? 'me' : ''}"><b>${pid === me ? 'Dig' : esc(shortName(pid))}</b><small class="${cls(dOf(pid))}">${fmtD(dOf(pid))}</small></div>`;
+  const rows = [m.a_left, m.a_right, m.b_left, m.b_right].filter(Boolean).map((pid) => {
+    const x = ch.find((y) => y.player_id === pid);
+    return x ? { pid, before: x.elo_before, after: x.elo_before + x.delta, d: x.delta } : { pid };
+  }).sort((p, q2) => (q2.d ?? 0) - (p.d ?? 0));
+  // Spillerens (eller kortets) kampe på samme bane i dag, runde for runde
+  const focus = [m.a_left, m.a_right, m.b_left, m.b_right].includes(me) ? me : m.a_left;
+  const mine = matches.filter((x) => x.court_id === m.court_id && x.status === 'bekraeftet' && [x.a_left, x.a_right, x.b_left, x.b_right].includes(focus)).sort((x, y) => x.round_no - y.round_no);
+  const setRow = (x) => {
+    const onA = [x.a_left, x.a_right].includes(focus);
+    const mate = onA ? (x.a_left === focus ? x.a_right : x.a_left) : (x.b_left === focus ? x.b_right : x.b_left);
+    const opp = onA ? [x.b_left, x.b_right] : [x.a_left, x.a_right];
+    const my = onA ? x.score_a : x.score_b, th = onA ? x.score_b : x.score_a;
+    const d = (c.raw?.changes || []).find((y) => y.match_id === x.id && y.player_id === focus)?.delta;
+    return `<div class="mdset ${x.id === m.id ? 'on' : ''}"><small class="muted">Runde ${x.round_no}</small>
+      <span class="mdteam"><b>${focus === me ? 'Dig' : esc(shortName(focus))}</b><b>${esc(shortName(mate))}</b></span>
+      <span class="mdsc"><i class="${cls(d)}">${fmtD(d)}</i><b>${my}–${th}</b></span>
+      <span class="mdteam r"><span>${esc(shortName(opp[0]))}</span><span>${esc(shortName(opp[1]))}</span></span></div>`;
+  };
+  const wrap = document.createElement('div');
+  wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-card mdcard" role="dialog" aria-modal="true" aria-label="Kampdetaljer">
+    <div class="ftop"><b>${esc(courtById(m.court_id)?.name || 'Banen')} · runde ${m.round_no}</b><button class="link sm" id="mdClose">Luk</button></div>
+    <div class="mdcourt">
+      <div class="mdside ${aWon ? 'won' : ''}">${cell(m.a_left)}${cell(m.a_right)}</div>
+      <div class="mdnet"><span class="mdscore">${m.score_a}–${m.score_b}</span></div>
+      <div class="mdside ${bWon ? 'won' : ''}">${cell(m.b_left)}${cell(m.b_right)}</div>
+    </div>
+    ${mine.length > 1 ? `<div class="mtitle">${focus === me ? 'Dine' : `${esc(first(focus))}${/[sxz]$/i.test(first(focus)) ? '’' : 's'}`} kampe på banen i dag</div>${mine.map(setRow).join('')}` : ''}
+    ${rows.some((r) => r.d != null) ? `<div class="mdpts"><div class="mtitle">Point efter kampen</div>
+      ${rows.map((r) => `<div class="mdrow ${r.pid === me ? 'me' : ''}"><span class="grow">${esc(nameOf(r.pid))}</span><span class="muted">${r.before ?? ''}${r.before != null ? ` → ${r.after}` : ''}</span><b class="${cls(r.d)}">${fmtD(r.d)}</b></div>`).join('')}</div>` : '<p class="muted small">Kampen tæller ikke på ranglisten.</p>'}
+  </div>`;
+  document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('#mdClose').onclick = close;
+  onLeave(close);
 }
