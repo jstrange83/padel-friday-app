@@ -21,5 +21,15 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/privatliv",
+      "destination": "/privatliv.html"
+    },
+    {
+      "source": "/support",
+      "destination": "/support.html"
+    }
   ]
 }

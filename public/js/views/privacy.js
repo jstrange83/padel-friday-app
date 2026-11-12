@@ -6,11 +6,11 @@ export function viewPrivacy() {
   <div class="page privacy">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/profil')">‹ Tilbage</button>
     <h1>Privatliv</h1>
-    <p class="muted">Sådan bruger appen dine oplysninger. Senest opdateret 25. oktober 2026.</p>
+    <p class="muted">Sådan bruger appen dine oplysninger. Senest opdateret 12. november 2026.</p>
 
     <div class="card"><h3>Hvem står for oplysningerne</h3>
-      <p>Appen drives af Jimmy Strange. I en gruppe eller klub er det gruppens eller klubbens admin, der bestemmer, hvem der er med, og som bruger oplysningerne til at styre spilledage, hold og træning.</p>
-      <p>Har du spørgsmål, så skriv i <a href="#/forslag">Forslagskassen</a> eller kontakt din gruppes admin.</p></div>
+      <p>Appen udgives af FST Gruppen ApS (CVR 43100009), Bjørn Andersens Vej 57, Blistrup, 3230 Græsted. Kontakt: <a href="mailto:kontakt@padelklubben.dk">kontakt@padelklubben.dk</a>. I en gruppe eller klub er det gruppens eller klubbens admin, der bestemmer, hvem der er med, og som bruger oplysningerne til at styre spilledage, hold og træning.</p>
+      <p>Har du spørgsmål, så skriv til os, brug <a href="#/forslag">Forslagskassen</a> eller kontakt din gruppes admin. Hele politikken kan også læses på <a href="/privatliv" target="_blank" rel="noopener">padelklubben.dk/privatliv</a>.</p></div>
 
     <div class="card"><h3>Hvad gemmes om dig</h3>
       <ul>
@@ -43,12 +43,12 @@ export function viewPrivacy() {
       </ul></div>
 
     <div class="card"><h3>Hvor gemmes det</h3>
-      <p>Oplysningerne gemmes hos Supabase på servere i EU (Stockholm), og appen ligger hos Vercel. Oplysningerne bliver ikke solgt eller givet videre til andre.</p></div>
+      <p>Oplysningerne gemmes hos Supabase på servere i EU (Stockholm), appen ligger hos Vercel, og mails fra appen sendes via Google (Gmail). Appen bruger ikke reklamer eller sporing. Oplysningerne bliver ikke solgt eller givet videre til andre.</p></div>
 
     <div class="card"><h3>Ret og slet</h3>
       <ul>
         <li>Du kan selv rette dine oplysninger under Profil, og forældre kan rette deres barns oplysninger under Profil → Mine børn.</li>
-        <li>Du kan slette din profil under Profil → Slet min profil. Dine kampe og point gemmes, så ranglisten passer, men du forsvinder fra grupperne.</li>
+        <li>Du kan slette din profil under Profil → Slet min profil, eller skrive til kontakt@padelklubben.dk. Dine kampe og point gemmes, så ranglisten passer, men du forsvinder fra grupperne.</li>
         <li>Et barn meldes ud under Profil → Mine børn. Vil du have barnets oplysninger helt slettet, så bed klubbens admin om det.</li>
         <li>Du har ret til at få at vide, hvad der er gemt om dig, og til at klage til Datatilsynet (datatilsynet.dk).</li>
       </ul></div>
