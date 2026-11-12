@@ -31,5 +31,12 @@
       "source": "/support",
       "destination": "/support.html"
     }
+  ],
+  "redirects": [
+    {
+      "source": "/android",
+      "destination": "https://play.google.com/apps/internaltest/4701396856686669522",
+      "permanent": false
+    }
   ]
 }
