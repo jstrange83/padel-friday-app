@@ -588,6 +588,12 @@ export const FAQ = [
   },
   {
     cat: 'Roller og adgang',
+    q: 'Kan jeg tilmelde mange spillere på én gang?',
+    a: `<p>Ja. Åbn spilledagen og tryk <b>📋 Indsæt en liste</b> under de tilmeldte. Sæt én spiller ind pr. linje: navn, mail eller telefonnummer, fx kopieret fra MATCHi, Excel eller en besked.</p>
+<p>Alle, appen kender, bliver tilmeldt med det samme og kommer med i gruppen. Dem, appen ikke kender, får du en liste over, så du kan sende dem invitationslinket.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
     q: 'Kan jeg give nogen lov til mere uden at gøre dem til admin?',
     a: `<p>Ja. Gå til <b>Admin → 🔑 Rettigheder</b>, find personen og sæt flueben ved det, de må. Det gemmes med det samme, og <b>Ingen</b> fjerner det hele igen.</p>
 <p>I en spillegruppe kan du give:</p>

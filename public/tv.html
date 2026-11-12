@@ -58,6 +58,7 @@
   .flash .t { font-size:2.4vw; font-weight:700; text-align:center; }
   .flash .egg { font-size:6vw; }
   @keyframes in { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
+  .msg { background:var(--card); border-left:.4vw solid var(--acc); border-radius:.8vw; padding:.8vw 1.4vw; font-size:1.6vw; font-weight:700; margin:0 0 1vw; }
   .err { padding:6vw; font-size:2vw; color:var(--mut); }
 </style>
 </head>
@@ -127,7 +128,7 @@ function render(d) {
   }
   app.innerHTML = `<header><div><div class="kicker">${esc(d.group)}</div><h1>${esc(day(d.now, { weekday: 'long', day: 'numeric', month: 'long' }))}</h1>
       <div class="sub">${ev ? esc(ev.title || 'Spilledag') : 'Padelklubben'}</div></div><div class="clock" id="clock"></div></header>
-    <main>${main}</main>
+    <main>${look?.message ? `<div class="msg">${esc(look.message)}</div>` : ''}${main}</main>
     <aside><h2>${sideTitle}</h2><div class="rows">${side || '<p style="color:var(--mut)">Ingen resultater endnu.</p>'}</div>
       <div class="qr">${qrSvg}<span>Følg med og meld resultater i Padelklubben-appen</span></div></aside>
     <footer>Opdaterer automatisk · ${esc(d.group)}</footer>`;
@@ -148,8 +149,18 @@ function flash(m, courtName) {
   flashTimer = setTimeout(() => box.remove(), egg ? 9000 : 6000);
 }
 
+// Centrets farve og besked (sat under Admin → Indstillinger)
+let look = null;
+async function loadLook() {
+  try {
+    const { data } = await sb.rpc('padel_tv_look_v2', { p_token: token });
+    look = data || null;
+    if (look?.color) document.documentElement.style.setProperty('--acc', look.color);
+  } catch {}
+}
 async function load() {
   try {
+    if (!look) await loadLook();
     const { data, error } = await sb.rpc('padel_tv_v2', { p_token: token });
     if (error) throw error;
     const done = (data?.matches || []).filter((m) => m.status === 'bekraeftet');
@@ -164,6 +175,7 @@ async function load() {
 }
 load();
 setInterval(load, 10000);
+setInterval(loadLook, 60000);
 // Hold skærmen tændt, hvis browseren kan
 const keepOn = () => { try { navigator.wakeLock?.request('screen').catch(() => {}); } catch {} };
 keepOn(); document.addEventListener('visibilitychange', () => { if (!document.hidden) keepOn(); });

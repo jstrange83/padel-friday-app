@@ -1105,3 +1105,13 @@ html.inapp body { overscroll-behavior-y: contain; }
 .rmadmin .link { padding: 4px 0; font-size: 14px; }
 .rmvote { min-width: 64px; }
 .rmform { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Center: farver til TV-skærmen */
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 12px; }
+.sw { position: relative; margin: 0; cursor: pointer; }
+.sw input[type=radio] { position: absolute; opacity: 0; }
+.sw span { display: block; width: 32px; height: 32px; border-radius: 50%; background: var(--c); border: 3px solid transparent; }
+.sw input:checked + span { border-color: var(--text); box-shadow: 0 0 0 2px var(--bg) inset; }
+.sw.own input { width: 36px; height: 36px; padding: 0; border: 0; background: none; border-radius: 50%; cursor: pointer; }
+.centermode { margin-top: 10px; }
+.importbox textarea { width: 100%; margin: 6px 0; }

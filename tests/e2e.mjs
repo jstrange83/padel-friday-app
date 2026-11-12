@@ -108,11 +108,18 @@ try {
   // Åbn fredagen og tilmeld 8 testspillere (9 i alt = 2 baner + 1 venteliste)
   await page.locator('a.ev').first().click();
   await page.waitForSelector('.page.event');
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 6; i++) {
     await page.fill('#addSearch', 'test');
     await page.locator('#addHits .hit').first().click();
     await wait(250);
   }
+  // De sidste to sættes ind som en liste (fx fra MATCHi): én på mail og én på navn, plus én appen ikke kender
+  await page.click('details.importbox summary');
+  await page.fill('#importText', 'test11@fredagspadel.test\nTest Freja\nUkendt Person');
+  await page.click('#importGo');
+  await page.waitForSelector('#importRes .warnc');
+  { const r = await page.locator('#importRes').innerText(); ok(r.includes('Test Eva') && r.includes('Test Freja') && r.includes('Ukendt Person'), 'indsat liste tilmelder kendte spillere og viser dem, appen ikke kender'); }
+  await shot('indsaet-liste');
   ok((await text()).includes('2 baner klar · 1 på venteliste'), 'venteliste ved 9 tilmeldte');
   await shot('tilmeldte');
 
@@ -446,6 +453,25 @@ try {
   await page.locator('.mrow:has-text("Test Carsten") [data-remove]').click();
   await wait(400);
   ok(!(await page.locator('.mrow:has-text("Test Carsten")').count()), 'Carsten fjernet igen');
+  // Center med egen officiel rangliste (kun superadmin kan slå det til)
+  await page.check('#centerMode');
+  await wait(500);
+  ok(await page.evaluate(() => window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel').is_center === true), 'superadmin gør Lørdagspadel til et center med egen rangliste');
+  await page.click('[data-tab="indstillinger"]');
+  await page.waitForSelector('#centerLook');
+  await page.locator('#centerLook label.sw').nth(9).click();
+  await page.fill('#centerLook input[name=msg]', 'Ranglisteaften kl. 19');
+  await page.click('#centerLook button');
+  await wait(500);
+  ok(await page.evaluate(() => { const g = window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel'); return g.brand_color === '#8b5cf6' && g.tv_message === 'Ranglisteaften kl. 19'; }), 'centret vælger farve og besked til TV-skærmen');
+  ok(await page.locator('.rankmode').isHidden(), 'et center har altid sin egen rangliste (valget er skjult)');
+  await shot('center-indstillinger');
+  await noOverflow('center indstillinger');
+  await page.click('[data-tab="grupper"]');
+  await page.waitForSelector('#centerMode');
+  await page.uncheck('#centerMode');
+  await wait(500);
+  ok(await page.evaluate(() => !window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel').is_center), 'center kan slås fra igen');
   await shot('superadmin');
   await page.click('[data-group="g-fre"]');
   await wait(400);

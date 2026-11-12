@@ -483,7 +483,12 @@ function signupsSection(c) {
     ${signed.length ? person(L.courts ? L.playing : signed, false) : '<p class="muted">Ingen endnu.</p>'}
     ${L.courts && L.waiting.length ? `<h3>Venteliste (${L.waiting.length})</h3>${person(L.waiting, true, L.playing.length)}` : ''}
     ${run && ev.status !== 'afsluttet' ? `<div class="addp"><input type="search" id="addSearch" placeholder="➕ Tilmeld en spiller: søg på navn…" autocomplete="off">
-      <div id="addHits" class="hits"></div></div>` : ''}
+      <div id="addHits" class="hits"></div></div>
+      <details class="card importbox" ${S.importOpen ? 'open' : ''}><summary><b>📋 Indsæt en liste</b> <small class="muted">fra MATCHi, Excel eller en besked</small></summary>
+        <p class="muted small">Én spiller pr. linje: navn, mail eller telefonnummer. Spillere, der allerede er i appen, bliver tilmeldt (og kommer med i gruppen). Dem, appen ikke kender, får du en liste over.</p>
+        <textarea id="importText" rows="5" placeholder="Anna Holm&#10;mikkel@mail.dk&#10;20 30 40 50"></textarea>
+        <div class="mact"><button class="btn sm primary" id="importGo">Tilmeld dem</button></div>
+        <div id="importRes"></div></details>` : ''}
     ${log.length ? `<details class="faq log"><summary>Til‑ og afmeldinger (${log.length})</summary><div>${log.map((l) => {
       const by = l.done_by && l.done_by !== l.player_id ? ` <small>af ${esc(first(l.done_by))}</small>` : '';
       return `<div class="logrow">${editBtn('padel_signup_log', l.id)}<span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
@@ -594,6 +599,24 @@ function bind(c) {
     if (t) toast(`${first(b.dataset.unsign)} er afmeldt og har fået en bøde: ${t.name}`);
     await reload();
   }));
+  // Indsæt en liste fra MATCHi/Excel: tilmeld alle, appen kender
+  const ib = app.querySelector('details.importbox'); if (ib) ib.ontoggle = () => (S.importOpen = ib.open);
+  $('importGo')?.addEventListener('click', async (e) => {
+    const lines = $('importText').value.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+    if (!lines.length) return toast('Indsæt mindst én linje', true);
+    busy(e.currentTarget, true);
+    try {
+      const r = await q(sb.rpc('padel_import_signups_v2', { e: ev.id, p_lines: lines }));
+      S.importResult = r; S.importOpen = true;
+      toast(r.added.length ? `${r.added.length} tilmeldt` : 'Ingen nye tilmeldte');
+      await hooks.loadBase(); await reload();
+    } catch { busy(e.currentTarget, false); }
+  });
+  if (S.importResult && $('importRes')) {
+    const r = S.importResult;
+    $('importRes').innerHTML = `${r.added.length ? `<p class="ok small">✓ Tilmeldt: ${r.added.map(esc).join(', ')}</p>` : ''}${r.already.length ? `<p class="muted small">Var allerede tilmeldt: ${r.already.map(esc).join(', ')}</p>` : ''}${r.missing.length ? `<p class="warnc small">Ikke fundet i appen (${r.missing.length}): ${r.missing.map(esc).join(', ')}. Send dem invitationslinket, eller opret dem under Admin → Spillere.</p>` : ''}`;
+    S.importResult = null;
+  }
   // Søg og tilmeld en spiller fra gruppen
   const search = $('addSearch');
   if (search) {
@@ -619,7 +642,7 @@ function bind(c) {
   // Runder: lav hold til en eller flere runder. Hver ny runde tager højde for dem, der lige er lavet.
   const buildRounds = async (from, to) => {
     // Gruppens point bruges til at gøre holdene lige og fordele baner efter niveau
-    const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean).map((p) => ({ ...p, elo: groupElo(p.id) }));
+    const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean).map((p) => ({ ...p, elo: groupElo(p.id, ev.group_id) }));
     const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
       .order('created_at', { ascending: false }).limit(800));
     const rows = [];

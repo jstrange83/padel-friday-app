@@ -78,9 +78,17 @@ export async function viewAdmin() {
 // ---------- Indstillinger for gruppen eller klubben ----------
 function settingsTab() {
   if (isClub()) return `${mailCard()}${clubSettingsCard()}${clubStaffCard()}`;
+  const ctr = group()?.is_center, col = group()?.brand_color || '';
+  const COLORS = ['#c6ef3e', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e', '#eab308', '#f97316', '#ef4444', '#ec4899', '#8b5cf6'];
   return `${mailCard()}
-    <div class="card gset"><b>⚙️ Gruppens indstillinger</b>
-    <div class="rankmode"><div class="lbl">🏆 Rangliste</div>
+    ${ctr ? `<form class="card centerlook" id="centerLook"><b>🏟 Centrets udseende på TV-skærmen</b>
+      <div class="lbl">Farve</div><div class="swatches">${COLORS.map((c) => `<label class="sw" style="--c:${c}"><input type="radio" name="color" value="${c}" ${col.toLowerCase() === c ? 'checked' : ''}><span></span></label>`).join('')}
+        <label class="sw own" title="Egen farve"><input type="color" name="own" value="${col || '#c6ef3e'}"></label></div>
+      <label>Besked på skærmen <small class="muted">(fx "Fredagsturnering kl. 19, tilmeld dig i baren")</small><input name="msg" maxlength="140" value="${esc(group()?.tv_message || '')}"></label>
+      <div class="mact"><button class="btn sm primary">Gem</button></div></form>` : ''}
+    <div class="card gset"><b>⚙️ ${ctr ? 'Centrets' : 'Gruppens'} indstillinger</b>
+    ${ctr ? '<p class="muted small">🏆 Centret har sin egen officielle rangliste. Alle starter på 1000 point, og kampene her tæller ikke på den fælles rangliste.</p>' : ''}
+    <div class="rankmode" ${ctr ? 'hidden' : ''}><div class="lbl">🏆 Rangliste</div>
       ${radios('rankmode', { alle: 'Alle spillere', gruppe: 'Kun gruppen', ingen: 'Ingen' }, group()?.ranking_mode || 'alle')}
       <p class="muted small">Én fælles rangliste med samme point i alle grupper. Vælg om gruppen ser alle, kun sine egne, eller ingen (kampene giver stadig point).</p></div>
     <form class="frow ballfee" id="ballFee"><label class="grow">🎾 Bolde pr. spiller (kr.) <small class="muted">lægges oveni banelejen</small><input name="fee" type="number" min="0" value="${group()?.ball_fee ?? ''}" placeholder="Fx 15"></label><button class="btn sm">Gem</button></form>
@@ -198,6 +206,8 @@ function groupsTab() {
       <div class="head"><div class="grow"><b class="big">${esc(group()?.name || '')}</b>
         <small class="muted gsum">${group()?.kind === 'klub' ? `${{ boern: '🧒 Juniorklub', voksne: '🏟 Klub for voksne', begge: '🏟 Klub for børn og voksne' }[audience()] || '🧒 Juniorklub'} · ` : ''}${mem.length === 1 ? '1 spiller' : `${mem.length} spillere`} · ${admins.length ? `Admin: ${adminNames}` : '<span class="warn">ingen admin</span>'}</small></div>
         <button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
+      ${group()?.kind !== 'klub' ? `<label class="switch centermode"><input type="checkbox" id="centerMode" ${group()?.is_center ? 'checked' : ''}><span>🏟 Center med egen officiel rangliste</span></label>
+      <p class="muted small">${group()?.is_center ? 'Gruppen er et center: point her tæller kun på centrets egen rangliste (alle starter på 1000) og ikke på den fælles. Kun synligt for superadmin indtil videre.' : 'Slå til for et padelcenter, der holder officielle ranglisteaftener med sin egen rangliste.'}</p>` : ''}
       <div class="lbl">Centre</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
       <details class="gmem" ${S.gmemOpen || !admins.length ? 'open' : ''}><summary><b>👥 Medlemmer og roller</b><span class="muted">${mem.length} ›</span></summary>
@@ -258,6 +268,22 @@ function bind() {
     document.getElementById('p-' + pid)?.closest('details')?.setAttribute('open', '');
   };
   const on = (sel, fn) => app.querySelectorAll(sel).forEach((el) => (el.onclick = () => fn(el)));
+  // Center: superadmin slår egen officiel rangliste til; centrets admin vælger farve og besked til TV'et
+  const cm = document.getElementById('centerMode');
+  if (cm) cm.onchange = async () => {
+    if (!confirm(cm.checked ? `Gør ${group()?.name} til et center med egen officiel rangliste?\n\nKampe her tæller så kun på centrets egen rangliste (alle starter på 1000).` : `Slå center fra for ${group()?.name}?`)) { cm.checked = !cm.checked; return; }
+    try { await q(sb.rpc('padel_set_center_mode_v2', { g, p_on: cm.checked })); toast(cm.checked ? 'Gruppen er nu et center' : 'Center er slået fra'); await refresh(); } catch { cm.checked = !cm.checked; }
+  };
+  const cl = document.getElementById('centerLook');
+  if (cl) {
+    cl.own.oninput = () => cl.querySelectorAll('input[name=color]').forEach((x) => (x.checked = false));
+    cl.onsubmit = async (e) => {
+      e.preventDefault();
+      const btn = cl.querySelector('button'); busy(btn, true);
+      const color = cl.querySelector('input[name=color]:checked')?.value || cl.own.value;
+      try { await q(sb.rpc('padel_set_center_look_v2', { g, p_color: color, p_message: cl.msg.value })); toast('Gemt. TV-skærmen opdaterer sig selv inden for et minut'); await refresh(); } catch { busy(btn, false); }
+    };
+  }
   const setMember = (p, role, status) => q(sb.rpc('padel_set_member', { g, p, p_role: role, p_status: status }));
 
   document.getElementById('inviteQR')?.addEventListener('click', () => (isClub() ? clubInvite(g).qr() :

@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-12e', date: '12. november 2026', admin: true, groups: true, title: 'Indsæt en liste med tilmeldte',
+    items: ['📋 På en spilledag kan du nu trykke <b>Indsæt en liste</b> og sætte navne, mails eller telefonnumre ind, fx fra MATCHi, Excel eller en besked. Alle, appen kender, bliver tilmeldt med det samme, og du får at vide, hvem den ikke kender.'],
+  },
+  {
     id: '2026-11-12d', date: '12. november 2026', title: 'Nyt og på vej',
     items: ['🆕 Under <b>Profil → Nyt og på vej</b> kan du nu se, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet.', '👍 Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i Forslagskassen.'],
   },

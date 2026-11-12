@@ -80,7 +80,9 @@ export const group = (g = S.groupId) => S.groups.find((x) => x.id === g);
 export const activeMembers = (g = S.groupId) => S.members.filter((m) => m.group_id === g && m.status === 'aktiv');
 // Point i gruppens egen rangliste
 // Én fælles rangliste: samme point i alle grupper
-export const groupElo = (pid) => S.profiles[pid]?.elo ?? 1000;
+// Point: den fælles rangliste, men i et center centrets egne point (starter på 1000)
+export const isCenterGroup = (g = S.groupId) => !!S.groups?.find((x) => x.id === g)?.is_center;
+export const groupElo = (pid, g = S.groupId) => (isCenterGroup(g) ? S.members.find((m) => m.group_id === g && m.player_id === pid)?.elo ?? 1000 : S.profiles[pid]?.elo ?? 1000);
 export const groupCenterIds = (g = S.groupId) => S.groupCenters.filter((c) => c.group_id === g && c.enabled).map((c) => c.center_id);
 export function setGroup(g) {
   S.groupId = g;

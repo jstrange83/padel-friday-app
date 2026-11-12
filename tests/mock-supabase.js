@@ -792,6 +792,23 @@ Object.assign(RPC, {
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
     if (p_title === 'Formand') GM(g, p_user).role = 'admin';
   },
+  // Centre med egen officiel rangliste
+  padel_set_center_mode_v2: ({ g, p_on }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); const gr = db.padel_groups.find((x) => x.id === g); if (p_on) gr.ranking_mode = 'gruppe'; else if (gr.is_center) gr.ranking_mode = 'alle'; gr.is_center = !!p_on; },
+  padel_set_center_look_v2: ({ g, p_color, p_message }) => { if (!isAdm(g)) throw new Error('Kun centrets admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { brand_color: p_color || null, tv_message: p_message || null }); },
+  padel_tv_look_v2: ({ p_token }) => { const t = (db.padel_tv_links || []).find((x) => x.token === p_token); const gr = t && db.padel_groups.find((x) => x.id === t.group_id); return gr ? { color: gr.brand_color || null, message: gr.tv_message || null, center: !!gr.is_center } : null; },
+  padel_import_signups_v2: ({ e, p_lines }) => {
+    const ev = db.padel_events.find((x) => x.id === e);
+    const added = [], already = [], missing = [];
+    for (const ln of p_lines) {
+      const t = ln.trim().toLowerCase();
+      const digits = t.replace(/\D/g, '');
+      const p = db.padel_profiles.find((x) => (x.email && t.includes(x.email.toLowerCase())) || (digits.length >= 8 && (db.padel_contacts.find((c) => c.player_id === x.id)?.phone || '').replace(/\D/g, '').endsWith(digits.slice(-8))) || x.name.toLowerCase() === t);
+      if (!p) { missing.push(ln.trim()); continue; }
+      const m = GM(ev.group_id, p.id); if (m) m.status = 'aktiv'; else db.padel_group_members.push({ group_id: ev.group_id, player_id: p.id, role: 'bruger', status: 'aktiv', elo: 1000 });
+      if (db.padel_signups.some((s) => s.event_id === e && s.player_id === p.id)) already.push(p.name); else { db.padel_signups.push({ id: uuid(), event_id: e, player_id: p.id, created_at: now() }); added.push(p.name); }
+    }
+    return { added, already, missing };
+  },
   // Nyt og på vej (padel_roadmap_v2)
   padel_roadmap_list_v2: () => {
     rmSeed();
