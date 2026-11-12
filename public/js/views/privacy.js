@@ -33,7 +33,7 @@ export function viewPrivacy() {
         <li>Hvem der er barnets forældre i appen.</li>
       </ul>
       <p><b>Hvem kan se det:</b> barnets forældre (og barnet selv med eget login) ser kun deres eget barn. Klubbens trænere ser børnene på deres hold, klubbens admin ser alle børn i klubben, og kassereren ser navne, forældre og om der er betalt. Andre forældre kan ikke se dit barn.</p>
-      <p>Trænere kan ikke skrive privat til et barn. Opslag går til hele holdet og forældrene.</p></div>
+      <p>Et barn er aldrig alene i en samtale med en voksen. Ingen voksne kan skrive til et barn, uden at barnets forældre også får beskeden, og skriver barnet selv, er forældrene automatisk med. Opslag går til hele holdet og forældrene.</p></div>
 
     <div class="card"><h3>Hvem kan se dine oplysninger</h3>
       <ul>
