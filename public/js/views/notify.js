@@ -1,6 +1,6 @@
 // Beskeder i appen (fx plads fra ventelisten) og notifikationer på telefonen.
 import { sb, S, app, hooks, esc, toast, q, busy, fmtDate } from '../core.js';
-import { pushSupported, pushOn, enablePush, disablePush, isIOS, standalone } from '../push.js';
+import { pushSupported, pushOn, enablePush, disablePush, isIOS, standalone, isNativeApp } from '../push.js';
 
 export async function loadUnread() {
   try { S.unread = (await q(sb.from('padel_notifications').select('id').eq('user_id', S.realMe.id).is('read_at', null).is('done_at', null).limit(99))).length; } catch { S.unread = 0; }
@@ -9,7 +9,7 @@ export async function loadUnread() {
 async function pushCard() {
   const on = await pushOn();
   const iosHint = isIOS() && !standalone();
-  if (!pushSupported() && !iosHint) return '<div class="card"><p class="muted small">Din browser kan ikke vise notifikationer. Beskederne står stadig her i appen.</p></div>';
+  if (!pushSupported() && !iosHint) return `<div class="card"><p class="muted small">${isNativeApp() ? 'Opdater appen i Google Play eller App Store for at få notifikationer.' : 'Din browser kan ikke vise notifikationer.'} Beskederne står stadig her i appen.</p></div>`;
   return `<div class="card pushcard">
     <label class="switch"><input type="checkbox" id="pushToggle" ${on ? 'checked' : ''} ${iosHint ? 'disabled' : ''}><span>🔔 Notifikationer på denne enhed</span></label>
     <p class="muted small">${iosHint ? 'På iPhone skal appen være lagt på hjemmeskærmen, før den kan sende notifikationer. Tryk Del → Føj til hjemmeskærm, og åbn appen derfra.'
@@ -48,7 +48,8 @@ function bindPushToggle(rerender) {
 
 // Lille kort på Spilledage: tilbyd at slå notifikationer til (én gang pr. telefon)
 export function pushPromptCard() {
-  if (S.viewAs || !pushSupported() || Notification.permission !== 'default') return '';
+  if (S.viewAs || !pushSupported()) return '';
+  if (isNativeApp() ? !S.pushUndecided : Notification.permission !== 'default') return '';
   try { if (localStorage.getItem('fp-push-ask') === 'nej') return ''; } catch {}
   return `<div class="card pushask"><p>🔔 Vil du have besked på telefonen, fx når du får en plads fra ventelisten?</p>
     <div class="mact"><button class="btn sm ghost" id="pushNo">Ikke nu</button><button class="btn sm primary" id="pushYes">Slå til</button></div></div>`;
@@ -59,6 +60,6 @@ export function bindPushPrompt() {
   document.getElementById('pushNo').onclick = () => { try { localStorage.setItem('fp-push-ask', 'nej'); } catch {} card.remove(); };
   document.getElementById('pushYes').onclick = async (e) => {
     busy(e.currentTarget, true);
-    try { await enablePush(); toast('Notifikationer er slået til 🔔'); card.remove(); } catch (err) { toast(err.message || 'Det lykkedes ikke', true); busy(e.currentTarget, false); }
+    try { await enablePush(); S.pushUndecided = false; toast('Notifikationer er slået til 🔔'); card.remove(); } catch (err) { toast(err.message || 'Det lykkedes ikke', true); busy(e.currentTarget, false); }
   };
 }

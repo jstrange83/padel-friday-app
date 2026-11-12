@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lille hvid ikon i statuslinjen til notifikationer: et padelbat med huller og en bold -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M9,2.5a6,6 0,1 1,0 12a6,6 0,1 1,0 -12zM6.5,6.5a1,1 0,1 0,0 2a1,1 0,1 0,0 -2zM11.5,6.5a1,1 0,1 0,0 2a1,1 0,1 0,0 -2zM9,9.5a1,1 0,1 0,0 2a1,1 0,1 0,0 -2z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M7.8,14h2.4v7a1,1 0,0 1,-1 1h-0.4a1,1 0,0 1,-1 -1z"/>
+    <path android:fillColor="#FFFFFFFF" android:pathData="M19,13.5a2.5,2.5 0,1 1,0 5a2.5,2.5 0,1 1,0 -5z"/>
+</vector>

@@ -13,6 +13,7 @@ import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
 import { viewSuggest, maybeAskFeedback } from './views/suggest.js';
 import { viewNotices, loadUnread } from './views/notify.js';
+import { pushUndecided, refreshNativePush } from './push.js';
 import { viewTheme, applyTheme } from './theme.js';
 import { maybeShowNews, viewNews } from './news.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
@@ -52,7 +53,8 @@ async function loadBase() {
   // Beskeder til superadmin (fx når en slettet spiller kommer igen)
   S.notices = [];
   if (S.realMe?.is_superadmin && viewMode() === 'super') { try { S.notices = await q(sb.from('padel_admin_notices').select('*').eq('seen', false).order('created_at')); } catch {} }
-  if (S.realMe) await Promise.all([loadUnread(), loadClubPending()]);
+  if (S.realMe) await Promise.all([loadUnread(), loadClubPending(), pushUndecided().then((v) => { S.pushUndecided = v; }).catch(() => {})]);
+  if (S.realMe) refreshNativePush();
 }
 
 // Invitationslink til en gruppe: #/velkommen/<gruppe-id>. Huskes til man er logget ind og har en profil.
@@ -165,6 +167,18 @@ hooks.boot = boot;
 hooks.loadBase = loadBase;
 hooks.renderNav = () => renderNav();
 hooks.route = () => route();
+hooks.refreshUnread = async () => { await loadUnread(); renderNav(); };
+
+// Mister telefonen nettet, vises en rød bjælke øverst. Når nettet kommer igen, hentes siden på ny.
+function watchOnline() {
+  const bar = document.getElementById('offline');
+  if (!bar) return;
+  const set = () => { bar.hidden = navigator.onLine; };
+  addEventListener('offline', set);
+  addEventListener('online', () => { const was = !bar.hidden; set(); if (was && S.realMe) route(); });
+  set();
+}
+watchOnline();
 
 
 // Computer: navn og gruppe nederst i menuen i venstre side (skjult på telefonen)

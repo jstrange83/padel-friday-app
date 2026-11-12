@@ -118,7 +118,17 @@ export async function openMobilePay(nr) {
   setTimeout(() => { if (!left && document.visibilityState === 'visible') toast(`Nummeret ${nr} er kopieret. Åbn MobilePay og sæt det ind`); }, 1500);
   location.href = 'mobilepay://';
 }
+// Lille vibration i Android- og iPhone-appen (gør ingenting i browseren)
+export function haptic(kind = 'light') {
+  try {
+    const H = window.Capacitor?.isNativePlatform?.() && window.Capacitor.isPluginAvailable?.('Haptics') ? window.Capacitor.Plugins.Haptics : null;
+    if (!H) return;
+    if (kind === 'error') H.notification({ type: 'ERROR' }); else if (kind === 'success') H.notification({ type: 'SUCCESS' }); else H.impact({ style: 'LIGHT' });
+  } catch {}
+}
+
 export function toast(msg, bad = false) {
+  haptic(bad ? 'error' : 'light');
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'show' + (bad ? ' bad' : '');

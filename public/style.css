@@ -1050,3 +1050,7 @@ html.inapp body { overscroll-behavior-y: contain; }
 .badge.dn { background: rgba(239, 68, 68, .15); color: #f87171; }
 .cancelrow { justify-content: flex-end; margin: -4px 0 12px; }
 .card.cancelled .mtitle { color: #f87171; }
+
+/* Bjælke når telefonen mister nettet */
+#offline { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; padding: calc(8px + env(safe-area-inset-top)) 16px 8px; background: var(--dn); color: #fff; font-weight: 600; font-size: 14px; text-align: center; }
+#offline[hidden] { display: none; }

@@ -13,8 +13,11 @@
   "plugins": {
     "SplashScreen": {
       "launchShowDuration": 1200,
-      "backgroundColor": "#b8ea44",
+      "backgroundColor": "#5b3ee6",
       "showSpinner": false
+    },
+    "PushNotifications": {
+      "presentationOptions": []
     }
   }
 }

@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-12b', date: '12. november 2026', title: 'Notifikationer i Android-appen',
+    items: ['🔔 Bruger du <b>Padelklubben-appen fra Google Play</b>, kan du nu få notifikationer på telefonen. Opdater appen, tryk <b>🔔</b> og slå <b>Notifikationer på denne enhed</b> til. Tryk på en notifikation for at komme direkte til siden.', '📡 Mister telefonen nettet, står der nu en rød bjælke øverst, og siden opdateres selv, når nettet er tilbage.'],
+  },
+  {
     id: '2026-11-12', date: '12. november 2026', groups: true, title: 'Aflyste spilledage',
     items: ['🚫 En spilledag kan nu <b>aflyses</b> i stedet for at blive slettet. Den bliver stående som <b>Aflyst</b> med årsagen, så den kan ses bagefter.', '🔔 Alle tilmeldte får besked på telefonen og på mail, og ingen får bøde for at melde fra efter aflysningen. Bøder til dem, der meldte fra inden, bliver stående. En aflyst dag bryder ikke din stime.'],
   },

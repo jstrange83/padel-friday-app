@@ -2,6 +2,7 @@
 import {
   sb, S, app, hooks, isSuper, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
+  haptic,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -815,6 +816,7 @@ function bind(c) {
     try {
       const old = matches.find((x) => x.id === f.dataset.id);
       await q(sb.rpc('padel_report_result', { p_match: f.dataset.id, p_a: a, p_b: bb }));
+      if (run || old.status === 'planlagt') haptic('success');
       toast(run || old.status === 'planlagt' ? 'Resultatet er gemt' : 'Rettelsen er sendt. En fra modstanderholdet skal godkende');
       await reload();
     } catch { busy(btn, false); }

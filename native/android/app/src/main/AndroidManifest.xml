@@ -20,6 +20,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Notifikationer: lille ikon, farve og kanal -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notify_color" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="padel" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
