@@ -1,0 +1,20 @@
+{
+  "appId": "dk.padelklubben.app",
+  "appName": "Padelklubben",
+  "webDir": "www",
+  "server": {
+    "url": "https://padel-friday-app.vercel.app",
+    "androidScheme": "https",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1200,
+      "backgroundColor": "#0c1b2a",
+      "showSpinner": false
+    }
+  }
+}

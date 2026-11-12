@@ -1,0 +1,20 @@
+{
+  "name": "padelklubben-native",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Padelklubben som app til Android og iPhone (Capacitor)",
+  "scripts": {
+    "sync": "cap sync"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.10",
+    "@capacitor/core": "^7.6.10",
+    "@capacitor/ios": "^7.6.10",
+    "@capacitor/splash-screen": "^7.0.5",
+    "@capacitor/status-bar": "^7.0.6"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^7.6.10"
+  }
+}
