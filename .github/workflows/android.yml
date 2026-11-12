@@ -43,3 +43,43 @@ jobs:
           git commit -m "Ny test-APK af Padelklubben-appen" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
+
+  release:
+    # Signeret app-pakke (AAB) til Google Play. Kræver GitHub-secret ANDROID_SIGNING_PASSPHRASE.
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Tjek at nøglen er sat op
+        id: key
+        env:
+          PASS: ${{ secrets.ANDROID_SIGNING_PASSPHRASE }}
+        run: if [ -n "$PASS" ]; then echo "ok=1" >> $GITHUB_OUTPUT; else echo "::warning::ANDROID_SIGNING_PASSPHRASE mangler, springer signeret pakke over"; fi
+      - name: Installer Capacitor
+        if: steps.key.outputs.ok == '1'
+        working-directory: native
+        run: npm ci && npx cap sync android
+      - name: Byg signeret AAB
+        if: steps.key.outputs.ok == '1'
+        working-directory: native/android
+        env:
+          PASS: ${{ secrets.ANDROID_SIGNING_PASSPHRASE }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in upload-key.jks.enc -out "$RUNNER_TEMP/upload.jks" -pass env:PASS
+          export ANDROID_KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ANDROID_KEYSTORE_PASSWORD="$PASS" ANDROID_KEY_PASSWORD="$PASS" ANDROID_KEY_ALIAS=upload
+          chmod +x gradlew && ./gradlew bundleRelease --no-daemon
+          rm -f "$RUNNER_TEMP/upload.jks"
+      - uses: actions/upload-artifact@v4
+        if: steps.key.outputs.ok == '1'
+        with:
+          name: padelklubben-google-play-aab
+          path: native/android/app/build/outputs/bundle/release/app-release.aab
