@@ -1407,6 +1407,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   // Arrangement med betaling, maks 1 plads og forældrehjælp
   await page.click('#nav a[href="#/traening"]');
   await page.waitForSelector('#evNew');
+  if (await page.locator('.chips.groups [data-group]:not(.on)').count()) {
+    const clubId = await page.locator('.chips.groups [data-group].on').getAttribute('data-group');
+    await page.locator('.chips.groups [data-group]:not(.on)').first().click();
+    await wait(500);
+    ok(page.url().endsWith('#/fredage') && (await page.locator('#nav a[href="#/fredage"]').count()) === 1, 'skift fra klub til spillegruppe åbner Spilledage');
+    await page.click(`.chips.groups [data-group="${clubId}"]`);
+    await page.waitForSelector('#evNew');
+    ok(page.url().endsWith('#/traening'), 'skift tilbage til klubben åbner Træning');
+  }
   await page.click('#evNew');
   await page.waitForSelector('#evForm');
   const evDate = await page.evaluate(() => { const d = new Date(Date.now() + 10 * 864e5); return d.toISOString().slice(0, 10); });

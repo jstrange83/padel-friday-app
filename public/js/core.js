@@ -166,12 +166,22 @@ export function leavePage() {
 export function groupBar(onChange) {
   const gs = myGroups();
   if (gs.length < 2) return '';
-  setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { setGroup(b.dataset.group); hooks.renderNav?.(); onChange(); })), 0);
+  // Skift gruppe. Skiftes der mellem en klub og en spillegruppe, går vi til den andens forside (Træning / Spilledage)
+  const pick = (g) => {
+    const wasClub = isClub();
+    setGroup(g); hooks.renderNav?.();
+    if (wasClub !== isClub()) {
+      const home = isClub() ? '#/traening' : '#/fredage';
+      if (location.hash !== home) { location.hash = home; return; }
+    }
+    onChange();
+  };
+  setTimeout(() => app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => pick(b.dataset.group))), 0);
   // Tal på gruppen, når nogen venter på godkendelse der (så man kan se, hvor tallet på Admin kommer fra)
   const waiting = (id) => (S.viewAs ? 0 : (S.clubPendingBy?.[id] || 0) + pendingForMe().filter((m) => m.group_id === id).length);
   // Mange grupper: én rullemenu i stedet for en knap pr. gruppe
   if (gs.length > 4) {
-    setTimeout(() => { const sel = document.getElementById('groupSel'); if (sel) sel.onchange = () => { setGroup(sel.value); hooks.renderNav?.(); onChange(); }; }, 0);
+    setTimeout(() => { const sel = document.getElementById('groupSel'); if (sel) sel.onchange = () => pick(sel.value); }, 0);
     return `<label class="teamsel"><span>Gruppe</span><select id="groupSel">${gs.map((g) => `<option value="${g.id}" ${g.id === S.groupId ? 'selected' : ''}>${esc(g.name)}${waiting(g.id) ? ` (${waiting(g.id)} venter)` : ''}</option>`).join('')}</select></label>`;
   }
   return `<div class="chips groups">${gs.map((g) => `<button class="chip ${g.id === S.groupId ? 'on' : ''}" data-group="${g.id}">${esc(g.name)}${waiting(g.id) ? ` <b class="chipbadge">${waiting(g.id)}</b>` : ''}</button>`).join('')}</div>`;
