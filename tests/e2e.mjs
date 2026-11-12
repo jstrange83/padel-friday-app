@@ -1095,7 +1095,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Påmindelser på mail') && nm.includes('Flottere på computeren'), 'admin får popup med de nyeste nyheder (også admin-nyheder)');
+  ok(nm.includes('Aflyste spilledage') && nm.includes('Flottere på computeren'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1112,7 +1112,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   if (await page.locator('.finegate').count()) await page.click('#fgOk');
   await page.waitForSelector('#newsModal');
   ok(!(await page.locator('#newsModal').innerText()).includes('Grafer på fremmøde og kontingent'), 'spillere ser ikke admin-nyheder');
-  await page.click('#newsModal [data-newslink]');
+  await page.click('#newsOk');
+  await page.goto('http://localhost:8765/#/nyt');
+  await page.waitForSelector('[data-newslink]');
+  await page.locator('[data-newslink]').first().click();
   await page.waitForSelector('[data-theme-key]');
   ok(!(await page.locator('#newsModal').count()) && page.url().includes('#/udseende'), 'knappen "Vælg farver" i nyheden fører til Udseende');
   await page.goto('http://localhost:8765/#/nyt');
