@@ -85,6 +85,26 @@ try {
   await wait();
   ok((await page.locator('a.ev').first().innerText()).includes('Du er med'), 'tilmeldt fra oversigten');
 
+  // Aflys den sidste spilledag: den bliver liggende som "Aflyst", kan ikke tilmeldes, og kan fortrydes
+  await page.locator('a.ev').last().locator('[data-on]').click();
+  await wait();
+  await page.locator('a.ev').last().click();
+  await page.waitForSelector('#cancelEvent');
+  await page.click('#cancelEvent');
+  await page.waitForSelector('.card.cancelled');
+  ok((await page.locator('.evsub').innerText()).includes('Aflyst') && !(await page.locator('#signon, #signoff').count()), 'aflyst dag vises som aflyst uden tilmelding');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('a.ev');
+  ok((await page.locator('a.ev').last().innerText()).includes('Aflyst') && !(await page.locator('a.ev').last().locator('[data-on], [data-off]').count()), 'aflyst dag står i oversigten uden knapper');
+  await shot('aflyst');
+  await page.locator('a.ev').last().click();
+  await page.waitForSelector('#uncancelEvent');
+  await page.click('#uncancelEvent');
+  await page.waitForSelector('#cancelEvent');
+  ok(!(await page.locator('.card.cancelled').count()), 'aflysningen kan fortrydes');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('a.ev');
+
   // Åbn fredagen og tilmeld 8 testspillere (9 i alt = 2 baner + 1 venteliste)
   await page.locator('a.ev').first().click();
   await page.waitForSelector('.page.event');

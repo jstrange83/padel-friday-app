@@ -46,17 +46,18 @@ export async function viewEvents() {
     const L = lineup(ids, e.court_ids.length);
     const waitNo = L.courts ? L.waiting.indexOf(S.me.id) : -1;
     const status = L.courts ? `${L.courts} ${L.courts === 1 ? 'bane' : 'baner'} klar${L.waiting.length ? `, ${L.waiting.length} venter` : ''}` : `mangler ${4 - n} til første bane`;
-    const btn = e.status === 'planlagt'
+    const off = !!e.cancelled_at;
+    const btn = off ? '<span class="badge dn">Aflyst</span>' : e.status === 'planlagt'
       ? mine ? `<button class="btn sm quick" data-off="${e.id}">Afmeld</button>`
         : canJoin(e) ? `<button class="btn sm primary quick" data-on="${e.id}">Tilmeld</button>` : ''
       : e.status === 'igang' ? '<span class="badge live">I gang</span>' : '';
     // Kort og overskueligt: spiltype (eller egen titel), sted og plads, og om man selv er med
     const what = `${e.title ? esc(e.title) : FORMAT[e.format]}${e.team_mode !== 'aaben' ? ` · ${MODE[e.team_mode]}` : ''}`;
-    const me = mine ? (waitNo >= 0 ? `<span class="evme warn">⏳ Nr. ${waitNo + 1} på venteliste</span>` : '<span class="evme ok">✓ Du er med</span>') : '';
-    return `<a class="ev ${mine && waitNo < 0 ? 'mine' : ''}" href="#/fredag/${e.id}">${editBtn('padel_events', e.id)}
+    const me = off ? (e.cancel_reason ? `<span class="evme">🚫 ${esc(e.cancel_reason)}</span>` : '') : mine ? (waitNo >= 0 ? `<span class="evme warn">⏳ Nr. ${waitNo + 1} på venteliste</span>` : '<span class="evme ok">✓ Du er med</span>') : '';
+    return `<a class="ev ${off ? 'cancelled' : mine && waitNo < 0 ? 'mine' : ''}" href="#/fredag/${e.id}">${editBtn('padel_events', e.id)}
       <div class="when">${fmtDate(e.starts_at, { weekday: 'short', day: 'numeric', month: 'short' })}<b>${fmtDate(e.starts_at, { hour: '2-digit', minute: '2-digit' })}</b></div>
       <div class="grow"><b>${what}</b>
-        <small>${esc(centerById(e.center_id)?.name || '')} · ${n} tilmeldt · ${status}</small>${me}</div>
+        <small>${esc(centerById(e.center_id)?.name || '')} · ${off ? 'Aflyst' : `${n} tilmeldt · ${status}`}</small>${me}</div>
       ${btn}</a>`;
   };
   const coming = [...running, ...upcoming];
@@ -86,7 +87,7 @@ export async function viewEvents() {
     ${coming.length ? `<div class="evlist">${coming.map(card).join('')}</div>` : (isAdmin()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}
-    ${past.length ? `<details class="past"><summary>Tidligere (${past.length})</summary><div class="evlist">${past.map(card).join('')}</div></details>` : ''}
+    ${past.length ? `<details class="past"><summary>Tidligere (${past.length}${past.some((e) => e.cancelled_at) ? ` · ${past.filter((e) => e.cancelled_at).length} aflyst` : ''})</summary><div class="evlist">${past.map(card).join('')}</div></details>` : ''}
     ${side ? `</div>${side}</div>` : ''}
   </div>`;
   const quick = async (e, fn) => {
@@ -256,7 +257,7 @@ export async function askOpenSpots() {
       .gte('starts_at', now.toISOString()).lte('starts_at', soon.toISOString()).order('starts_at', { ascending: true }));
     const e = evs.find((x) => {
       const ids = x.padel_signups.map((s) => s.player_id).filter((p) => !S.profiles[p]?.deleted_at);
-      return !ids.includes(S.me.id) && !skipped().includes(x.id) && canJoin(x) && x.court_ids.length * 4 - ids.length > 0;
+      return !x.cancelled_at && !ids.includes(S.me.id) && !skipped().includes(x.id) && canJoin(x) && x.court_ids.length * 4 - ids.length > 0;
     });
     if (!e || document.querySelector('.modal')) return false;
     const n = e.padel_signups.filter((s) => !S.profiles[s.player_id]?.deleted_at).length, free = e.court_ids.length * 4 - n;

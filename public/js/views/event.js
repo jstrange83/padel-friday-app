@@ -143,7 +143,7 @@ const signCls = (n) => (n > 0 ? 'up' : n < 0 ? 'dn' : '');
 
 function header(c) {
   const { ev, center, isRot, isAm, courts, admin } = c;
-  const status = ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
+  const status = ev.cancelled_at ? ' · <b class="dn">Aflyst</b>' : ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
   return `
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
       ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
@@ -491,6 +491,20 @@ function signupsSection(c) {
 }
 
 // ---------- Tegn siden ----------
+// Aflys: kun før dagen er gået i gang. Dagen bliver liggende, og de tilmeldte får besked.
+function cancelBar(c) {
+  const { ev, run, matches } = c;
+  if (!run || ev.status !== 'planlagt' || ev.current_round > 0 || matches.some((m) => m.status !== 'planlagt')) return '';
+  return '<div class="mact cancelrow"><button class="btn sm ghost danger" id="cancelEvent">🚫 Aflys dagen</button></div>';
+}
+function cancelledCard(c) {
+  const { ev, run } = c;
+  return `<div class="card warnbox cancelled"><div class="mtitle">🚫 Spilledagen er aflyst</div>
+    ${ev.cancel_reason ? `<p>Årsag: ${esc(ev.cancel_reason)}</p>` : ''}
+    <p class="muted small">Aflyst ${fmtDate(ev.cancelled_at, { day: 'numeric', month: 'short' })} kl. ${hm(ev.cancelled_at)}${ev.cancelled_by && S.profiles[ev.cancelled_by] ? ` af ${esc(nameOf(ev.cancelled_by))}` : ''}. De tilmeldte har fået besked. Dagen tæller ikke med i ranglisten, og ingen mister deres stime.</p>
+    ${run && new Date(ev.starts_at).getTime() > Date.now() ? '<div class="mact"><button class="btn sm" id="uncancelEvent">↩️ Fortryd aflysningen</button></div>' : ''}</div>`;
+}
+
 function render(data) {
   const c = context(data);
   const st = standingsOf(c);
@@ -498,13 +512,23 @@ function render(data) {
   const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0 || c.base > 0;
   c.started = started;
   c.raw = data;
+  // Aflyst dag: vises stadig (til historik og statistik), men man kan ikke tilmelde sig
+  if (c.ev.cancelled_at) {
+    app.innerHTML = `<div class="page event">
+      ${header(c)}
+      ${cancelledCard(c)}
+      ${signupsSection(c)}
+    </div>`;
+    bind(c);
+    return;
+  }
   const fineBox = c.run && group(c.ev.group_id)?.fines_enabled ? '<details class="card givebox" id="evFine"><summary><b>💸 Giv en bøde</b></summary><div id="evFineBody"><p class="muted">Henter takster…</p></div></details>' : '';
   // Computer: dagens kampe til venstre, pris, tilmeldte og bøder til højre
   app.innerHTML = isWide() ? `
   <div class="page event wide">
     ${header(c)}
     <div class="wcols">
-      <div class="wmain">${approvals(c)}${myNight(c, st)}${timer(c)}${runBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
+      <div class="wmain">${approvals(c)}${myNight(c, st)}${timer(c)}${runBar(c)}${cancelBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
       <aside class="wside">${priceCard(c)}${signupsSection(c)}${fineBox}</aside>
     </div>
   </div>` : `
@@ -515,6 +539,7 @@ function render(data) {
     ${priceCard(c)}
     ${timer(c)}
     ${runBar(c)}
+    ${cancelBar(c)}
     ${started ? roundsSection(c) + standingsSection(c, st) + signupsSection(c) : signupsSection(c) + roundsSection(c)}
     ${fineBox}
   </div>`;
@@ -661,6 +686,19 @@ function bind(c) {
     await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: 'afsluttet' })); await reload();
   });
   act($('reopen'), async () => { await q(sb.rpc('padel_set_event_status', { p_event: ev.id, p_status: matches.length ? 'igang' : 'planlagt' })); await reload(); });
+  act($('cancelEvent'), async () => {
+    const why = prompt('Aflys dagen? De tilmeldte får besked på telefonen og på mail.\n\nSkriv evt. en årsag (fx "Banerne er lukket"):', '');
+    if (why === null) return;
+    const n = await q(sb.rpc('padel_cancel_event_v2', { p_event: ev.id, p_cancel: true, p_reason: why.trim() || null }));
+    toast(n ? `Dagen er aflyst. ${n} ${n === 1 ? 'spiller har' : 'spillere har'} fået besked` : 'Dagen er aflyst');
+    await reload();
+  });
+  act($('uncancelEvent'), async () => {
+    if (!confirm('Fortryd aflysningen? De tilmeldte får besked om, at dagen alligevel bliver til noget.')) return;
+    await q(sb.rpc('padel_cancel_event_v2', { p_event: ev.id, p_cancel: false, p_reason: null }));
+    toast('Dagen er ikke længere aflyst');
+    await reload();
+  });
   act($('delEvent'), async () => {
     if (!confirm('Slet denne spilledag?')) return;
     await q(sb.from('padel_events').delete().eq('id', ev.id));

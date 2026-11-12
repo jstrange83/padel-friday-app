@@ -137,6 +137,11 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto', group: true,
+    q: 'Hvad sker der, når en spilledag bliver aflyst?',
+    a: `<p>Admin eller en superbruger kan trykke <b>🚫 Aflys dagen</b>, så længe dagen ikke er gået i gang, og skrive en årsag. Alle tilmeldte får besked på telefonen og på mail. Dagen bliver stående som <b>Aflyst</b> (og senere under Tidligere), så man kan se den bagefter. Man kan ikke tilmelde sig en aflyst dag, der kommer ingen bøde for at melde fra efter aflysningen (bøder til dem, der meldte fra inden, bliver stående), og den tæller ikke som en dag, du har misset i "fredage i træk" eller "uger i træk". Aflysningen kan fortrydes, og så får de tilmeldte besked igen.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto', group: true,
     q: 'Hvordan tilmelder jeg mig en fredag?',
     a: `<p>Alle fredage er åbne for tilmelding. Gå til <b>Fredage</b>, åbn dagen og tryk <b>Tilmeld mig</b>. Du kan afmelde dig igen, indtil dagen er gået i gang. Derefter skal en admin gøre det.</p>`,
   },

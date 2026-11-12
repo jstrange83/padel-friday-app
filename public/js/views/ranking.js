@@ -80,6 +80,9 @@ export async function viewPlayer(id) {
       .or(`a_left.eq.${id},a_right.eq.${id},b_left.eq.${id},b_right.eq.${id}`).eq('status', 'bekraeftet').order('created_at', { ascending: true })),
     q(sb.from('padel_elo_changes').select('match_id,delta,elo_before').eq('player_id', id).eq('active', true)),
   ]);
+  // Aflyste spilledage bryder ikke "uger i træk"
+  let offDays = [];
+  try { offDays = (await q(sb.from('padel_events').select('starts_at,cancelled_at').eq('group_id', S.groupId))).filter((e) => e.cancelled_at).map((e) => new Date(e.starts_at)); } catch {}
   const chg = Object.fromEntries(ch.map((c) => [c.match_id, c]));
   // Kampe i den valgte gruppe, ældste først
   const all = ms.filter((m) => m.padel_events?.group_id === S.groupId).map((m) => {
@@ -125,9 +128,13 @@ export async function viewPlayer(id) {
     for (const x of all) { if (x.sc > x.th) { cur++; best = Math.max(best, cur); } else cur = 0; }
     const week = (d) => { const t = new Date(d); t.setHours(0, 0, 0, 0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7)); return t.getTime(); };
     const weeks = [...new Set(all.map((x) => week(x.date)))].sort((a, b) => a - b);
+    const offWeeks = new Set(offDays.map(week));
+    // To uger hænger sammen, hvis der kun er aflyste uger imellem
+    const linked = (a, b) => { const d = new Date(a); d.setDate(d.getDate() + 7); while (week(d) < b) { if (!offWeeks.has(week(d))) return false; d.setDate(d.getDate() + 7); } return true; };
     let wBest = 0, wRun = 0, prev = null;
-    for (const wk of weeks) { wRun = prev && wk - prev <= 7 * 864e5 + 36e5 ? wRun + 1 : 1; wBest = Math.max(wBest, wRun); prev = wk; }
-    const wNow = prev && week(new Date()) - prev <= 7 * 864e5 + 36e5 ? wRun : 0;
+    for (const wk of weeks) { wRun = prev && linked(prev, wk) ? wRun + 1 : 1; wBest = Math.max(wBest, wRun); prev = wk; }
+    const thisWeek = week(new Date());
+    const wNow = prev && (prev === thisWeek || linked(prev, thisWeek)) ? wRun : 0;
 
     app.innerHTML = `
     <div class="page stats-page">

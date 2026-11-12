@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-12', date: '12. november 2026', groups: true, title: 'Aflyste spilledage',
+    items: ['🚫 En spilledag kan nu <b>aflyses</b> i stedet for at blive slettet. Den bliver stående som <b>Aflyst</b> med årsagen, så den kan ses bagefter.', '🔔 Alle tilmeldte får besked på telefonen og på mail, og ingen får bøde for at melde fra efter aflysningen. Bøder til dem, der meldte fra inden, bliver stående. En aflyst dag bryder ikke din stime.'],
+  },
+  {
     id: '2026-11-11c', date: '11. november 2026', groups: true, title: 'Fredage i træk og kampdetaljer',
     items: ['🔥 Under <b>Rangliste → Streak</b> kan du nu også se, hvem der har været med flest fredage i træk.', '📊 Tryk <b>Detaljer</b> på en spillet kamp for at se banen, resultatet og point før → efter for alle fire.'],
   },

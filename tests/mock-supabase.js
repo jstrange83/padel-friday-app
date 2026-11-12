@@ -109,6 +109,7 @@ class Query {
       data = this.v.map((v) => ({ ...(DEFAULTS[this.t]?.() || {}), ...v }));
       if (this.t === 'padel_signups') for (const s of data) {
         if (T.some((x) => x.event_id === s.event_id && x.player_id === s.player_id)) return { error: { message: 'duplicate key' } };
+        if (db.padel_events.find((e) => e.id === s.event_id)?.cancelled_at) return { error: { message: 'Spilledagen er aflyst' } };
         logSignup(s, 'til');
       }
       if (this.t === 'padel_signups') for (const s of data) {
@@ -406,6 +407,15 @@ const RPC = {
   padel_admin_reset_match: ({ p_match }) => { revertElo(p_match); Object.assign(M(p_match), { status: 'planlagt', score_a: null, score_b: null, reported_team: null }); },
   padel_admin_set_teams: ({ p_match, p_al, p_ar, p_bl, p_br, p_court }) => { Object.assign(M(p_match), { a_left: p_al, a_right: p_ar, b_left: p_bl, b_right: p_br, court_id: p_court }); },
   padel_start_round: ({ p_event, p_round }) => { Object.assign(db.padel_events.find((e) => e.id === p_event), { current_round: p_round, round_started_at: now(), status: 'igang' }); },
+  padel_cancel_event_v2: ({ p_event, p_cancel, p_reason }) => {
+    const e = db.padel_events.find((x) => x.id === p_event);
+    if (p_cancel && e.status !== 'planlagt') throw new Error('Kun en spilledag, der ikke er gået i gang, kan aflyses');
+    if (!!e.cancelled_at === !!p_cancel) return 0;
+    Object.assign(e, { cancelled_at: p_cancel ? now() : null, cancelled_by: p_cancel ? uid() : null, cancel_reason: p_cancel ? (p_reason || null) : null });
+    const us = db.padel_signups.filter((x) => x.event_id === p_event && x.player_id !== uid()).map((x) => x.player_id);
+    if (us.length) notify(us, 'aflyst', (p_cancel ? 'Aflyst: ' : 'Ikke aflyst alligevel: ') + e.starts_at.slice(0, 10), p_reason || '', '/#/fredag/' + p_event);
+    return us.length;
+  },
   padel_set_event_status: ({ p_event, p_status }) => { db.padel_events.find((e) => e.id === p_event).status = p_status; },
   padel_admin_set_ranked: ({ p_event, p_ranked }) => {
     const ev = db.padel_events.find((e) => e.id === p_event);

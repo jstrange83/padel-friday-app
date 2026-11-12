@@ -1043,3 +1043,10 @@ html.inapp body { overscroll-behavior-y: contain; }
 .ptr.ready span { transform: rotate(180deg); color: var(--accent, #d4f53c); }
 .ptr.spin span { animation: ptrspin .8s linear infinite; }
 @keyframes ptrspin { to { transform: rotate(540deg); } }
+
+/* ---------- Aflyst spilledag ---------- */
+.ev.cancelled { opacity: .7; }
+.ev.cancelled .when b, .ev.cancelled .grow > b { text-decoration: line-through; text-decoration-thickness: 2px; }
+.badge.dn { background: rgba(239, 68, 68, .15); color: #f87171; }
+.cancelrow { justify-content: flex-end; margin: -4px 0 12px; }
+.card.cancelled .mtitle { color: #f87171; }
