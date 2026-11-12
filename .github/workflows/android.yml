@@ -83,3 +83,14 @@ jobs:
         with:
           name: padelklubben-google-play-aab
           path: native/android/app/build/outputs/bundle/release/app-release.aab
+      - name: Gem AAB i repoet (release/, ikke på hjemmesiden), så den kan uploades til Google Play
+        if: steps.key.outputs.ok == '1'
+        run: |
+          mkdir -p release
+          cp native/android/app/build/outputs/bundle/release/app-release.aab release/padelklubben.aab
+          echo "${{ github.run_number }}" > release/version.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add release/padelklubben.aab release/version.txt
+          git commit -m "Ny Google Play-pakke (AAB) version 1.0.${{ github.run_number }}" || exit 0
+          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && break; sleep 5; done
