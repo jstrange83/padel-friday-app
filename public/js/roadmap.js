@@ -25,8 +25,8 @@ function card(r) {
   return `<div class="card rmitem ${r.hidden ? 'secret' : ''}" data-rm="${r.id}">
     <div class="rmhead"><b>${esc(r.title)}</b>${r.hidden ? '<span class="badge">🔒 Kun dig</span>' : ''}${r.audience !== 'alle' ? `<span class="badge">${AUD[r.audience]}</span>` : ''}</div>
     ${r.body ? `<p class="muted small">${esc(r.body)}</p>` : ''}
-    <div class="mact rmact">${canVote ? `<button class="btn sm ${r.my_vote ? 'primary' : 'ghost'} rmvote" data-vote="${r.id}" aria-pressed="${r.my_vote}">👍 ${r.votes || ''}</button><small class="muted">${r.my_vote ? 'Du vil gerne have den' : 'Vil du gerne have den?'}</small>` : ''}
-      ${isSuper() ? `<span class="grow"></span>${NEXT[r.status] ? `<button class="btn sm" data-rmnext="${r.id}">${r.status === 'plan' ? '→ I gang' : '→ Bygget'}</button>` : ''}<button class="btn sm ghost" data-rmedit="${r.id}">Ret</button>` : ''}</div>
+    ${canVote ? `<div class="rmact"><button class="btn sm ${r.my_vote ? 'primary' : 'ghost'} rmvote" data-vote="${r.id}" aria-pressed="${r.my_vote}">👍${r.votes ? ` ${r.votes}` : ''}</button><small class="muted">${r.my_vote ? 'Du vil gerne have den' : 'Vil du gerne have den?'}</small></div>` : ''}
+    ${isSuper() ? `<div class="rmadmin">${NEXT[r.status] ? `<button class="link sm" data-rmnext="${r.id}">${r.status === 'plan' ? '🔨 Sæt i gang' : '✅ Færdig'}</button>` : ''}<button class="link sm" data-rmedit="${r.id}">✏️ Ret</button></div>` : ''}
     ${isSuper() && S.rmEdit === r.id ? itemForm(r) : ''}
   </div>`;
 }

@@ -1100,7 +1100,8 @@ html.inapp body { overscroll-behavior-y: contain; }
 .rmitem .rmhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .rmitem p { margin: 6px 0 0; }
 .rmitem.secret { border: 1px dashed var(--line); }
-.rmact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-.rmact .grow { flex: 1; }
+.rmact { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.rmadmin { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.rmadmin .link { padding: 4px 0; font-size: 14px; }
 .rmvote { min-width: 64px; }
 .rmform { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
