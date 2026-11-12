@@ -8,6 +8,9 @@ on:
       - 'native/**'
       - '.github/workflows/android.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,3 +33,13 @@ jobs:
         with:
           name: padelklubben-apk
           path: native/android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Læg APK på hjemmesiden (public/app)
+        run: |
+          mkdir -p public/app
+          cp native/android/app/build/outputs/apk/debug/app-debug.apk public/app/padelklubben.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app/padelklubben.apk
+          git commit -m "Ny test-APK af Padelklubben-appen" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main
