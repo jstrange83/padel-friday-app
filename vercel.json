@@ -30,6 +30,10 @@
     {
       "source": "/support",
       "destination": "/support.html"
+    },
+    {
+      "source": "/tv/:token",
+      "destination": "/tv.html"
     }
   ],
   "redirects": [

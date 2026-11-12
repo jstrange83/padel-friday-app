@@ -210,6 +210,51 @@ const RPC = {
   padel_has_push: () => db.padel_push_subs.some((x) => x.user_id === uid() && x.enabled),
   padel_notifications_read: () => { db.padel_notifications.filter((n) => n.user_id === uid() && !n.read_at).forEach((n) => (n.read_at = now())); },
   padel_set_ranking_mode: ({ g, p_mode }) => { db.padel_groups.find((x) => x.id === g).ranking_mode = p_mode; },
+  padel_center_ranking_v2: ({ c }) => {
+    if (!me()?.is_superadmin) return [];
+    const out = {};
+    for (const m of db.padel_matches.filter((x) => x.status === 'bekraeftet')) {
+      const ev = db.padel_events.find((e) => e.id === m.event_id);
+      if (!ev || ev.center_id !== c || !ev.ranked || ev.cancelled_at) continue;
+      for (const [pid, f, a] of [[m.a_left, m.score_a, m.score_b], [m.a_right, m.score_a, m.score_b], [m.b_left, m.score_b, m.score_a], [m.b_right, m.score_b, m.score_a]]) {
+        const p = db.padel_profiles.find((x) => x.id === pid);
+        const r = (out[pid] ||= { id: pid, name: p.name, gender: p.gender, elo: p.elo, matches: 0, wins: 0, pts: 0, last_at: ev.starts_at });
+        r.matches++; if (f > a) r.wins++;
+        r.pts += db.padel_elo_changes.find((x) => x.match_id === m.id && x.player_id === pid && x.active)?.delta || 0;
+      }
+    }
+    return Object.values(out);
+  },
+  padel_tv_link_v2: ({ g }) => {
+    if (!me()?.is_superadmin) throw new Error('TV-skærmen er ikke slået til endnu');
+    db.padel_tv_links ||= [];
+    let t = db.padel_tv_links.find((x) => x.group_id === g);
+    if (!t) { t = { token: 'tv' + uuid().replace(/-/g, '').slice(0, 20), group_id: g }; db.padel_tv_links.push(t); }
+    return t.token;
+  },
+  padel_tv_v2: ({ p_token }) => {
+    const t = (db.padel_tv_links || []).find((x) => x.token === p_token);
+    if (!t) return null;
+    const g = t.group_id, gr = db.padel_groups.find((x) => x.id === g);
+    const short = (pid) => { const n = (db.padel_profiles.find((x) => x.id === pid)?.name || '').trim().split(' '); return n[0] + (n[1] ? ` ${n[1][0]}.` : ''); };
+    const evs = db.padel_events.filter((e) => e.group_id === g && !e.cancelled_at).sort((a, b) => (b.status === 'igang') - (a.status === 'igang') || b.starts_at.localeCompare(a.starts_at));
+    const ev = evs.find((e) => e.status === 'igang') || evs.find((e) => db.padel_matches.some((m) => m.event_id === e.id)) || null;
+    const ms = ev ? db.padel_matches.filter((m) => m.event_id === ev.id).sort((a, b) => a.round_no - b.round_no) : [];
+    const st = {};
+    for (const m of ms.filter((x) => x.status === 'bekraeftet')) for (const [pid, f, a] of [[m.a_left, m.score_a, m.score_b], [m.a_right, m.score_a, m.score_b], [m.b_left, m.score_b, m.score_a], [m.b_right, m.score_b, m.score_a]]) {
+      const r = (st[pid] ||= { name: short(pid), n: 0, w: 0, f: 0, a: 0, diff: 0, pts: 0 });
+      r.n++; r.f += f; r.a += a; r.diff += f - a; if (f > a) r.w++;
+      r.pts += db.padel_elo_changes.find((x) => x.match_id === m.id && x.player_id === pid && x.active)?.delta || 0;
+    }
+    return { group: gr.name, now: now(),
+      event: ev && { id: ev.id, title: ev.title, starts_at: ev.starts_at, status: ev.status, current_round: ev.current_round, format: ev.format, round_minutes: ev.round_minutes, duration_minutes: ev.duration_minutes, center: db.padel_centers.find((c) => c.id === ev.center_id)?.name },
+      next: null,
+      courts: ev ? db.padel_courts.filter((c) => ev.court_ids.includes(c.id)).sort((a, b) => a.sort - b.sort).map((c) => ({ id: c.id, name: c.name })) : [],
+      matches: ms.map((m) => ({ round: m.round_no, court: m.court_id, a: [short(m.a_left), short(m.a_right)], b: [short(m.b_left), short(m.b_right)], sa: m.score_a, sb: m.score_b, status: m.status,
+        d: db.padel_elo_changes.find((x) => x.match_id === m.id && x.player_id === m.a_left && x.active)?.delta ?? null })),
+      standings: Object.values(st).sort((a, b) => b.w - a.w || b.diff - a.diff),
+      ranking: db.padel_group_members.filter((m) => m.group_id === g && m.status === 'aktiv').sort((a, b) => b.elo - a.elo).slice(0, 12).map((m) => ({ name: short(m.player_id), elo: m.elo })) };
+  },
   padel_ranking: ({ g }) => {
     const mode = db.padel_groups.find((x) => x.id === g)?.ranking_mode || 'alle';
     if (mode === 'ingen' && !(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) return [];

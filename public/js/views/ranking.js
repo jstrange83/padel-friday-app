@@ -1,9 +1,11 @@
 // Den fælles rangliste og den enkelte spillers statistik.
-import { sb, S, app, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, activeMembers, groupElo, group, groupBar, esc, nameOf, first, fmtDate, q } from '../core.js';
+import { sb, S, app, GENDER, SIDE, ROLE, roleIn, isSuper, isAdmin, activeMembers, groupElo, group, groupBar, groupCenterIds, centerById, esc, nameOf, first, fmtDate, q } from '../core.js';
 import { startViewAs } from '../viewas.js';
 import { editBtn } from '../editmode.js';
 
-const TABS = [['point', '🏆 Point'], ['maaned', '⭐ Måned'], ['aeg', '🥚 Æg'], ['streak', '🔥 Streak']];
+const TABS = [['point', '🏆 Point'], ['maaned', '⭐ Måned'], ['aeg', '🥚 Æg'], ['streak', '🔥 Streak'], ['center', '🏟️ Center']];
+// Center-ranglisten er et produkt til centre; indtil videre kun synlig for superadmin
+const tabs = () => TABS.filter(([k]) => k !== 'center' || isSuper());
 const MONTHS = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
 const MODE_TXT = { alle: 'Alle spillere fra alle grupper', gruppe: `Kun spillere fra gruppen`, ingen: 'Gruppen har ingen rangliste' };
 
@@ -15,6 +17,7 @@ export async function viewRanking() {
     app.innerHTML = `<div class="page"><h1>Rangliste</h1>${groupBar(viewRanking)}<p class="muted">${esc(group()?.name || 'Gruppen')} har ikke en rangliste. Kampene giver stadig point på den fælles rangliste.</p></div>`;
     return;
   }
+  if (kind === 'center' && isSuper()) return viewCenterRanking();
   const data = await q(sb.rpc('padel_ranking', { g: S.groupId }));
   const now = new Date();
   const val = { point: (r) => r.elo, maaned: (r) => r.month_pts, aeg: (r) => r.eggs, streak: (r) => r.cur_streak }[kind];
@@ -57,7 +60,7 @@ export async function viewRanking() {
     ${groupBar(viewRanking)}
     ${mode === 'ingen' ? '<div class="card warnbox">Gruppen har valgt ingen rangliste, så spillerne kan ikke se den. Du ser den, fordi du er admin.</div>' : ''}
     <p class="muted small">${mode === 'gruppe' ? `Viser kun spillere fra ${esc(group()?.name || 'gruppen')}` : 'Fælles rangliste for alle grupper'}${isAdmin() ? ' · <a class="link" href="#/admin">skift under Admin</a>' : ''}</p>
-    <div class="tabbar">${TABS.map(([k, t]) => `<button class="tab ${kind === k ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>
+    <div class="tabbar">${tabs().map(([k, t]) => `<button class="tab ${kind === k ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>
     <div class="chips">${[['alle', 'Alle'], ['mand', 'Mænd'], ['kvinde', 'Kvinder']].map(([k, v]) =>
       `<button class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${v}</button>`).join('')}</div>
     ${kind === 'streak' ? `<div class="chips">${[['sejre', '🏅 Sejre i træk'], ['dage', `📅 ${dayWord[0].toUpperCase() + dayWord.slice(1)} i træk`]].map(([k, v]) => `<button class="chip ${(S.streakKind || 'sejre') === k ? 'on' : ''}" data-sk="${k}">${v}</button>`).join('')}</div>` : ''}
@@ -70,6 +73,41 @@ export async function viewRanking() {
   app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
   app.querySelectorAll('[data-kind]').forEach((b) => (b.onclick = () => { S.rankKind = b.dataset.kind; viewRanking(); }));
   app.querySelectorAll('[data-sk]').forEach((b) => (b.onclick = () => { S.streakKind = b.dataset.sk; viewRanking(); }));
+}
+
+// Center-rangliste: alle, der har spillet tællende kampe i et center (fx Helsinge), på tværs af grupper.
+// Kampe fra andre grupper tæller kun med, hvis de grupper har fælles rangliste.
+async function viewCenterRanking() {
+  const ids = groupCenterIds().filter((id) => centerById(id));
+  if (!ids.includes(S.rankCenter)) S.rankCenter = ids[0];
+  const c = S.rankCenter;
+  const data = c ? await q(sb.rpc('padel_center_ranking_v2', { c })) : [];
+  const SORT = [['elo', 'Point'], ['pts', 'Vundet her'], ['matches', 'Flest kampe']];
+  S.centerSort ||= 'elo';
+  let rows = data.filter((r) => S.filter === 'alle' || r.gender === S.filter);
+  const by = S.centerSort;
+  rows.sort((a, b) => b[by] - a[by] || b.elo - a.elo || a.name.localeCompare(b.name));
+  const link = (p) => (S.profiles[p.id] ? `href="#/spiller/${p.id}"` : '');
+  const row = (p, i) => `<a class="row ${p.id === S.me.id ? 'me' : ''}" ${link(p)}>
+      <div class="pos">${['🥇', '🥈', '🥉'][i] || `<span class="rk">${i + 1}</span>`}</div>
+      <div class="grow"><b>${esc(p.name)}</b><small>${p.matches} ${p.matches === 1 ? 'kamp' : 'kampe'} her · ${p.wins} sejre · ${p.pts > 0 ? '+' : ''}${p.pts} point her</small></div>
+      <div class="elo">${by === 'elo' ? p.elo : by === 'pts' ? `${p.pts > 0 ? '+' : ''}${p.pts}` : p.matches}</div></a>`;
+  app.innerHTML = `
+  <div class="page">
+    <h1>Rangliste</h1>
+    ${groupBar(viewRanking)}
+    <div class="tabbar">${tabs().map(([k, t]) => `<button class="tab ${k === 'center' ? 'on' : ''}" data-kind="${k}">${t}</button>`).join('')}</div>
+    <div class="card warnbox">🏟️ Kun synlig for dig som superadmin. Center-ranglisten er et produkt til padelcentre.</div>
+    ${ids.length > 1 ? `<div class="chips">${ids.map((id) => `<button class="chip ${id === c ? 'on' : ''}" data-center="${id}">${esc(centerById(id).name)}</button>`).join('')}</div>` : ''}
+    <div class="chips">${SORT.map(([k, v]) => `<button class="chip ${by === k ? 'on' : ''}" data-cs="${k}">${v}</button>`).join('')}
+      ${[['alle', 'Alle'], ['mand', 'Mænd'], ['kvinde', 'Kvinder']].map(([k, v]) => `<button class="chip ${S.filter === k ? 'on' : ''}" data-f="${k}">${v}</button>`).join('')}</div>
+    <p class="muted small">Alle, der har spillet tællende kampe i ${esc(centerById(c)?.name || 'centret')}. "Vundet her" er de point, man har vundet eller tabt i centret.</p>
+    <div class="list">${rows.map(row).join('') || '<p class="muted pad">Ingen kampe i centret endnu.</p>'}</div>
+  </div>`;
+  app.querySelectorAll('[data-kind]').forEach((b) => (b.onclick = () => { S.rankKind = b.dataset.kind; viewRanking(); }));
+  app.querySelectorAll('[data-center]').forEach((b) => (b.onclick = () => { S.rankCenter = b.dataset.center; viewRanking(); }));
+  app.querySelectorAll('[data-cs]').forEach((b) => (b.onclick = () => { S.centerSort = b.dataset.cs; viewRanking(); }));
+  app.querySelectorAll('[data-f]').forEach((b) => (b.onclick = () => { S.filter = b.dataset.f; viewRanking(); }));
 }
 
 export async function viewPlayer(id) {

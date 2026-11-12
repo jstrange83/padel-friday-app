@@ -1,6 +1,6 @@
 // En spilledag: din næste kamp, runder og kampe, dagens stilling, tilmeldinger og styring af dagen.
 import {
-  sb, S, app, hooks, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
+  sb, S, app, hooks, isSuper, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
@@ -8,6 +8,7 @@ import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
 import { giveFormBody, bindGive, signoffFine, fineWarn, kr } from './fines.js';
 import { editBtn } from '../editmode.js';
+import { showQR } from '../qr.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -146,7 +147,7 @@ function header(c) {
   const status = ev.cancelled_at ? ' · <b class="dn">Aflyst</b>' : ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
   return `
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
-      ${admin ? `<div class="tools">${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
+      ${admin ? `<div class="tools">${isSuper() ? '<button class="icon" id="tvEvent" aria-label="TV-skærm" title="Vis dagen på et TV i centret (kun superadmin)">📺</button>' : ''}${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
     <h1 class="cap evtitle">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
     <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
     ${quickSettings(c, '')}`;
@@ -703,6 +704,13 @@ function bind(c) {
     if (!confirm('Slet denne spilledag?')) return;
     await q(sb.from('padel_events').delete().eq('id', ev.id));
     location.hash = '#/fredage';
+  });
+  // TV-skærm: et hemmeligt link, der viser dagens baner, resultater og stilling live (uden login)
+  act($('tvEvent'), async () => {
+    const t = await q(sb.rpc('padel_tv_link_v2', { g: ev.group_id }));
+    const url = `${location.origin}/tv/${t}`;
+    try { await navigator.clipboard.writeText(url); toast('TV-linket er kopieret'); } catch {}
+    showQR(url, '📺 TV-skærm', `Åbn linket i browseren på et TV i centret, eller scan koden: ${url}`);
   });
   $('shareEvent')?.addEventListener('click', () =>
     share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));

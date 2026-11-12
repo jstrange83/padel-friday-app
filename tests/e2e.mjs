@@ -303,6 +303,19 @@ try {
   ok((await text()).includes('afsluttet'), 'dagen afsluttet');
   await shot('afsluttet');
 
+  // TV-skærm: admin henter et hemmeligt link; skærmen viser baner, resultater og dagens stilling uden login
+  await page.click('#tvEvent');
+  await page.waitForSelector('.qrmodal');
+  ok((await page.locator('.qrmodal').innerText()).includes('/tv/'), 'TV-link vises med QR-kode');
+  await page.click('.qrmodal button');
+  const tvTok = await page.evaluate(() => window.__mock.db().padel_tv_links[0].token);
+  await page.goto(`http://localhost:8765/tv.html?k=${tvTok}`);
+  await page.waitForSelector('aside h2');
+  { const t = await page.locator('#app').innerText(); ok(t.includes('Dagens stilling') && /Bane|Court/.test(t) && /\d–\d/.test(t), 'TV-skærmen viser baner, resultater og dagens stilling'); }
+  await shot('tv-skaerm');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('#nav a');
+
   // Rangliste
   { const vw = page.viewportSize().width; const shown = await page.locator("#nav .navfoot").isVisible(); ok(vw >= 900 ? shown : !shown, vw >= 900 ? "navn og gruppe i menuen på computer" : "intet navn i bundmenuen på telefon"); }
   await page.click('#nav a:has-text("Rangliste")');
@@ -316,6 +329,12 @@ try {
   await page.click('[data-sk="sejre"]');
   await wait(300);
   ok((await page.locator('.list .row').count()) >= 1, 'ranglistefaner (måned, æg, streak) virker');
+  await page.click('[data-kind="center"]');
+  await wait(400);
+  ok((await page.locator('.list .row').count()) >= 1 && (await text()).includes('kampe her'), 'center-rangliste viser spillere, der har spillet i centret (kun superadmin)');
+  await page.click('[data-cs="pts"]');
+  await wait(300);
+  await shot('rangliste-center');
   await page.click('[data-kind="maaned"]');
   await wait(300);
   await shot('rangliste-maaned');
@@ -975,6 +994,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('.page h1');
   await wait(400);
   ok((await page.locator('.list').innerText()).includes('Test Anders'), 'fælles rangliste viser spillere fra alle grupper');
+  ok(!(await page.locator('[data-kind="center"]').count()) && !(await page.locator('#tvEvent').count()), 'center-rangliste og TV-skærm er skjult for almindelige brugere');
   await page.goto('http://localhost:8765/#/admin');
   await page.waitForSelector('details.gset'); await page.evaluate(() => document.querySelectorAll('details.gset').forEach((d) => (d.open = true)));
   await page.click('.rankmode label:has-text("Kun gruppen")');

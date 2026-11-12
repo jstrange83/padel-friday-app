@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Padelklubben · TV-skærm</title>
+<link rel="icon" href="/icon.svg">
+<style>
+  :root { --bg:#0b1626; --card:#13233a; --line:#22385a; --txt:#f4f7fb; --mut:#93a6c0; --acc:#d4f53c; --up:#4ade80; --dn:#f87171; --vio:#7c3aed; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; overflow:hidden; }
+  .tv { display:grid; grid-template-columns: 1fr 26vw; grid-template-rows:auto 1fr auto; gap:1.6vw; height:100vh; padding:2vw 2.4vw; }
+  header { grid-column:1/3; display:flex; align-items:flex-end; justify-content:space-between; gap:2vw; }
+  .kicker { color:var(--acc); font-weight:800; letter-spacing:.12em; text-transform:uppercase; font-size:1.05vw; }
+  h1 { margin:.2vw 0 0; font-size:3vw; line-height:1.05; font-weight:800; }
+  .sub { color:var(--mut); font-size:1.15vw; margin-top:.3vw; }
+  .clock { font-size:4.2vw; font-weight:800; font-variant-numeric:tabular-nums; }
+  main { min-height:0; display:flex; flex-direction:column; gap:1.2vw; }
+  .rl { display:flex; align-items:center; gap:1vw; font-size:1.3vw; font-weight:700; }
+  .rl .pill { background:var(--acc); color:#0b1626; border-radius:99px; padding:.25vw .9vw; }
+  .rl .muted { color:var(--mut); font-weight:500; }
+  .courts { flex:1; min-height:0; display:grid; gap:1.2vw; grid-template-columns:repeat(var(--cols,2),1fr); align-content:start; }
+  .court { background:var(--card); border:2px solid var(--line); border-radius:1.2vw; padding:1.2vw 1.4vw; display:flex; flex-direction:column; gap:.8vw; transition:border-color .4s, box-shadow .4s; }
+  .court.fresh { border-color:var(--acc); box-shadow:0 0 0 .3vw rgba(212,245,60,.25); }
+  .ch { display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.4vw; }
+  .ch small { font-size:.9vw; color:var(--mut); font-weight:600; }
+  .tag { font-size:.85vw; font-weight:800; padding:.2vw .7vw; border-radius:99px; background:var(--acc); color:#0b1626; }
+  .tag.play { background:#1d4ed8; color:#fff; }
+  .match { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:1vw; }
+  .team { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:#0f1d31; border-radius:.8vw; padding:.8vw 1vw; font-size:1.35vw; font-weight:700; line-height:1.35; }
+  .team.b { text-align:right; }
+  .team.win { outline:2px solid var(--acc); }
+  .score { font-size:2.6vw; font-weight:800; font-variant-numeric:tabular-nums; min-width:7vw; text-align:center; }
+  .score.vs { font-size:1.3vw; color:var(--mut); }
+  .d { font-size:.95vw; font-weight:800; }
+  .up { color:var(--up); } .dn { color:var(--dn); }
+  aside { grid-row:2/4; grid-column:2; background:var(--card); border:2px solid var(--line); border-radius:1.2vw; padding:1.2vw 1.3vw; display:flex; flex-direction:column; min-height:0; }
+  aside h2 { margin:0 0 .8vw; font-size:1.45vw; }
+  .rows { flex:1; min-height:0; overflow:hidden; }
+  .row { display:grid; grid-template-columns:2.2vw 1fr auto; gap:.6vw; align-items:center; padding:.42vw 0; border-bottom:1px solid var(--line); font-size:1.2vw; }
+  .row .pos { color:var(--mut); font-weight:800; }
+  .row b { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .v { font-weight:800; font-variant-numeric:tabular-nums; }
+  .row small { color:var(--mut); font-size:.85vw; display:block; font-weight:500; }
+  .qr { display:flex; gap:1vw; align-items:center; margin-top:1vw; padding-top:1vw; border-top:1px solid var(--line); font-size:1vw; color:var(--mut); }
+  .qr svg { width:6.5vw; height:6.5vw; background:#fff; border-radius:.5vw; padding:.3vw; flex:none; }
+  footer { grid-column:1; display:flex; gap:1.2vw; align-items:center; color:var(--mut); font-size:1vw; }
+  .next { display:flex; gap:1.2vw; flex-wrap:wrap; }
+  .next span { background:var(--card); border:1px solid var(--line); border-radius:99px; padding:.35vw 1vw; color:var(--txt); }
+  .idle { flex:1; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; gap:1vw; }
+  .idle .big { font-size:4vw; font-weight:800; line-height:1.05; }
+  .idle .big em { color:var(--acc); font-style:normal; }
+  .idle p { font-size:1.5vw; color:var(--mut); margin:0; }
+  .flash { position:fixed; inset:0; background:rgba(11,22,38,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5vw; z-index:5; animation:in .35s ease-out; }
+  .flash .k { color:var(--acc); font-weight:800; letter-spacing:.15em; font-size:1.6vw; text-transform:uppercase; }
+  .flash .s { font-size:12vw; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
+  .flash .t { font-size:2.4vw; font-weight:700; text-align:center; }
+  .flash .egg { font-size:6vw; }
+  @keyframes in { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
+  .err { padding:6vw; font-size:2vw; color:var(--mut); }
+</style>
+</head>
+<body>
+<div id="app" class="tv"><div class="err">Henter …</div></div>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import qrcode from '/js/vendor/qrcode.js';
+// TV-skærm til centret: åbnes med et hemmeligt link fra appen (/tv/<kode>). Kræver ikke login og opdaterer sig selv.
+const sb = createClient('https://jlstsyvhlzsbqymwiyzx.supabase.co', 'sb_publishable_rvPBZIkE1qhyrsq2o4EVYw_-afl7UyZ', { auth: { persistSession: false } });
+const token = (location.pathname.split('/tv/')[1] || new URLSearchParams(location.search).get('k') || '').replace(/[^a-z0-9]/gi, '');
+const app = document.getElementById('app');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tz = { timeZone: 'Europe/Copenhagen' };
+const hm = (d) => new Date(d).toLocaleTimeString('da-DK', { ...tz, hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+const day = (d, o) => new Date(d).toLocaleDateString('da-DK', { ...tz, ...o });
+const sign = (n) => (n > 0 ? `+${n}` : `${n}`);
+const qrSvg = (() => { const q = qrcode(0, 'M'); q.addData(location.origin + '/'); q.make(); return q.createSvgTag({ cellSize: 6, margin: 1, scalable: true }); })();
+let last = null, seen = null, flashTimer = 0;
+
+function clock() { const el = document.getElementById('clock'); if (el) el.textContent = hm(Date.now()); }
+setInterval(clock, 1000);
+
+function teams(m) { return [m.a.join(' & '), m.b.join(' & ')]; }
+
+function render(d) {
+  if (!d) { app.innerHTML = '<div class="err">Linket virker ikke længere. Lav et nyt TV-link i appen.</div>'; return; }
+  const ev = d.event;
+  const courts = d.courts || [];
+  const ms = d.matches || [];
+  let main = '';
+  let sideTitle = 'Ranglisten', side = (d.ranking || []).map((r, i) => `<div class="row"><span class="pos">${i + 1}</span><b>${esc(r.name)}</b><span class="v">${r.elo}</span></div>`).join('');
+  if (ev) {
+    const rounds = [...new Set(ms.map((m) => m.round))].sort((a, b) => a - b);
+    const open = rounds.find((r) => ms.some((m) => m.round === r && m.status !== 'bekraeftet'));
+    const cur = ev.status === 'afsluttet' || !open ? rounds[rounds.length - 1] : Math.max(open, Math.min(ev.current_round || open, open));
+    const inRound = ms.filter((m) => m.round === cur);
+    const used = courts.filter((c) => ms.some((m) => m.court === c.id));
+    const show = used.length ? used : courts;
+    const cols = show.length > 4 ? 3 : 2;
+    const card = (c) => {
+      const m = inRound.find((x) => x.court === c.id);
+      if (!m) return `<div class="court"><div class="ch">${esc(c.name)}<small>Ingen kamp</small></div></div>`;
+      const [ta, tb] = teams(m), done = m.status === 'bekraeftet';
+      const fresh = done && seen && !seen.has(key(m));
+      return `<div class="court ${fresh ? 'fresh' : ''}"><div class="ch">${esc(c.name)}${done ? '<span class="tag">Resultat</span>' : '<span class="tag play">Spiller nu</span>'}</div>
+        <div class="match"><div class="team ${done && m.sa > m.sb ? 'win' : ''}">${esc(m.a[0])}<br>${esc(m.a[1])}</div>
+        <div class="score ${done ? '' : 'vs'}">${done ? `${m.sa}–${m.sb}` : 'mod'}</div>
+        <div class="team b ${done && m.sb > m.sa ? 'win' : ''}">${esc(m.b[0])}<br>${esc(m.b[1])}</div></div>
+        ${done && m.d != null ? `<div class="ch"><span class="d ${m.d > 0 ? 'up' : 'dn'}">${sign(m.d)}</span><span class="d ${m.d > 0 ? 'dn' : 'up'}">${sign(-m.d)}</span></div>` : ''}</div>`;
+    };
+    const status = ev.status === 'afsluttet' ? 'Dagen er slut' : `Runde ${cur} af ${rounds.length}`;
+    main = `<div class="rl"><span class="pill">${status}</span><span class="muted">${esc(ev.center || '')} · ${hm(ev.starts_at)}–${hm(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3)}</span></div>
+      <div class="courts" style="--cols:${cols}">${show.map(card).join('')}</div>`;
+    const next = ms.filter((m) => m.round === cur + 1);
+    if (next.length && ev.status !== 'afsluttet') main += `<div class="next"><b style="color:var(--mut)">Næste runde:</b>${next.map((m) => `<span>${esc(courts.find((c) => c.id === m.court)?.name || '')}: ${esc(teams(m)[0])} mod ${esc(teams(m)[1])}</span>`).join('')}</div>`;
+    if ((d.standings || []).length) {
+      sideTitle = 'Dagens stilling';
+      side = d.standings.map((r, i) => `<div class="row"><span class="pos">${i === 0 ? '👑' : i + 1}</span><b>${esc(r.name)}<small>${r.w} sejre · ${r.f}–${r.a} partier</small></b><span class="v ${r.pts > 0 ? 'up' : r.pts < 0 ? 'dn' : ''}">${sign(r.pts)}</span></div>`).join('');
+    }
+  } else {
+    const n = d.next;
+    main = `<div class="idle"><div class="kicker">${esc(d.group)}</div>
+      ${n ? `<div class="big">Næste spilledag<br><em>${esc(day(n.starts_at, { weekday: 'long', day: 'numeric', month: 'long' }))} kl. ${hm(n.starts_at)}</em></div>
+      <p>${esc(n.center || '')}${n.title ? ` · ${esc(n.title)}` : ''} · ${n.signed} tilmeldt</p>` : '<div class="big">Ingen spilledag <em>i dag</em></div>'}
+      <p>Tilmeld dig i Padelklubben-appen. Scan koden for at åbne den.</p></div>`;
+  }
+  app.innerHTML = `<header><div><div class="kicker">${esc(d.group)}</div><h1>${esc(day(d.now, { weekday: 'long', day: 'numeric', month: 'long' }))}</h1>
+      <div class="sub">${ev ? esc(ev.title || 'Spilledag') : 'Padelklubben'}</div></div><div class="clock" id="clock"></div></header>
+    <main>${main}</main>
+    <aside><h2>${sideTitle}</h2><div class="rows">${side || '<p style="color:var(--mut)">Ingen resultater endnu.</p>'}</div>
+      <div class="qr">${qrSvg}<span>Følg med og meld resultater i Padelklubben-appen</span></div></aside>
+    <footer>Opdaterer automatisk · ${esc(d.group)}</footer>`;
+  clock();
+}
+
+const key = (m) => `${m.round}|${m.court}|${m.sa}-${m.sb}`;
+
+function flash(m, courtName) {
+  const egg = (m.sa === 0 || m.sb === 0) && Math.max(m.sa, m.sb) >= 6;
+  const winA = m.sa > m.sb;
+  const box = document.createElement('div');
+  box.className = 'flash';
+  box.innerHTML = `<div class="k">Nyt resultat · ${esc(courtName)}</div><div class="s">${m.sa}–${m.sb}</div>
+    <div class="t">${esc((winA ? m.a : m.b).join(' & '))} vinder</div>${egg ? '<div class="egg">🥚 Æg!</div>' : ''}`;
+  document.body.appendChild(box);
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => box.remove(), egg ? 9000 : 6000);
+}
+
+async function load() {
+  try {
+    const { data, error } = await sb.rpc('padel_tv_v2', { p_token: token });
+    if (error) throw error;
+    const done = (data?.matches || []).filter((m) => m.status === 'bekraeftet');
+    if (seen && data?.event) {
+      const nu = done.filter((m) => !seen.has(key(m)));
+      if (nu.length) { const m = nu[nu.length - 1]; flash(m, data.courts.find((c) => c.id === m.court)?.name || ''); }
+    }
+    render(data);
+    seen = new Set(done.map(key));
+    last = data;
+  } catch (e) { if (!last) app.innerHTML = '<div class="err">Kan ikke hente data. Prøver igen …</div>'; }
+}
+load();
+setInterval(load, 10000);
+// Hold skærmen tændt, hvis browseren kan
+const keepOn = () => { try { navigator.wakeLock?.request('screen').catch(() => {}); } catch {} };
+keepOn(); document.addEventListener('visibilitychange', () => { if (!document.hidden) keepOn(); });
+</script>
+</body>
+</html>
