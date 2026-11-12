@@ -1034,3 +1034,12 @@ details.people { display: block; }
 .mdrow b { min-width: 44px; text-align: right; }
 .mdcard .up, .mdpts .up { color: var(--up); } .mdcard .dn, .mdpts .dn { color: var(--dn); }
 @media (max-width: 360px) { .mdset { grid-template-columns: 1fr auto 1fr; } .mdset > small { display: none; } }
+
+/* ---------- Træk ned for at opdatere (kun i appen) ---------- */
+html.inapp body { overscroll-behavior-y: contain; }
+.ptr { position: fixed; top: 0; left: 50%; transform: translate(-50%, 0); margin-top: -48px; z-index: 9999; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--card2, #12324f); color: var(--text, #fff); font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .15s; }
+.ptr.show { opacity: 1; }
+.ptr span { display: inline-block; font-size: 16px; transition: transform .2s; }
+.ptr.ready span { transform: rotate(180deg); color: var(--accent, #d4f53c); }
+.ptr.spin span { animation: ptrspin .8s linear infinite; }
+@keyframes ptrspin { to { transform: rotate(540deg); } }

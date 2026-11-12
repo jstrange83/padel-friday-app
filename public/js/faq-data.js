@@ -165,6 +165,11 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
+    q: 'Hvordan opdaterer jeg appen?',
+    a: `<p>I appen (og når appen er lagt på hjemmeskærmen) er der ingen genindlæs-knap. <b>Træk siden ned fra toppen</b>, til der står <b>Slip for at opdatere</b>, og slip. Har appen ligget i baggrunden i over en halv time, henter den selv den nyeste version, når du åbner den igen.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
     q: 'Hvordan får jeg appen på hjemmeskærmen?',
     a: `<p><b>iPhone:</b> åbn appen i Safari, tryk på del‑ikonet og vælg "Føj til hjemmeskærm".</p><p><b>Android:</b> åbn appen i Chrome, tryk på de tre prikker og vælg "Føj til startskærm".</p>`,
   },

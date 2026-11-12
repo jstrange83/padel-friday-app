@@ -18,6 +18,7 @@ import { maybeShowNews, viewNews } from './news.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
+import { setupRefresh } from './refresh.js';
 
 async function loadBase() {
   const [profiles, centers, courts, groups, groupCenters, members, settings, contacts] = await Promise.all([
@@ -293,3 +294,6 @@ window.addEventListener('hashchange', () => {
   if (/^#\/(velkommen|barn)\//.test(location.hash)) return boot();
   if (S.me) route();
 });
+
+// Træk ned for at opdatere + hent nyeste version efter pause (kun i appen)
+setupRefresh();
