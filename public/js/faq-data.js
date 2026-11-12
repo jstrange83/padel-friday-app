@@ -165,6 +165,11 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
+    q: 'Skal jeg logge ind hver gang?',
+    a: `<p>Nej. Når <b>Husk mig på denne enhed</b> er slået til ved login, forbliver du logget ind, og din e-mail er udfyldt næste gang. Slå det fra, hvis du logger ind på en fælles computer. Så bliver du logget ud, når browseren lukkes.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
     q: 'Hvordan opdaterer jeg appen?',
     a: `<p>I appen (og når appen er lagt på hjemmeskærmen) er der ingen genindlæs-knap. <b>Træk siden ned fra toppen</b>, til der står <b>Slip for at opdatere</b>, og slip. Har appen ligget i baggrunden i over en halv time, henter den selv den nyeste version, når du åbner den igen.</p>`,
   },

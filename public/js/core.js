@@ -3,8 +3,15 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 
 // Login fra den gamle database (før flytningen) virker ikke længere: glem det, så man bare logger ind igen
 try { localStorage.removeItem('fredagspadel-auth'); } catch {}
+// "Husk mig": login gemmes på enheden (standard). Slået fra: login glemmes, når browseren lukkes (fx på en fælles computer).
+export const rememberMe = () => { try { return localStorage.getItem('fp-remember') !== '0'; } catch { return true; } };
+const authStore = {
+  getItem: (k) => { try { return (rememberMe() ? localStorage : sessionStorage).getItem(k); } catch { return null; } },
+  setItem: (k, v) => { try { (rememberMe() ? localStorage : sessionStorage).setItem(k, v); } catch {} },
+  removeItem: (k) => { try { localStorage.removeItem(k); } catch {} try { sessionStorage.removeItem(k); } catch {} },
+};
 export const sb = createClient('https://jlstsyvhlzsbqymwiyzx.supabase.co', 'sb_publishable_rvPBZIkE1qhyrsq2o4EVYw_-afl7UyZ', {
-  auth: { persistSession: true, storageKey: 'padel-auth' },
+  auth: { persistSession: true, storageKey: 'padel-auth', storage: authStore },
 });
 
 // S.me er den man ser appen som (kan være en anden spiller i "se som"), S.realMe er den der er logget ind.

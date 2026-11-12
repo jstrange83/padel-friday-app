@@ -1104,6 +1104,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await page.evaluate(() => sessionStorage.removeItem('mock-session'));
     await page.goto(url);
     await page.waitForSelector('#authForm');
+    if (!freshLogin.checked) { freshLogin.checked = true; ok(await page.locator('#authForm input[name=remember]').isChecked(), '"Husk mig" er slået til som standard'); const pre = await page.inputValue('input[name=email]'); ok(pre.includes('@'), 'e-mailen fra sidste login er udfyldt'); }
     await page.fill('input[name=email]', email);
     await page.fill('input[name=password]', 'whatever');
     await page.click('button[type=submit]');
