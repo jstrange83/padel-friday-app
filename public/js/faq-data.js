@@ -226,7 +226,7 @@ export const FAQ = [
     cat: 'Tilmelding og konto',
     q: 'Hvor sender jeg et forslag til appen?',
     a: `<p>Under <b>Profil → 💡 Forslagskasse</b>. Skriv dit forslag og tryk <b>Send</b>. Kun den, der står for appen, kan læse det, og svaret kommer i appen (ikke på mail). Når der er et nyt svar, står der <b>Nyt svar</b> ved Forslagskasse.</p>
-<p>Når du har spillet et vist antal kampe, spørger appen også én gang, om du har et forslag.</p>`,
+<p>Når du har spillet et vist antal kampe, eller i en klub når dit barn har været til et antal træninger (eller du har været med i 3 uger), spørger appen også én gang, om du har et forslag.</p>`,
   },
   {
     cat: 'Tilmelding og konto', group: true,
@@ -401,7 +401,8 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan melder jeg mit barn ind?',
     a: `<p>Åbn klubbens invitationslink (eller scan QR-koden fra træneren), opret dig som forælder, og udfyld barnets navn og fødselsår. Har du flere børn, trykker du <b>Tilføj et barn mere</b>.</p>
-<p>En træner godkender indmeldelsen og sætter barnet på et hold. Du får besked i appen. Senere kan du melde flere børn ind under <b>Profil → Mine børn</b>.</p>`,
+<p>En træner godkender indmeldelsen og sætter barnet på et hold. Du får besked i appen. Senere kan du melde flere børn ind under <b>Profil → Mine børn</b>.</p>
+<p>Man kan kun melde et barn ind i en klub via klubbens eget link, eller når man selv er med i klubben. Har du ikke linket, så spørg klubben eller træneren.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,

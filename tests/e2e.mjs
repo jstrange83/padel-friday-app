@@ -1334,21 +1334,18 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('details.gset:not(.staff):not(.mailset) summary').innerText()).includes('600'), 'kontingent sat op');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_absence_hours, clubId)) === 48, 'afbudsfrist sat til 48 timer');
   ok((await page.evaluate((g) => window.__mock.db().padel_groups.find((x) => x.id === g).club_fee_account, clubId)) === 'Reg. 1234 konto 0012345678', 'kontonummer til kontingent er gemt');
-  // Klubben kan findes i appen: andre ser en lille linje under Profil, som kan lukkes
-  await page.locator('#clubSet input[name=disc]').check();
-  await page.click('#clubSet button.primary');
-  await wait(500);
+  // Man kan kun melde et barn ind i en klub, man selv er med i (ellers skal man have klubbens link)
+  ok(!(await page.locator('#clubSet input[name=disc][type=checkbox]').count()), 'indstillingen "kan findes i appen" er fjernet');
   await freshLogin('test5@fredagspadel.test');
   await page.waitForSelector('#nav a');
   await pastGates();
   await page.goto('http://localhost:8765/#/profil');
-  await page.waitForSelector('#discRow');
-  ok(!(await page.locator('#discRow').innerText()).includes('Gribskov'), 'diskret linje under Profil uden klubbens navn');
-  await page.click('#discRow');
-  await page.waitForSelector('#joinForm select[name=club]');
-  ok((await page.locator('#joinForm select[name=club] option').allInnerTexts()).some((t) => t.includes('Gribskov Padelklub Junior')), 'klubben vælges i en rullemenu ved indmeldelsen');
-  await shot('klub-find');
-  await noOverflow('klub find');
+  await page.waitForSelector('.page');
+  await wait(600);
+  ok(!(await page.locator('#discRow').count()), 'en spiller uden for klubben kan ikke melde et barn ind i klubben fra Profil');
+  await page.goto('http://localhost:8765/#/klub-ind');
+  await page.waitForSelector('.page.club');
+  ok(!(await page.locator('#joinForm select[name=club]').count()), 'indmeldelsen viser ingen klubber, man ikke er med i');
   await freshLogin('jimmy@test');
   await page.waitForSelector('#nav a');
   await pastGates();
@@ -1836,8 +1833,9 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.evaluate(() => { sessionStorage.setItem('fp-viewas', 'u-6'); localStorage.setItem('fp-group', 'g-fre'); });
   await page.goto('http://localhost:8765/#/profil');
   await page.reload();
-  await page.waitForSelector('#discRow');
-  ok((await page.locator('#discRow').innerText()).includes('Meld et barn ind'), 'Se som: linjen vises som for spilleren');
+  await page.waitForSelector('.page');
+  await wait(600);
+  ok(!(await page.locator('#discRow').count()), 'Se som: en spiller uden for klubben ser heller ikke linjen');
   await page.evaluate(() => sessionStorage.removeItem('fp-viewas'));
 
   // En træner uden børn bruger klubbens link og beder om adgang; admin godkender som træner

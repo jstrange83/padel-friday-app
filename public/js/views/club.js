@@ -642,11 +642,9 @@ export async function discoverList() {
     return cands.filter((g) => !kids.some((k) => k.group_id === g.id && ['ansoegt', 'aktiv'].includes(k.status))).map((g) => ({ id: g.id, name: g.name }));
   } catch { return cands.map((g) => ({ id: g.id, name: g.name })); }
 }
-// Klubber man kan melde et barn ind i: dem der kan findes + dem man selv er med i
+// Klubber man kan melde et barn ind i: kun dem, man selv er med i. Ellers skal man have klubbens invitationslink.
 export async function joinableClubs() {
-  const mine = S.groups.filter((g) => g.kind === 'klub' && !g.archived && S.members.some((m) => m.group_id === g.id && m.player_id === S.me?.id && m.status === 'aktiv')).map((g) => ({ id: g.id, name: g.name }));
-  const disc = await discoverList();
-  return [...mine, ...disc.filter((d) => !mine.some((m) => m.id === d.id))];
+  return S.groups.filter((g) => g.kind === 'klub' && !g.archived && S.members.some((m) => m.group_id === g.id && m.player_id === S.me?.id && m.status === 'aktiv')).map((g) => ({ id: g.id, name: g.name }));
 }
 export async function discoverRow() {
   if (S.isKid) return '';
@@ -1209,8 +1207,7 @@ export function clubSettingsCard() {
       <p class="muted small">Forældrene ser kontonummeret på Træning. Kassereren hakker dem af under Kontingent, når pengene er kommet.</p>
       <label class="switch"><input type="checkbox" name="addr" ${gr.club_collect_address ? 'checked' : ''}><span>🏠 Spørg om adresse ved indmeldelse</span></label>
       <p class="muted small">Slå til, hvis klubben skal bruge adresser, fx til kommunens tilskud.</p>
- <label class="switch"><input type="checkbox" name="disc" ${gr.club_discoverable ? 'checked' : ''}><span>🔎 Kan findes i appen</span></label>
-      <p class="muted small">Slået til: brugere uden for klubben ser linjen "Meld ind i en klub" under Profil, og klubben kan vælges, når de melder et barn ind. Der sendes ingen beskeder.</p>
+      <input type="hidden" name="disc" value="">
       <label class="switch"><input type="checkbox" name="remind" ${gr.club_reminders !== false ? 'checked' : ''}><span>🔔 Påmindelse dagen før træning</span></label>
       <label>Afbudsfrist (timer før træning) <small class="muted">(0 = ingen frist)</small><input name="hours" type="number" min="0" max="72" value="${gr.club_absence_hours || 0}"></label>
       <p class="muted small">Afbud efter fristen er stadig muligt, men holdets trænere får besked.</p>

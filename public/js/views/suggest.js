@@ -49,14 +49,13 @@ export async function maybeAskFeedback() {
   let ask = false;
   try { ask = await q(sb.rpc('padel_should_ask_feedback')); } catch { return; }
   if (!ask || document.getElementById('fbModal')) return;
-  const n = S.settings.feedback_after_matches || 5;
   const wrap = document.createElement('div');
   wrap.id = 'fbModal';
   wrap.className = 'modal';
   wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="fbTitle">
     <div class="fgicon">💡</div>
     <h2 id="fbTitle">Hvad synes du om appen?</h2>
-    <p class="muted">Du har spillet ${n} kampe eller flere. Har du en idé, eller er der noget, der driller? Skriv det her. Kun den, der står for appen, kan læse det.</p>
+    <p class="muted">Du har brugt appen et stykke tid nu. Har du en idé, eller er der noget, der driller? Skriv det her. Kun den, der står for appen, kan læse det.</p>
     <form id="fbForm">
       <textarea name="text" rows="4" maxlength="2000" placeholder="Fx: Det ville være fedt, hvis …"></textarea>
       <div class="mact"><button type="button" class="btn ghost" id="fbLater">Ikke nu</button><button class="btn primary">Send</button></div>
@@ -85,7 +84,7 @@ export function suggestTab() {
   const shown = S.sugTab === 'nye' ? all.filter((x) => x.status === 'ny') : all;
   return `
     <div class="card"><form id="fbAfter" class="frow">
-      <label class="grow">Spørg efter antal spillede kampe <small class="muted">(0 = aldrig)</small><input type="number" name="n" min="0" max="500" value="${S.settings.feedback_after_matches ?? 5}"></label>
+      <label class="grow">Spørg efter antal kampe eller træninger <small class="muted">(0 = aldrig; klubmedlemmer spørges også efter 3 uger)</small><input type="number" name="n" min="0" max="500" value="${S.settings.feedback_after_matches ?? 5}"></label>
       <button class="btn sm">Gem</button></form></div>
     <div class="tabbar inner"><button class="tab ${S.sugTab === 'nye' ? 'on' : ''}" data-stab="nye">Nye (${all.filter((x) => x.status === 'ny').length})</button><button class="tab ${S.sugTab === 'alle' ? 'on' : ''}" data-stab="alle">Alle (${all.length})</button></div>
     ${shown.map((x) => `
