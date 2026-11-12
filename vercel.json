@@ -32,6 +32,10 @@
       "destination": "/support.html"
     },
     {
+      "source": "/nyt",
+      "destination": "/nyt.html"
+    },
+    {
       "source": "/tv/:token",
       "destination": "/tv.html"
     }

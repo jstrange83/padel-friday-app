@@ -8,7 +8,7 @@ import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { rightsTab, bindRights, loadGroupRights, rightsCount } from './rights.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
-import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, hasAdults, audience } from './club.js';
+import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, seesTraining, hasAdults, audience } from './club.js';
 
 // Admin starter med en oversigt (fliser). Hver flise åbner sin del med en tilbage-knap.
 function adminSections() {
@@ -19,7 +19,7 @@ function adminSections() {
   return [
     club && (canRun() || myRight('godkende')) ? ['boern', hasAdults() ? '🎾' : '👧', hasAdults() ? 'Spillere' : 'Børn', pend ? `${pend} venter på svar` : 'Godkend og sæt på hold', pend] : null,
     club && canRun() ? ['hold', '🗓', 'Hold og tider', 'Hold, træningstider og trænere'] : null,
-    club && canRun() ? ['fremmode', '📊', 'Fremmøde', 'Hvem kom til træning'] : null,
+    club && seesTraining() ? ['fremmode', '📊', 'Fremmøde', 'Hvem kom til træning'] : null,
     club && isTreasurer() ? ['kontingent', '💳', 'Kontingent', 'Hvem har betalt'] : null,
     adm || (club && canRun()) || (!club && hasRight('medlemmer')) ? ['spillere', '👥', club ? 'Medlemmer' : 'Spillere', !club && pend ? `${pend} venter på svar` : `${nPlayers} med · invitation`, club ? 0 : pend] : null,
     adm && S.groupId ? ['rettigheder', '🔑', 'Rettigheder', nr ? `${nr} ${nr === 1 ? 'person har' : 'personer har'} flueben` : 'Hvem må hvad'] : null,

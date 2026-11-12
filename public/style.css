@@ -1094,3 +1094,13 @@ html.inapp body { overscroll-behavior-y: contain; }
 .rchip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .rchip.locked span { opacity: .75; }
 .rcard.admin p { margin: 6px 0 0; }
+
+/* Nyt og på vej */
+.roadmap .tabbar { margin-top: 8px; }
+.rmitem .rmhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rmitem p { margin: 6px 0 0; }
+.rmitem.secret { border: 1px dashed var(--line); }
+.rmact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.rmact .grow { flex: 1; }
+.rmvote { min-width: 64px; }
+.rmform { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }

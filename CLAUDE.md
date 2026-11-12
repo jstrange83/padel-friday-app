@@ -5,3 +5,4 @@
 - Opdater også Spørgsmål og svar (`public/js/faq-data.js`), når appen ændres.
 - Supabase: sletninger (DELETE/DROP) og opdateringer uden WHERE bliver afvist. Brug statusfelter, `create or replace` og nye funktionsnavne (`_v2`).
 - Test før push: `node tests/e2e.mjs` (og `W=320 node tests/e2e.mjs` for små telefoner). Push til `main` (Vercel deployer selv).
+- **Nyt og på vej (køreplan):** Ligger i Supabase-tabellen `padel_roadmap_v2` (status `plan` = på tegnebrættet, `igang`, `bygget`; `hidden = true` = kun synlig for superadmin; `audience` alle/admin/klub/gruppe). Når Jimmy skriver en idé, lægges den ind som `plan` med `source = 'jimmy'` (synlig for alle, medmindre han siger, den er hemmelig eller kun for centre/admins). Når vi går i gang, sættes `igang`; når det er lagt ud, sættes `bygget` (og `done_at`), og der skrives et indslag i `news.js` som altid.

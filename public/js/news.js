@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-12d', date: '12. november 2026', title: 'Nyt og på vej',
+    items: ['🆕 Under <b>Profil → Nyt og på vej</b> kan du nu se, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet.', '👍 Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i Forslagskassen.'],
+  },
+  {
     id: '2026-11-12c', date: '12. november 2026', admin: true, title: 'Ny Admin med rettigheder',
     items: ['🧭 <b>Admin</b> starter nu med en oversigt, hvor hver del har sin egen flise. Det, der venter på dig, er markeret.', '🔑 Under <b>Admin → Rettigheder</b> sætter du flueben ved, hvad hver person må. I en klub fx <b>Træninger</b> (se alle hold og krydse fremmøde af), <b>Medlemmer</b>, <b>Kontingent</b>, <b>Opslag</b> og <b>Arrangementer</b>. I en spillegruppe <b>Køre spilledagen</b>, <b>Spilledage</b>, <b>Spillere</b> og <b>Bødekasse</b>.', '⚙️ Indstillinger, mails og bestyrelse ligger nu under <b>Admin → Indstillinger</b>.'],
   },
@@ -98,7 +102,7 @@ const inCenter = (names) => S.members.some((m) => m.player_id === S.realMe?.id &
 const inGroup = () => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.some((g) => g.id === m.group_id && g.kind !== 'klub' && !g.archived));
 // club: true = kun for dem, der er med i en klub
 const inClub = () => S.members.some((m) => m.player_id === S.realMe?.id && m.status === 'aktiv' && S.groups.some((g) => g.id === m.group_id && g.kind === 'klub' && !g.archived));
-const forMe = () => NEWS.filter((n) => (!n.club || isSuper() || inClub()) && (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)) && (!n.groups || isSuper() || inGroup()));
+export const forMe = () => NEWS.filter((n) => (!n.club || isSuper() || inClub()) && (!n.admin || canRun() || isSuper()) && (!n.centers || isSuper() || inCenter(n.centers)) && (!n.groups || isSuper() || inGroup()));
 export const latestNewsId = () => NEWS[0]?.id || '';
 
 // Nyheder jeg ikke har set. Har man aldrig set nogen, vises kun den seneste opdatering.
@@ -116,7 +120,7 @@ export async function markNewsSeen() {
   try { await q(sb.rpc('padel_set_news_seen', { p_id: id })); } catch {}
 }
 
-const entry = (n) => `<div class="news-entry"><div class="news-head"><b>${esc(n.title)}</b><small class="muted">${esc(n.date)}</small></div>
+export const entry = (n) => `<div class="news-entry"><div class="news-head"><b>${esc(n.title)}</b><small class="muted">${esc(n.date)}</small></div>
   <ul>${n.items.map((i) => `<li>${i}</li>`).join('')}</ul>
   ${n.link ? `<div class="mact"><a class="btn sm" href="${n.link[1]}" data-newslink>${esc(n.link[0])}</a></div>` : ''}</div>`;
 

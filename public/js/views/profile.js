@@ -71,7 +71,7 @@ export function renderProfile(isNew) {
     <div class="list links">
       ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende</span><span class="muted">›</span></a>'}
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
-      <a class="row" href="#/nyt"><span class="grow">🆕 Nyt i appen</span><span class="muted">›</span></a>
+      <a class="row" href="#/nyt"><span class="grow">🆕 Nyt og på vej</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
       ${club && !viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Træninger i min kalender</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>

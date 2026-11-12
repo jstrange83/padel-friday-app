@@ -83,8 +83,11 @@ const evDay = (iso) => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Cope
 const infoOf = (kid) => C().kidInfo.find((x) => x.kid_id === kid)?.info || '';
 // Træner for et bestemt hold: admin, eller træner sat på holdet (en træner uden hold må alle hold)
 const myAssigned = () => C().teamTrainers.filter((x) => x.user_id === S.me?.id && C().teams.some((t) => t.id === x.team_id && !t.archived));
-export const isTeamTrainer = (t) => isAdmin() || rightIn('traening') || (roleIn(S.me?.id) === 'superbruger' && (!myAssigned().length || myAssigned().some((x) => x.team_id === t)));
+export const isTeamTrainer = (t) => isAdmin() || (roleIn(S.me?.id) === 'superbruger' && (!myAssigned().length || myAssigned().some((x) => x.team_id === t)));
 const myTeams = () => C().teams.filter((t) => !t.archived && isTeamTrainer(t.id));
+// Rettigheden "Træninger": se alle hold, tilmeldinger og afbud og krydse fremmøde af (men ikke rette hold, tider eller aflyse)
+export const seesTraining = (g = S.groupId) => canRun(g) || rightIn('traening', g);
+const viewTeams = () => (canRun() ? myTeams() : C().teams.filter((t) => !t.archived));
 // Rettigheder formanden har givet (bestyrelse m.fl.). Admin har alle. Visning "Bruger" slår dem fra.
 const RIGHT_COL = { kontingent: 'treasurer', opslag: 'can_post', arrangementer: 'can_events', godkende: 'can_approve' };
 export const myRight = (r, g = S.groupId) => isAdmin(g) || rightIn(r === 'godkende' ? 'medlemmer' : r, g) || (!S.viewAs && viewMode() !== 'bruger' && !!S.clubRights?.find((x) => x.group_id === g)?.[RIGHT_COL[r]]);
@@ -117,14 +120,14 @@ function occurrences(teamIds, from, to) {
 
 // ---------- Træning ----------
 export async function viewTraining() {
-  const g = S.groupId, gr = group(), trainer = canRun();
+  const g = S.groupId, gr = group(), trainer = seesTraining();
   const today = todayISO();
   S.trWeeks ||= 2;
   const from = trainer && S.trPast ? addDays(today, -14) : today, to = addDays(today, S.trWeeks * 7 - 1);
   await loadClub(g, { from, to });
   const mine = myKids();
   const active = mine.filter((k) => k.status === 'aktiv');
-  const liveTeams = trainer ? myTeams() : C().teams.filter((t) => !t.archived);
+  const liveTeams = trainer ? viewTeams() : C().teams.filter((t) => !t.archived);
   if (trainer && S.trTeam && !liveTeams.some((t) => t.id === S.trTeam)) S.trTeam = null;
   const teamIds = trainer ? (S.trTeam ? [S.trTeam] : liveTeams.map((t) => t.id)) : [...new Set(active.map((k) => k.team_id).filter(Boolean))];
   const occ = occurrences(teamIds, from, to);
@@ -141,7 +144,7 @@ export async function viewTraining() {
     ${active.filter((k) => !k.team_id).map((k) => `<div class="card warnbox">👋 <b>${esc(k.name)}</b> er optaget. Træneren sætter snart ${k.player_id === S.me?.id ? 'dig' : 'barnet'} på et hold.</div>`).join('')}
     ${unpaid.length ? feeCard(gr, unpaid) : ''}
     ${trainer && liveTeams.length > 1 ? `<label class="teamsel"><span>Hold</span><select id="trTeamSel"><option value="">Alle hold (${liveTeams.length})</option>${liveTeams.map((t) => `<option value="${t.id}" ${S.trTeam === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
-    ${trainer ? `<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button><button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Sidste 2 uger'}</button></div>` : ''}
+    ${trainer ? `<div class="trtools">${canRun() || myRight('arrangementer') ? '<button class="link sm" id="evNew">➕ Arrangement</button>' : ''}<button class="link sm" id="trPast">${S.trPast ? '↑ Skjul tidligere' : '↓ Sidste 2 uger'}</button></div>` : ''}
     ${!trainer && myRight('arrangementer') ? '<div class="trtools"><button class="link sm" id="evNew">➕ Arrangement</button></div>' : ''}
     ${(trainer || myRight('arrangementer')) && S.evEdit !== undefined ? eventForm(S.evEdit) : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> er på venteliste${team(k.team_id) ? ` til ${esc(team(k.team_id).name)}` : ''}. Du får besked, når der er plads.</div>`).join('')}
@@ -239,8 +242,8 @@ function trainerCard(o, today) {
         ${canMark && !c ? `<label class="present"><input type="checkbox" data-att="${key}|${k.id}" ${present(o.s.id, o.day, k.id) ? 'checked' : ''}><span>Mødt</span></label>` : ''}</div>`;
     }).join('') || '<p class="muted small">Ingen børn på holdet endnu.</p>'}</div>
     ${byLine(o.s.created_by, o.s.created_at)}
-    ${!c && o.day >= today && kids.length ? `<div class="lbl">🔔 Send påmindelse</div><div class="mact remindrow"><button class="btn sm ${unans ? 'primary' : ''}" data-remind="${key}|0" ${unans ? '' : 'disabled'}>Ikke svaret (${unans})</button><button class="btn sm" data-remind="${key}|1">Alle</button></div>` : ''}
-    <div class="mact">${c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
+    ${isTeamTrainer(o.s.team_id) && !c && o.day >= today && kids.length ? `<div class="lbl">🔔 Send påmindelse</div><div class="mact remindrow"><button class="btn sm ${unans ? 'primary' : ''}" data-remind="${key}|0" ${unans ? '' : 'disabled'}>Ikke svaret (${unans})</button><button class="btn sm" data-remind="${key}|1">Alle</button></div>` : ''}
+    <div class="mact">${!isTeamTrainer(o.s.team_id) ? '' : c ? `<button class="btn sm" data-cancel="${key}|0">↩️ Træningen er alligevel ikke aflyst</button>` : o.day >= today ? `<button class="btn sm ghost danger" data-cancel="${key}|1">Aflys træningen</button>` : ''}</div>
   </details>`;
 }
 
@@ -1285,7 +1288,7 @@ function weekBars(weeks) {
 }
 
 export function clubAttendanceTab() {
-  const weeks = S.attWeeks || 8, teams = myTeams();
+  const weeks = S.attWeeks || 8, teams = viewTeams();
   if (S.attTeam && S.attTeam !== 'alle' && !teams.some((t) => t.id === S.attTeam)) S.attTeam = null;
   if (!teams.length) return '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>';
   const all = teams.length > 1 && (S.attTeam || 'alle') === 'alle';

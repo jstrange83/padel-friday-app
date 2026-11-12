@@ -1,5 +1,6 @@
 // Forslagskasse: spilleren skriver forslag i appen (ingen mails). Superadmin læser og svarer under Admin.
 import { sb, S, app, esc, toast, q, busy, fmtDate, nameOf, group } from '../core.js';
+import { suggestionToRoadmap } from '../roadmap.js';
 import { editBtn } from '../editmode.js';
 
 export const SSTATUS = { ny: 'Ny', set: 'Set', planlagt: 'Planlagt', lavet: 'Lavet ✓', nej: 'Nej tak' };
@@ -93,7 +94,7 @@ export function suggestTab() {
         <p class="stext">${esc(x.text)}</p>
         <label>Status<select name="status">${Object.entries(SSTATUS).map(([k, v]) => `<option value="${k}" ${x.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
         <label>Svar til spilleren <small class="muted">(vises i appen)</small><textarea name="reply" rows="2" maxlength="2000">${esc(x.reply || '')}</textarea></label>
-        <div class="mact"><button class="btn sm primary">Gem</button></div>
+        <div class="mact"><button type="button" class="btn sm ghost" data-sug2rm="${x.id}">💡 Sæt på listen</button><button class="btn sm primary">Gem</button></div>
       </form>`).join('') || `<p class="muted">${S.sugTab === 'nye' ? 'Ingen nye forslag.' : 'Ingen forslag endnu.'}</p>`}`;
 }
 
@@ -105,6 +106,11 @@ export function bindSuggestTab(refresh) {
     const btn = fa.querySelector('button'); busy(btn, true);
     try { await q(sb.rpc('padel_set_feedback_after', { p_n: +fa.n.value })); S.settings.feedback_after_matches = +fa.n.value; toast('Gemt'); } finally { busy(btn, false); }
   };
+  app.querySelectorAll('[data-sug2rm]').forEach((b) => (b.onclick = async () => {
+    const x = (S.suggestions || []).find((y) => y.id === b.dataset.sug2rm);
+    busy(b, true);
+    try { await suggestionToRoadmap(x.text); toast('Sat på listen "På vej" som skjult. Ret og vis det under Profil → Nyt og på vej'); b.textContent = '✓ På listen'; } catch { busy(b, false); }
+  }));
   app.querySelectorAll('form[data-sug]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);

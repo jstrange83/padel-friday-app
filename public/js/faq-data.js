@@ -506,7 +506,7 @@ export const FAQ = [
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
     a: `<p><b>Bestyrelsen</b>: Klubbens admin (typisk formanden) går til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og vælger post: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk adgang til kontingent. Vælger man <b>Formand</b>, bliver personen klubbens admin.</p>
 <p><b>Rettigheder</b>: Under <b>Admin → 🔑 Rettigheder</b> sætter man flueben ved, hvad hver person må:</p>
-<ul><li>🗓 <b>Træninger</b>: se alle hold og tilmeldinger og krydse fremmøde af, ligesom en træner.</li>
+<ul><li>🗓 <b>Træninger</b>: se alle hold, tilmeldinger og afbud og krydse fremmøde af. Man kan ikke rette hold og tider eller aflyse.</li>
 <li>🧒 <b>Medlemmer</b>: godkende nye og sætte dem på hold.</li>
 <li>💳 <b>Kontingent</b>: se og registrere, hvem der har betalt.</li>
 <li>📣 <b>Opslag</b>: skrive opslag til hele klubben.</li>
@@ -579,6 +579,12 @@ export const FAQ = [
     q: 'Kan jeg sende et billede i en samtale?',
     a: `<p>Ja. Tryk <b>📷 Billede</b> under beskeden eller svaret, og vælg et billede eller tag et med kameraet. Du kan skrive tekst til, eller bare sende billedet alene. Tryk på et billede i samtalen for at se det stort.</p>
 <p>Billederne gøres mindre, før de sendes, og kan kun ses af dem, der er med i samtalen.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Hvad kommer der i appen?',
+    a: `<p>Se under <b>Profil → Nyt og på vej</b>. Der står, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet. Tryk 👍 ved det, du gerne vil have.</p>
+<p>Listen kan også ses uden login på <a href="/nyt" target="_blank" rel="noopener">padelklubben.dk/nyt</a>. Har du en idé, så skriv den i <a href="#/forslag">Forslagskassen</a>.</p>`,
   },
   {
     cat: 'Roller og adgang',

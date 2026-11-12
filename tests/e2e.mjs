@@ -862,9 +862,12 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('form[data-sug]');
   ok((await page.locator('[data-stab="nye"]').innerText()).includes('2'), 'superadmin ser 2 nye forslag');
   const sf = page.locator('form[data-sug]', { hasText: 'mørk og en lys' });
+  await sf.locator('[data-sug2rm]').click();
+  await wait(400);
+  ok(await page.evaluate(() => (window.__mock.db().padel_roadmap_v2 || []).some((r) => r.title.includes('mørk og en lys') && r.hidden && r.status === 'plan')), 'superadmin sætter et forslag på listen På vej (skjult, til han har set på det)');
   await sf.locator('select[name=status]').selectOption('planlagt');
   await sf.locator('textarea[name=reply]').fill('God idé, den kommer!');
-  await sf.locator('button').click();
+  await sf.locator('button.primary').click();
   await wait(400);
   await shot('forslag-admin');
   await loginAs('test2@fredagspadel.test');
@@ -1141,13 +1144,25 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('.rcard[data-ruser="u-2"] [data-rnone]');
   await wait(400);
   ok(await page.evaluate(() => !(window.__mock.db().padel_rights_v2 || []).find((x) => x.user_id === 'u-2')?.rights.length), 'rettigheden kan fjernes igen med Ingen');
+  // Superadmin tilføjer et punkt til "På vej" og flytter det til I gang
+  await page.goto('http://localhost:8765/#/nyt');
+  await page.waitForSelector('[data-rmtab="plan"]');
+  await page.click('[data-rmtab="plan"]');
+  await page.click('details.rmnew summary');
+  await page.fill('details.rmnew input[name=title]', 'Bookning af baner i appen');
+  await page.click('details.rmnew button.primary');
+  await page.waitForSelector('.rmitem:has-text("Bookning af baner i appen")');
+  ok(await page.evaluate(() => window.__mock.db().padel_roadmap_v2.some((r) => r.title === 'Bookning af baner i appen' && r.status === 'plan')), 'superadmin tilføjer et punkt til På vej');
+  await page.locator('.rmitem:has-text("Bookning af baner i appen") [data-rmnext]').click();
+  await wait(400);
+  ok(await page.evaluate(() => window.__mock.db().padel_roadmap_v2.find((r) => r.title === 'Bookning af baner i appen').status === 'igang'), 'punktet kan flyttes til I gang med ét tryk');
   // Nyt i appen: popup én gang efter en større opdatering; spillere ser ikke admin-nyheder
   await loginAs('jimmy@test');
   await page.evaluate(() => { const db = window.__mock.db(); db.padel_profiles.find((p) => p.id === 'u-5').news_seen = '2026-10-24'; db.padel_profiles.find((p) => p.id === 'u-admin').news_seen = '2026-10-24'; window.__mock.save(); });
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Ny Admin med rettigheder') && nm.includes('Aflyste spilledage'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Nyt og på vej') && nm.includes('Ny Admin med rettigheder'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1173,6 +1188,18 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/nyt');
   await page.waitForSelector('.news-entry');
   ok((await page.locator('.news-entry').count()) >= 1, 'tidligere nyheder kan læses under Profil');
+  // Nyt og på vej: I gang og På vej, med 👍
+  await page.click('[data-rmtab="igang"]');
+  await page.waitForSelector('.rmitem');
+  ok((await page.locator('.roadmap').innerText()).includes('App til iPhone'), 'I gang viser det, vi arbejder på');
+  await page.click('[data-rmtab="plan"]');
+  await page.waitForSelector('[data-vote="rm-2"]');
+  ok(!(await page.locator('.roadmap').innerText()).includes('Hemmeligt punkt'), 'hemmelige punkter er skjult for spillere');
+  await page.click('[data-vote="rm-2"]');
+  await wait(400);
+  ok((await page.locator('[data-vote="rm-2"]').innerText()).includes('1') && await page.evaluate(() => window.__mock.db().padel_roadmap_votes_v2.some((v) => v.item_id === 'rm-2' && v.active)), 'en spiller kan give 👍 til et punkt');
+  await shot('nyt-og-paa-vej');
+  await noOverflow('nyt og på vej');
 
   // ---------- Juniorklub ----------
   const freshLogin = async (email, url = 'http://localhost:8765/') => {

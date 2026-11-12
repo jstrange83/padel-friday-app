@@ -201,6 +201,7 @@ const autoFine = (s) => {
   db.padel_fines.push({ id: uuid(), group_id: ev.group_id, player_id: s.player_id, type_id: t.id, title: t.name, amount: t.amount, note: 'Meldte fra', event_id: ev.id, status: 'ubetalt', given_by: null, auto: true, created_at: now() });
 };
 
+const rmSeed = () => { db.padel_roadmap_v2 ||= [{ id: 'rm-1', title: 'App til iPhone', body: 'Venter på Apple', status: 'igang', audience: 'alle', hidden: false, sort: 10 }, { id: 'rm-2', title: 'Mails havner ikke i spam', body: null, status: 'plan', audience: 'alle', hidden: false, sort: 20 }, { id: 'rm-3', title: 'Hemmeligt punkt', body: null, status: 'plan', audience: 'alle', hidden: true, sort: 30 }]; };
 const RPC = {
   padel_set_news_seen: ({ p_id }) => { if (me()) me().news_seen = p_id; },
   padel_set_theme: ({ p_theme }) => { me().theme = p_theme; },
@@ -790,6 +791,27 @@ Object.assign(RPC, {
     upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: g, user_id: p_user, treasurer: !!p_treasurer, can_post: !!p_post, can_events: !!p_events, can_approve: !!p_approve, board_title: p_title || null });
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
     if (p_title === 'Formand') GM(g, p_user).role = 'admin';
+  },
+  // Nyt og på vej (padel_roadmap_v2)
+  padel_roadmap_list_v2: () => {
+    rmSeed();
+    db.padel_roadmap_v2 ||= [{ id: 'rm-1', title: 'App til iPhone', body: 'Venter på Apple', status: 'igang', audience: 'alle', hidden: false, sort: 10 }, { id: 'rm-2', title: 'Mails havner ikke i spam', body: null, status: 'plan', audience: 'alle', hidden: false, sort: 20 }, { id: 'rm-3', title: 'Hemmeligt punkt', body: null, status: 'plan', audience: 'alle', hidden: true, sort: 30 }];
+    db.padel_roadmap_votes_v2 ||= [];
+    const su = me()?.is_superadmin;
+    return db.padel_roadmap_v2.filter((r) => su || (!r.hidden && r.audience === 'alle')).sort((a, b) => a.sort - b.sort)
+      .map((r) => ({ ...r, votes: db.padel_roadmap_votes_v2.filter((v) => v.item_id === r.id && v.active).length, my_vote: db.padel_roadmap_votes_v2.some((v) => v.item_id === r.id && v.user_id === uid() && v.active) }));
+  },
+  padel_roadmap_vote_v2: ({ p_item, p_on }) => {
+    db.padel_roadmap_votes_v2 ||= [];
+    upsert('padel_roadmap_votes_v2', ['item_id', 'user_id'], { item_id: p_item, user_id: uid(), active: !!p_on });
+    return db.padel_roadmap_votes_v2.filter((v) => v.item_id === p_item && v.active).length;
+  },
+  padel_roadmap_save_v2: ({ p_id, p_title, p_body, p_status, p_audience, p_hidden, p_sort }) => {
+    if (!me()?.is_superadmin) throw new Error('Kun superadmin');
+    rmSeed();
+    const id = p_id || uuid();
+    upsert('padel_roadmap_v2', ['id'], { id, title: p_title, body: p_body, status: p_status, audience: p_audience, hidden: !!p_hidden, sort: p_sort ?? 100 });
+    return id;
   },
   // Rettigheder med flueben (padel_rights_v2)
   padel_my_rights_v2: () => (db.padel_rights_v2 || []).filter((x) => x.user_id === uid() && x.rights.length && GM(x.group_id, uid())?.status === 'aktiv').map((x) => ({ group_id: x.group_id, rights: x.rights })),

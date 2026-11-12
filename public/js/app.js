@@ -16,7 +16,8 @@ import { viewNotices, loadUnread } from './views/notify.js';
 import { pushUndecided, refreshNativePush } from './push.js';
 import { anyRight } from './views/rights.js';
 import { viewTheme, applyTheme } from './theme.js';
-import { maybeShowNews, viewNews } from './news.js';
+import { maybeShowNews } from './news.js';
+import { viewRoadmap } from './roadmap.js';
 import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
@@ -274,7 +275,7 @@ const ROUTES = {
   forslag: () => viewSuggest(),
   beskeder: () => viewNotices(),
   udseende: () => viewTheme(),
-  nyt: () => viewNews(app),
+  nyt: () => viewRoadmap(app),
   admin: () => (isAdmin() || isSuper() || anyRight() || (isClub() && (canRun() || hasAnyRight())) ? viewAdmin() : ROUTES.fredage()),
   privatliv: () => viewPrivacy(),
   boern: () => viewMyKids(),

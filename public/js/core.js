@@ -67,7 +67,7 @@ export const hasRight = (r, g = S.groupId) => isAdmin(g) || rightIn(r, g);
 // Må oprette og rette spilledage
 export const canPlan = (g = S.groupId) => hasRight('spilledage', g);
 // Må køre en fredag: starte runder, rette hold, til-/afmelde andre, godkende resultater
-export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g)) || rightIn('koere', g) || rightIn('traening', g);
+export const canRun = (g = S.groupId) => isSuper() || ['admin', 'superbruger'].includes(roleIn(S.me?.id, g)) || rightIn('koere', g);
 // Spillere der venter på at komme med i en gruppe, jeg er admin for
 // Forslagskassen vises først, når databasen har den (kolonnen findes i indstillingerne)
 export const hasSuggest = () => S.settings && 'feedback_after_matches' in S.settings;

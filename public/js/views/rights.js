@@ -9,7 +9,7 @@ export const GROUP_RIGHTS = [
   ['boeder', '💸', 'Bødekasse', 'Godkende bøder og betalinger'],
 ];
 export const CLUB_RIGHTS = [
-  ['traening', '🗓', 'Træninger', 'Se alle hold og tilmeldinger og krydse fremmøde af, ligesom en træner'],
+  ['traening', '🗓', 'Træninger', 'Se alle hold, tilmeldinger og afbud og krydse fremmøde af (men ikke rette hold og tider)'],
   ['medlemmer', '🧒', 'Medlemmer', 'Godkende nye og sætte dem på hold'],
   ['kontingent', '💳', 'Kontingent', 'Se og registrere, hvem der har betalt'],
   ['opslag', '📣', 'Opslag', 'Skrive opslag til hele klubben'],
