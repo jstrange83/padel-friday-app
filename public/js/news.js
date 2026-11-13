@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-13b', date: '13. november 2026', admin: true, club: true, title: 'Invitér bestyrelsen med mail',
-    items: ['✉️ Under <b>Admin → Indstillinger → Bestyrelse og børneattest</b> kan du nu invitere resten af bestyrelsen med deres mail og vælge deres post. Er de allerede i appen, kommer de med med det samme. Ellers får de en mail, og når de opretter sig med samme mail, kommer de automatisk med.', '🛠 Posten <b>Udvikler af appen</b> kan vælges, og trænere i én klub bliver ikke længere vist som trænere i andre klubber.'],
+    items: ['✉️ Under <b>Admin → Indstillinger → Bestyrelse og børneattest</b> kan du nu invitere resten af bestyrelsen med deres mail og vælge deres post. Er de allerede i appen, kommer de med med det samme. Ellers får de en mail, og når de opretter sig med samme mail, kommer de automatisk med.', '🧑‍💼 Man kan nu have <b>flere poster</b>, fx både bestyrelsesmedlem og kasserer, og en træner kan også sidde i bestyrelsen.', '🛠 Posten <b>Udvikler af appen</b> kan vælges, og trænere i én klub bliver ikke længere vist som trænere i andre klubber.'],
   },
   {
     id: '2026-11-13', date: '13. november 2026', title: 'Min padel',

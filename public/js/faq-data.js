@@ -517,7 +517,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
-    a: `<p><b>Bestyrelsen</b>: Klubbens admin (typisk formanden) går til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og vælger post: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk adgang til kontingent. Vælger man <b>Formand</b>, bliver personen klubbens admin.</p>
+    a: `<p><b>Bestyrelsen</b>: Klubbens admin (typisk formanden) går til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og vælger en eller flere poster: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant, revisor eller udvikler af appen. En træner kan også sidde i bestyrelsen. Kasserer og revisor får automatisk adgang til kontingent. Vælger man <b>Formand</b>, bliver personen klubbens admin.</p>
 <p><b>Rettigheder</b>: Under <b>Admin → 🔑 Rettigheder</b> sætter man flueben ved, hvad hver person må:</p>
 <ul><li>🗓 <b>Træninger</b>: se alle hold, tilmeldinger og afbud og krydse fremmøde af. Man kan ikke rette hold og tider eller aflyse.</li>
 <li>🧒 <b>Medlemmer</b>: godkende nye og sætte dem på hold.</li>

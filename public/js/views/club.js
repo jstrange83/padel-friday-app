@@ -2,7 +2,7 @@
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
 import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide, rightIn } from '../core.js';
 import { showQR } from '../qr.js';
-import { rightsOf, saveRights } from './rights.js';
+import { rightsOf, saveRights, loadGroupRights } from './rights.js';
 import { parseSession, SR, listen } from '../sessionvoice.js';
 
 // ---------- Datoer (altid dansk tid) ----------
@@ -977,18 +977,20 @@ export function clubStaffCard() {
   const ids = new Set([...mem.filter((m) => ['admin', 'superbruger'].includes(m.role)).map((m) => m.player_id),
     ...C().staff.filter((x) => x.board_title).map((x) => x.user_id), ...(S.staffAdd ? [S.staffAdd] : [])]);
   const people = [...ids].filter((id) => S.profiles[id] && mem.some((m) => m.player_id === id))
-    .sort((a, b) => (BOARD_TITLES.indexOf(st(a).board_title) + 1 || 99) - (BOARD_TITLES.indexOf(st(b).board_title) + 1 || 99) || nameOf(a).localeCompare(nameOf(b)));
+    .sort((a, b) => (st(a).board_sort ?? 99) - (st(b).board_sort ?? 99) || nameOf(a).localeCompare(nameOf(b)));
   const others = mem.map((m) => m.player_id).filter((id) => !ids.has(id)).sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   const cert = (id) => C().certs.find((x) => x.user_id === id)?.cert_date || '';
   const role = (id) => mem.find((m) => m.player_id === id)?.role;
   const teamsOf = (id) => C().teamTrainers.filter((x) => x.user_id === id).map((x) => team(x.team_id)).filter((t) => t && !t.archived).map((t) => t.name);
   const board = people.filter((id) => st(id).board_title);
+  function titlesOf(id) { const x = st(id); return x.board_titles?.length ? x.board_titles : x.board_title ? [x.board_title] : []; }
   return `<details class="card gset staff" ${S.staffOpen ? 'open' : ''}><summary><b>🧑‍💼 Bestyrelse og børneattest</b><small class="muted">${board.length ? board.map((id) => `${esc(st(id).board_title)}: ${esc(nameOf(id).split(' ')[0])}`).join(' · ') : 'Ingen bestyrelse endnu'}</small></summary>
     <p class="muted small">Vælg post i bestyrelsen og datoen for børneattest. Formanden bliver automatisk admin. Bestyrelsen vises med kontaktinfo under Opslag. Hvad hver person må, vælger du under 🔑 Rettigheder.</p>
     ${people.map((id) => `<form class="staffrow" data-staff="${id}">
       <div><b>${esc(nameOf(id))}</b><small class="muted">${role(id) === 'admin' ? 'Admin · alle rettigheder' : role(id) === 'superbruger' ? 'Træner' : 'Medlem'}${teamsOf(id).length ? ` · ${esc(teamsOf(id).join(', '))}` : ''}</small></div>
-      <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option ${st(id).board_title === t ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-      ${role(id) === 'admin' ? '' : `<small class="muted rightsnote">${MONEY_TITLES.includes(st(id).board_title) ? 'Kasserer og revisor får automatisk adgang til kontingent. ' : ''}Hvad personen må, vælger du under <a href="#/admin" data-gorights>🔑 Rettigheder</a>.</small>`}
+      <div class="lbl">Poster <small class="muted">(vælg gerne flere)</small></div>
+      <div class="rchips titles">${BOARD_TITLES.map((t) => `<label class="rchip"><input type="checkbox" name="titles" value="${t}" ${titlesOf(id).includes(t) ? 'checked' : ''}><span>${t}</span></label>`).join('')}</div>
+      ${role(id) === 'admin' ? '' : `<small class="muted rightsnote">${titlesOf(id).some((t) => MONEY_TITLES.includes(t)) ? 'Kasserer og revisor får automatisk adgang til kontingent. ' : ''}Hvad personen må, vælger du under <a href="#/admin" data-gorights>🔑 Rettigheder</a>.</small>`}
       <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
       <div class="mact">${st(id).board_title ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
@@ -1012,14 +1014,12 @@ export function bindClubStaff(refresh) {
   app.querySelectorAll('form[data-staff]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const btn = f.querySelector('button'); busy(btn, true);
-    // Rettighederne ændres ikke her (det sker under Rettigheder). Kasserer og revisor får kontingent.
-    let r = rightsOf(f.dataset.staff);
-    if (MONEY_TITLES.includes(f.title.value)) r = ['kontingent'];
-    const v = (k) => r.includes(k);
+    // Flere poster pr. person. Rettighederne ændres under Rettigheder (kasserer og revisor får kontingent af sig selv).
+    const titles = [...f.querySelectorAll('input[name=titles]:checked')].map((x) => x.value);
     try {
-      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: f.dataset.staff, p_title: f.title.value || null, p_treasurer: v('kontingent'), p_post: v('opslag'), p_events: v('arrangementer'), p_approve: v('medlemmer'), p_cert_date: f.cert.value || null }));
-      if (MONEY_TITLES.includes(f.title.value)) await saveRights(f.dataset.staff, r);
-      const chair = f.title.value === 'Formand';
+      await q(sb.rpc('padel_club_set_titles_v2', { g: S.groupId, p_user: f.dataset.staff, p_titles: titles, p_cert_date: f.cert.value || null }));
+      if (titles.some((t) => MONEY_TITLES.includes(t))) await loadGroupRights();
+      const chair = titles.includes('Formand');
       S.staffAdd = null; toast(chair ? 'Gemt. Formanden er nu klubbens admin med alle rettigheder' : 'Gemt');
       if (chair) await hooks.loadBase();
       await loadClub(S.groupId); await refresh();
@@ -1030,7 +1030,7 @@ export function bindClubStaff(refresh) {
     if (!confirm(`Fjern ${nameOf(id)} fra bestyrelsen og tag rettighederne fra?\n\nPersonen bliver i klubben (som medlem, træner eller admin som før).`)) return;
     busy(b, true);
     try {
-      await q(sb.rpc('padel_club_set_rights', { g: S.groupId, p_user: id, p_title: null, p_treasurer: false, p_post: false, p_events: false, p_approve: false, p_cert_date: C().certs.find((x) => x.user_id === id)?.cert_date || null }));
+      await q(sb.rpc('padel_club_set_titles_v2', { g: S.groupId, p_user: id, p_titles: [], p_cert_date: C().certs.find((x) => x.user_id === id)?.cert_date || null }));
       await saveRights(id, []);
       toast(`${nameOf(id)} er fjernet fra bestyrelsen`); await loadClub(S.groupId); await refresh();
     } catch { busy(b, false); }

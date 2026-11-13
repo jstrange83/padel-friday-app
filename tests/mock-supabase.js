@@ -872,6 +872,17 @@ Object.assign(RPC, {
       upsert('padel_club_staff', ['group_id', 'user_id'], { ...cur, group_id: g, user_id: p_user, treasurer: r.includes('kontingent'), can_post: r.includes('opslag'), can_events: r.includes('arrangementer'), can_approve: r.includes('medlemmer'), board_title: cur.board_title || null });
     }
   },
+  padel_club_set_titles_v2: ({ g, p_user, p_titles, p_cert_date }) => {
+    if (!isAdm(g)) throw new Error('Kun klubbens admin (formanden)');
+    const ORDER = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor', 'Udvikler af appen'];
+    const arr = [...new Set(p_titles || [])].sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+    const cur = db.padel_club_staff.find((x) => x.group_id === g && x.user_id === p_user) || { treasurer: false, can_post: false, can_events: false, can_approve: false };
+    const money = arr.some((t) => ['Kasserer', 'Revisor'].includes(t));
+    upsert('padel_club_staff', ['group_id', 'user_id'], { ...cur, group_id: g, user_id: p_user, board_titles: arr, board_title: arr.join(' · ') || null, board_sort: arr.length ? Math.min(...arr.map((t) => ORDER.indexOf(t) + 1)) : 99, treasurer: cur.treasurer || money });
+    if (money) { db.padel_rights_v2 ||= []; const r = db.padel_rights_v2.find((x) => x.group_id === g && x.user_id === p_user); if (r) { if (!r.rights.includes('kontingent')) r.rights.push('kontingent'); } else db.padel_rights_v2.push({ group_id: g, user_id: p_user, rights: ['kontingent'] }); }
+    upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
+    if (arr.includes('Formand')) GM(g, p_user).role = 'admin';
+  },
   padel_club_board_contacts: ({ g }) => db.padel_club_staff.filter((x) => x.group_id === g && x.board_title).map((x) => ({ user_id: x.user_id, name: db.padel_profiles.find((p) => p.id === x.user_id)?.name, title: x.board_title, phone: db.padel_contacts.find((c) => c.player_id === x.user_id)?.phone || null })),
 });
 

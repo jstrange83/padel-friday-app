@@ -1379,6 +1379,12 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('form[data-staff="u-brian"] button').click();
   await wait(500);
   ok((await page.evaluate(() => window.__mock.db().padel_club_certs.find((x) => x.user_id === 'u-brian')?.cert_date)) === '2026-09-01', 'børneattest registreret for træneren');
+  // Flere poster: træneren kan også sidde i bestyrelsen
+  await page.locator('form[data-staff="u-brian"] label.rchip:has(input[value="Bestyrelsesmedlem"])').click();
+  await page.locator('form[data-staff="u-brian"] label.rchip:has(input[value="Udvikler af appen"])').click();
+  await page.locator('form[data-staff="u-brian"] button.primary').click();
+  await wait(500);
+  ok(await page.evaluate(() => { const x = window.__mock.db().padel_club_staff.find((y) => y.user_id === 'u-brian'); return x.board_titles.length === 2 && x.board_title === 'Bestyrelsesmedlem · Udvikler af appen'; }), 'en træner kan have flere poster: bestyrelsesmedlem og udvikler af appen');
   await shot('klub-medlemmer');
 
   // Forælder får invitationslinket, opretter sig og melder to børn ind
@@ -1613,7 +1619,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#addStaff button');
   await page.waitForSelector('form[data-staff="u-nyforaelder"]');
   const pf = page.locator('form[data-staff="u-nyforaelder"]');
-  await pf.locator('select[name=title]').selectOption('Kasserer');
+  await pf.locator('label.rchip:has(input[value="Kasserer"])').click();
   ok((await pf.locator('.rightsnote').innerText()).includes('Rettigheder'), 'bestyrelsen viser, at rettigheder vælges under Rettigheder');
   await pf.locator('button.primary').click();
   await wait(500);
@@ -1626,7 +1632,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('#addStaff select').selectOption({ label: 'Pia Forælder' });
   await page.click('#addStaff button');
   await page.waitForSelector('form[data-staff="u-nyforaelder"]');
-  await page.locator('form[data-staff="u-nyforaelder"] select[name=title]').selectOption('Kasserer');
+  await page.locator('form[data-staff="u-nyforaelder"] label.rchip:has(input[value="Kasserer"])').click();
   await page.locator('form[data-staff="u-nyforaelder"] button.primary').click();
   await wait(500);
   // Invitér resten af bestyrelsen med mail: en, der findes i appen, kommer med med det samme; en ny får en invitation
