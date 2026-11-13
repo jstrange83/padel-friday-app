@@ -220,6 +220,17 @@ async function load() {
 load();
 setInterval(load, 10000);
 setInterval(loadLook, 60000);
+// Ny udgave af TV-skærmen lagt ud? Så genindlæses siden af sig selv (tjekkes hvert 2. minut)
+let ver = null;
+async function checkVersion() {
+  try {
+    const t = await (await fetch('/tv.html', { cache: 'no-store' })).text();
+    const h = t.length + ':' + t.slice(-400);
+    if (ver && h !== ver) location.reload();
+    ver = h;
+  } catch {}
+}
+checkVersion(); setInterval(checkVersion, 120000);
 // Hold skærmen tændt, hvis browseren kan
 const keepOn = () => { try { navigator.wakeLock?.request('screen').catch(() => {}); } catch {} };
 keepOn(); document.addEventListener('visibilitychange', () => { if (!document.hidden) keepOn(); });
