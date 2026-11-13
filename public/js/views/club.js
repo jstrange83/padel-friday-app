@@ -966,7 +966,7 @@ export function bindClubFees(refresh) {
 }
 
 // ---------- Admin: bestyrelse, rettigheder og børneattest (formanden / admin) ----------
-export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor'];
+export const BOARD_TITLES = ['Formand', 'Næstformand', 'Kasserer', 'Sekretær', 'Bestyrelsesmedlem', 'Suppleant', 'Revisor', 'Udvikler af appen'];
 // Kasserer og revisor får kun adgang til kontingent
 const MONEY_TITLES = ['Kasserer', 'Revisor'];
 export function clubStaffCard() {
@@ -992,6 +992,14 @@ export function clubStaffCard() {
       <label>Børneattest indhentet <small class="muted">(trænere)</small><input type="date" name="cert" value="${cert(id)}" max="${todayISO()}"></label>
       ${role(id) === 'superbruger' && !cert(id) ? '<small class="warnc">Mangler børneattest</small>' : ''}
       <div class="mact">${st(id).board_title ? `<button type="button" class="btn sm ghost danger" data-staffrm="${id}">Fjern</button>` : ''}<button class="btn sm primary">Gem</button></div></form>`).join('')}
+    <details class="inviteboard" ${S.inviteOpen ? 'open' : ''}><summary><b>✉️ Invitér med mail</b> <small class="muted">fx resten af bestyrelsen</small></summary>
+      <form id="inviteBoard"><label>Navn<input name="name" maxlength="60" autocomplete="off"></label>
+        <label>Mail<input name="email" type="email" required autocomplete="off" inputmode="email"></label>
+        <label>Post i bestyrelsen<select name="title"><option value="">Ingen</option>${BOARD_TITLES.map((t) => `<option>${t}</option>`).join('')}</select></label>
+        <p class="muted small">Er personen allerede i appen, kommer de med med det samme. Ellers får de en mail med klubbens link, og når de opretter sig med samme mail, kommer de automatisk med.</p>
+        <div class="mact"><button class="btn sm primary">Send invitation</button></div></form>
+      ${(S.clubInvites || []).length ? `<div class="lbl">Venter på at oprette sig</div>${S.clubInvites.map((i) => `<div class="mrow"><span class="grow">${esc(i.name || i.email)}<small class="muted"> · ${esc(i.email)}${i.title ? ` · ${esc(i.title)}` : ''}</small></span><button type="button" class="btn sm ghost" data-invcancel="${i.id}">Annullér</button></div>`).join('')}` : ''}
+    </details>
     ${others.length ? `<form class="frow" id="addStaff"><label class="grow">Tilføj en person<select name="u"><option value="">Vælg…</option>${others.map((id) => `<option value="${id}">${esc(nameOf(id))}</option>`).join('')}</select></label><button class="btn sm">Tilføj</button></form>` : ''}
   </details>`;
 }
@@ -1026,6 +1034,23 @@ export function bindClubStaff(refresh) {
       await saveRights(id, []);
       toast(`${nameOf(id)} er fjernet fra bestyrelsen`); await loadClub(S.groupId); await refresh();
     } catch { busy(b, false); }
+  }));
+  const ibd = app.querySelector('details.inviteboard'); if (ibd) ibd.ontoggle = () => (S.inviteOpen = ibd.open);
+  const ib = document.getElementById('inviteBoard');
+  if (ib) ib.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = ib.querySelector('button'); busy(btn, true);
+    try {
+      const r = await q(sb.rpc('padel_club_invite_board_v2', { g: S.groupId, p_name: ib.name.value, p_email: ib.email.value, p_title: ib.title.value || null }));
+      toast(r === 'tilfoejet' ? 'Personen var allerede i appen og er nu med i klubben' : 'Invitationen er sendt på mail');
+      S.clubInvitesG = null; S.staffOpen = true;
+      if (r === 'tilfoejet') await hooks.loadBase();
+      await loadClub(S.groupId); await refresh();
+    } catch { busy(btn, false); }
+  };
+  app.querySelectorAll('[data-invcancel]').forEach((b) => (b.onclick = async () => {
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_cancel_invite_v2', { p_id: b.dataset.invcancel })); toast('Invitationen er annulleret'); S.clubInvitesG = null; await refresh(); } catch { busy(b, false); }
   }));
   const ad = document.getElementById('addStaff');
   if (ad) ad.onsubmit = (e) => { e.preventDefault(); if (ad.u.value) { S.staffAdd = ad.u.value; refresh(); } };

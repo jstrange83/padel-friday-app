@@ -41,6 +41,7 @@ export async function viewAdmin() {
   if (tab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
   if (club && ['boern', 'hold', 'kontingent', 'spillere', 'indstillinger'].includes(tab)) { await loadClub(S.groupId); await loadClubPending(); }
   if (club && tab === 'fremmode') await loadAttendance(S.attWeeks || 8);
+  if (club && tab === 'indstillinger' && isAdmin() && S.clubInvitesG !== S.groupId) { S.clubInvitesG = S.groupId; try { S.clubInvites = await q(sb.rpc('padel_club_open_invites_v2', { g: S.groupId })); } catch { S.clubInvites = []; } }
   const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab }[tab];
   const sec = secs.find(([k]) => k === tab);
   app.innerHTML = tab ? `

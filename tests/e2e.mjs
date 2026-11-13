@@ -1629,6 +1629,25 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('form[data-staff="u-nyforaelder"] select[name=title]').selectOption('Kasserer');
   await page.locator('form[data-staff="u-nyforaelder"] button.primary').click();
   await wait(500);
+  // Invitér resten af bestyrelsen med mail: en, der findes i appen, kommer med med det samme; en ny får en invitation
+  await page.click('details.inviteboard summary');
+  await page.fill('#inviteBoard input[name=name]', 'Test Dorthe');
+  await page.fill('#inviteBoard input[name=email]', 'test10@fredagspadel.test');
+  await page.locator('#inviteBoard select[name=title]').selectOption('Sekretær');
+  await page.click('#inviteBoard button');
+  await wait(600);
+  ok(await page.evaluate((g) => window.__mock.db().padel_club_staff.some((x) => x.group_id === g && x.user_id === 'u-10' && x.board_title === 'Sekretær'), clubId), 'en, der allerede er i appen, kommer med i bestyrelsen med det samme');
+  if (!(await page.locator('details.inviteboard[open]').count())) await page.click('details.inviteboard summary');
+  await page.fill('#inviteBoard input[name=name]', 'Mette Ny');
+  await page.fill('#inviteBoard input[name=email]', 'mette@ny.dk');
+  await page.locator('#inviteBoard select[name=title]').selectOption('Bestyrelsesmedlem');
+  await page.click('#inviteBoard button');
+  await page.waitForSelector('[data-invcancel]');
+  ok((await page.locator('details.inviteboard').innerText()).includes('mette@ny.dk'), 'en ny person står som inviteret, til de opretter sig');
+  await shot('klub-inviter-bestyrelse');
+  await page.click('[data-invcancel]');
+  await wait(500);
+  ok(!(await page.locator('[data-invcancel]').count()), 'invitationen kan annulleres');
   await noOverflow('klub bestyrelse');
   await freshLogin('nyforaelder@test');
   await page.waitForSelector('#nav a');

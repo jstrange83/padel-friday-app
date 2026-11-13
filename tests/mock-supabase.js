@@ -792,6 +792,32 @@ Object.assign(RPC, {
     upsert('padel_club_certs', ['group_id', 'user_id'], { group_id: g, user_id: p_user, cert_date: p_cert_date });
     if (p_title === 'Formand') GM(g, p_user).role = 'admin';
   },
+  // Invitér bestyrelsen med mail
+  padel_club_invite_board_v2: ({ g, p_name, p_email, p_title }) => {
+    if (!isAdm(g)) throw new Error('Kun klubbens admin');
+    const em = (p_email || '').trim().toLowerCase();
+    const p = db.padel_profiles.find((x) => (x.email || '').toLowerCase() === em);
+    if (p) {
+      const m = GM(g, p.id); if (m) m.status = 'aktiv'; else db.padel_group_members.push({ group_id: g, player_id: p.id, role: 'bruger', status: 'aktiv', elo: 1000 });
+      if (p_title) { const cur = db.padel_club_staff.find((x) => x.group_id === g && x.user_id === p.id) || {}; upsert('padel_club_staff', ['group_id', 'user_id'], { treasurer: false, can_post: false, can_events: false, can_approve: false, ...cur, group_id: g, user_id: p.id, board_title: p_title }); }
+      return 'tilfoejet';
+    }
+    db.padel_club_invites_v2 ||= [];
+    db.padel_club_invites_v2.forEach((i) => { if (i.group_id === g && i.email === em && !i.used_at) i.cancelled = true; });
+    db.padel_club_invites_v2.push({ id: uuid(), group_id: g, email: em, name: p_name || null, title: p_title || null, created_at: now(), used_at: null, cancelled: false });
+    return 'inviteret';
+  },
+  padel_club_open_invites_v2: ({ g }) => (db.padel_club_invites_v2 || []).filter((i) => i.group_id === g && !i.used_at && !i.cancelled),
+  padel_club_cancel_invite_v2: ({ p_id }) => { const i = (db.padel_club_invites_v2 || []).find((x) => x.id === p_id); if (i) i.cancelled = true; },
+  padel_claim_invites_v2: () => {
+    const em = (me()?.email || '').toLowerCase(); let n = 0;
+    for (const i of (db.padel_club_invites_v2 || []).filter((x) => x.email === em && !x.used_at && !x.cancelled)) {
+      const m = GM(i.group_id, uid()); if (m) m.status = 'aktiv'; else db.padel_group_members.push({ group_id: i.group_id, player_id: uid(), role: 'bruger', status: 'aktiv', elo: 1000 });
+      if (i.title) upsert('padel_club_staff', ['group_id', 'user_id'], { group_id: i.group_id, user_id: uid(), treasurer: false, can_post: false, can_events: false, can_approve: false, board_title: i.title });
+      i.used_at = now(); n++;
+    }
+    return n;
+  },
   // Centre med egen officiel rangliste
   padel_set_center_mode_v2: ({ g, p_on }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); const gr = db.padel_groups.find((x) => x.id === g); if (p_on) gr.ranking_mode = 'gruppe'; else if (gr.is_center) gr.ranking_mode = 'alle'; gr.is_center = !!p_on; },
   padel_set_center_look_v2: ({ g, p_color, p_message }) => { if (!isAdm(g)) throw new Error('Kun centrets admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { brand_color: p_color || null, tv_message: p_message || null }); },

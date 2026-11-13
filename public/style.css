@@ -1200,3 +1200,6 @@ html.inapp body { overscroll-behavior-y: contain; }
 @media (max-width: 359px) { .mtiles { grid-template-columns: repeat(2, 1fr); } .pcard .pts b { font-size: 28px; } }
 @media (prefers-reduced-motion: reduce) { .goal .bar i { transition: none; } }
 .settings .me-card .pname { display: block; font-size: 18px; margin-bottom: 2px; }
+.inviteboard { margin: 12px 0; border-top: 1px solid var(--line); padding-top: 10px; }
+.inviteboard summary { cursor: pointer; }
+.inviteboard form label { display: block; margin: 8px 0; }

@@ -133,6 +133,8 @@ async function boot() {
     await restoreJoin();
     await loadBase();
     if (!S.me) { navEl.innerHTML = ''; await loadJoinInfo(); return renderProfile(true); }
+    // Inviteret med mail (fx til bestyrelsen): kom med i klubben med det samme
+    if (!S.viewAs) { try { if (await q(sb.rpc('padel_claim_invites_v2'))) { await loadBase(); toast('Du er nu med i klubben 🎾'); } } catch {} }
     if (S.realMe?.deleted_at && !S.viewAs) { navEl.innerHTML = ''; return viewDeleted(); }
     const joined = await handleJoin();
     let next = null;

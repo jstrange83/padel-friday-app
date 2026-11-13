@@ -510,6 +510,12 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Kan vi selv invitere resten af bestyrelsen?',
+    a: `<p>Ja. Gå til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og tryk <b>✉️ Invitér med mail</b>. Skriv navn og mail, og vælg posten.</p>
+<p>Er personen allerede i appen, kommer de med i klubben med det samme. Ellers får de en mail med klubbens link, og når de opretter sig med samme mail, kommer de automatisk med med den rigtige post. Indtil da står de under <b>Venter på at oprette sig</b>, hvor invitationen også kan annulleres.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Hvordan sætter formanden bestyrelse og rettigheder op?',
     a: `<p><b>Bestyrelsen</b>: Klubbens admin (typisk formanden) går til <b>Admin → ⚙️ Indstillinger → Bestyrelse og børneattest</b> og vælger post: formand, næstformand, kasserer, sekretær, bestyrelsesmedlem, suppleant eller revisor. Kasserer og revisor får automatisk adgang til kontingent. Vælger man <b>Formand</b>, bliver personen klubbens admin.</p>
 <p><b>Rettigheder</b>: Under <b>Admin → 🔑 Rettigheder</b> sætter man flueben ved, hvad hver person må:</p>
