@@ -61,7 +61,7 @@ try {
   await page.waitForSelector('#authForm');
   await shot('login');
   // Forsiden før login: beskrivelse af appen under log ind
-  ok(await page.locator('.landing .lcard').count() === 3 && (await page.locator('.landing').innerText()).includes('Padelcentre'), 'forsiden beskriver appen for grupper, klubber og centre');
+  ok(await page.locator('.landing .laud .lcard').count() === 3 && await page.locator('.landing .lgain .lcard').count() === 3 && await page.locator('.lpush [data-lsignup]').count() === 1 && (await page.locator('.landing').innerText()).includes('Padelcentre'), 'forsiden beskriver appen for grupper, klubber og centre');
   await page.locator('.landing .lfaq summary').first().click();
   await noOverflow('forside');
   await page.screenshot({ path: path.join(shots, 'forside-hel.png'), fullPage: true });
@@ -1274,7 +1274,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nlNew');
   await page.click('#nlNew');
   await page.waitForSelector('#nlForm');
-  ok(await page.locator('.nlai.locked').count() === 1 && !(await page.locator('#nlAi').count()), 'uden betalt udgave er AI-hjælpen låst');
+  ok(!(await page.locator('.nlai').count()), 'uden betalt udgave vises AI-hjælpen slet ikke');
   await page.click('#nlBack');
   await page.waitForSelector('.nlrow-item');
   await shot('nyhedsbrev-liste');
@@ -1309,7 +1309,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Opret flere spilledage på én gang') && nm.includes('Nyhedsbreve på mail'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Banerne set fra oven') && nm.includes('Opret flere spilledage på én gang'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

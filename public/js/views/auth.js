@@ -35,7 +35,7 @@ export function renderAuth(mode = 'login') {
     : ji?.kind === 'klub' && ji.audience === 'begge' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld bagefter dig selv eller dit barn ind.`
     : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
     : invited ? 'Du er inviteret med til padel. Opret en konto, eller log ind hvis du har en, så kommer du med i gruppen.'
-    : 'Spilledage, hold og rangliste til private padelgrupper, klubber, foreninger og padelcentre.';
+    : 'Gør padel til ugens bedste aften. Tilmelding, fair hold, rangliste og fællesskab, samlet ét sted.';
   // Forsiden med beskrivelse vises kun på hjemmesiden for nye besøgende (ikke i appen og ikke fra en invitation)
   const landing = !invited && !ji && !window.Capacitor?.isNativePlatform?.();
   // Barnets eget login: ingen e-mail, bare ét tryk, så er barnet logget ind på telefonen
