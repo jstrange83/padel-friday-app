@@ -21,7 +21,7 @@ Gør sådan:
 
 Du må ALDRIG finde på nye fakta: ingen nye datoer, tider, priser, navne, steder, links eller løfter, som ikke står i udkastet. Er noget uklart, så lad det stå, og nævn det i changes.
 Skriv "bat", aldrig "ketsjer". Brug ikke tankestreger som pynt.
-Brug værktøjet nyhedsbrev til at svare. I changes skriver du 2 til 6 korte punkter på dansk om, hvad du har ændret (fx "Rettet 4 stavefejl", "Delt teksten op i 3 afsnit med overskrifter").`;
+Du SKAL svare ved at kalde værktøjet nyhedsbrev, og du skriver ikke andet. I changes skriver du 2 til 6 korte punkter på dansk om, hvad du har ændret (fx "Rettet 4 stavefejl", "Delt teksten op i 3 afsnit med overskrifter").`;
 
 const TOOL = {
   name: "nyhedsbrev",
@@ -47,19 +47,24 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
     const key = Deno.env.get("ANTHROPIC_API_KEY")?.trim();
     if (!key) return json({ error: "AI er ikke sat op endnu" }, 503);
-    const auth = req.headers.get("Authorization") || "";
-    const user = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
-    const { data: u } = await user.auth.getUser();
-    if (!u?.user) return json({ error: "Du skal være logget ind" }, 401);
     const b = await req.json().catch(() => null);
     if (!b?.group) return json({ error: "Mangler gruppe" }, 400);
-    // Superadmin altid; ellers kun grupper med den betalte udgave
-    const { data: ok } = await user.rpc("padel_ai_allowed_v2", { g: b.group });
-    if (!ok) return json({ error: "AI-hjælpen kræver den betalte udgave" }, 402);
-    // Højst PER_DAY forslag pr. person pr. dag
-    const { data: used, error: uerr } = await admin.rpc("padel_ai_use_v2", { p_user: u.user.id, p_max: PER_DAY });
-    if (uerr) return json({ error: "Prøv igen om lidt" }, 500);
-    if (!used) return json({ error: `Du har brugt AI-hjælpen ${PER_DAY} gange i dag. Prøv igen i morgen.` }, 429);
+    // Intern test fra databasen (samme hemmelige nøgle som mails og push)
+    const { data: cfg } = await admin.rpc("padel_push_config");
+    const internal = !!cfg?.hook && req.headers.get("x-hook-secret") === cfg.hook;
+    if (!internal) {
+      const auth = req.headers.get("Authorization") || "";
+      const user = createClient(URL_, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } }, auth: { persistSession: false } });
+      const { data: u } = await user.auth.getUser();
+      if (!u?.user) return json({ error: "Du skal være logget ind" }, 401);
+      // Superadmin altid; ellers kun grupper med den betalte udgave
+      const { data: ok } = await user.rpc("padel_ai_allowed_v2", { g: b.group });
+      if (!ok) return json({ error: "AI-hjælpen kræver den betalte udgave" }, 402);
+      // Højst PER_DAY forslag pr. person pr. dag
+      const { data: used, error: uerr } = await admin.rpc("padel_ai_use_v2", { p_user: u.user.id, p_max: PER_DAY });
+      if (uerr) return json({ error: "Prøv igen om lidt" }, 500);
+      if (!used) return json({ error: `Du har brugt AI-hjælpen ${PER_DAY} gange i dag. Prøv igen i morgen.` }, 429);
+    }
 
     const draft = {
       overskrift: str(b.title, 150), indledning: str(b.intro, 3000),
@@ -70,13 +75,15 @@ Deno.serve(async (req) => {
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
       body: JSON.stringify({
         model: Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-5-5", max_tokens: 6000, system: SYSTEM,
-        tools: [TOOL], tool_choice: { type: "tool", name: "nyhedsbrev" },
+        tools: [TOOL], tool_choice: { type: "auto" },
         messages: [{ role: "user", content: `Nyhedsbrev fra ${str(b.group_name, 80) || "gruppen"}. Her er udkastet som JSON:\n\n${JSON.stringify(draft, null, 2)}` }],
       }),
     });
     if (!r.ok) { console.error("anthropic", r.status, (await r.text()).slice(0, 300)); return json({ error: "AI'en svarede ikke. Prøv igen om lidt." }, 502); }
     const out = await r.json();
-    const t = out.content?.find((c: { type: string }) => c.type === "tool_use")?.input;
+    // Svaret kommer normalt via værktøjet; ellers prøver vi at læse JSON i teksten
+    let t = out.content?.find((c: { type: string }) => c.type === "tool_use")?.input;
+    if (!t) { const txt = (out.content || []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join(""); const m = txt.match(/\{[\s\S]*\}/); try { t = m ? JSON.parse(m[0]) : null; } catch { t = null; } }
     if (!t) return json({ error: "AI'en svarede ikke rigtigt. Prøv igen." }, 502);
     const okUrl = (x: unknown) => typeof x === "string" && /^https?:\/\/[^\s"'<>]+$/i.test(x.trim());
     // Knapper må kun pege på links, der stod i udkastet
