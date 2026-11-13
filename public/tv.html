@@ -31,6 +31,19 @@
   .team { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:#0f1d31; border-radius:.8vw; padding:.8vw 1vw; font-size:1.35vw; font-weight:700; line-height:1.35; }
   .team.b { text-align:right; }
   .team.win { outline:2px solid var(--acc); }
+  .pcourt { display:flex; position:relative; flex:1; min-height:12vw; border-radius:.9vw; overflow:hidden; background:#1f6fb8; border:.25vw solid rgba(255,255,255,.18); box-shadow:inset 0 0 0 .14vw rgba(255,255,255,.9); }
+  .phalf { flex:1; display:flex; min-width:0; }
+  .phalf.a { background:linear-gradient(90deg,#1b63a6,#1f6fb8); } .phalf.b { background:linear-gradient(270deg,#1b63a6,#1f6fb8); }
+  .pback { flex:0 0 20%; } .phalf.a .pback { border-right:.14vw solid rgba(255,255,255,.9); } .phalf.b .pback { border-left:.14vw solid rgba(255,255,255,.9); }
+  .pserve { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .pbox { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:.4vw .6vw; min-width:0; text-align:center; color:#fff; }
+  .pbox.top { border-bottom:.14vw solid rgba(255,255,255,.9); }
+  .pbox b { font-size:1.45vw; line-height:1.15; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 .1vw .2vw rgba(0,0,0,.3); }
+  .pbox small { font-size:.7vw; letter-spacing:.1em; text-transform:uppercase; opacity:.75; }
+  .pbox.win b { color:var(--acc); }
+  .pnet { flex:0 0 .45vw; position:relative; background:repeating-linear-gradient(0deg,rgba(255,255,255,.95) 0 .25vw,rgba(255,255,255,.35) .25vw .5vw); }
+  .pscore { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; background:var(--bg); color:var(--txt); border:.15vw solid rgba(255,255,255,.9); border-radius:.8vw; padding:.3vw .9vw; font-size:2vw; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .pscore i { font-style:normal; color:var(--mut); margin:0 .3vw; } .pscore.vs { font-size:1vw; letter-spacing:.15em; color:var(--mut); }
   .score { font-size:2.6vw; font-weight:800; font-variant-numeric:tabular-nums; min-width:7vw; text-align:center; }
   .score.vs { font-size:1.3vw; color:var(--mut); }
   .d { font-size:.95vw; font-weight:800; }
@@ -84,6 +97,14 @@ setInterval(clock, 1000);
 
 function teams(m) { return [m.a.join(' & '), m.b.join(' & ')]; }
 
+// Banen set fra oven, som på computeren: hold A til venstre (V øverst), hold B til højre (H øverst), resultatet på nettet
+function pcourt(m, done) {
+  const box = (n, side, pos, win) => `<div class="pbox ${pos} ${win ? 'win' : ''}"><b>${esc(n || '')}</b><small>${side}</small></div>`;
+  const wa = done && m.sa > m.sb, wb = done && m.sb > m.sa;
+  return `<div class="pcourt"><div class="phalf a"><div class="pback"></div><div class="pserve">${box(m.a[0], 'Venstre', 'top', wa)}${box(m.a[1], 'Højre', 'bot', wa)}</div></div>
+    <div class="pnet"><span class="pscore ${done ? '' : 'vs'}">${done ? `${m.sa}<i>–</i>${m.sb}` : 'VS'}</span></div>
+    <div class="phalf b"><div class="pserve">${box(m.b[1], 'Højre', 'top', wb)}${box(m.b[0], 'Venstre', 'bot', wb)}</div><div class="pback"></div></div></div>`;
+}
 function render(d) {
   if (!d) { app.innerHTML = '<div class="err">Linket virker ikke længere. Lav et nyt TV-link i appen.</div>'; return; }
   const ev = d.event;
@@ -105,9 +126,7 @@ function render(d) {
       const [ta, tb] = teams(m), done = m.status === 'bekraeftet';
       const fresh = done && seen && !seen.has(key(m));
       return `<div class="court ${fresh ? 'fresh' : ''}"><div class="ch">${esc(c.name)}${done ? '<span class="tag">Resultat</span>' : '<span class="tag play">Spiller nu</span>'}</div>
-        <div class="match"><div class="team ${done && m.sa > m.sb ? 'win' : ''}">${esc(m.a[0])}<br>${esc(m.a[1])}</div>
-        <div class="score ${done ? '' : 'vs'}">${done ? `${m.sa}–${m.sb}` : 'mod'}</div>
-        <div class="team b ${done && m.sb > m.sa ? 'win' : ''}">${esc(m.b[0])}<br>${esc(m.b[1])}</div></div>
+        ${pcourt(m, done)}
         ${done && m.d != null ? `<div class="ch"><span class="d ${m.d > 0 ? 'up' : 'dn'}">${sign(m.d)}</span><span class="d ${m.d > 0 ? 'dn' : 'up'}">${sign(-m.d)}</span></div>` : ''}</div>`;
     };
     const status = ev.status === 'afsluttet' ? 'Dagen er slut' : `Runde ${cur} af ${rounds.length}`;

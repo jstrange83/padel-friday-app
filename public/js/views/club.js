@@ -1,5 +1,6 @@
 // Klub (juniorklub): træningstider med afbud og fremmøde, opslag fra trænerne, indmeldelse af børn og kontingent.
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
+import { nameCard, bindNameCard } from './notify.js';
 import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide, rightIn } from '../core.js';
 import { showQR } from '../qr.js';
 import { rightsOf, saveRights, loadGroupRights } from './rights.js';
@@ -139,6 +140,7 @@ export async function viewTraining() {
 
   const trTop = `
     ${groupBar(viewTraining)}
+    ${nameCard()}
     ${!trainer && mine.length && gr.club_welcome && !welcomeSeen(g) ? `<div class="card welcomecard"><div class="ftop"><b>👋 Velkommen i ${esc(gr.name)}</b><button class="link sm" id="welcomeOk">Luk</button></div><p>${rich(gr.club_welcome)}</p></div>` : ''}
     ${mine.filter((k) => k.status === 'ansoegt' && !k.waitlist).map((k) => `<div class="card warnbox">⏳ <b>${esc(k.name)}</b> venter på, at en træner godkender indmeldelsen.</div>`).join('')}
     ${active.filter((k) => !k.team_id).map((k) => `<div class="card warnbox">👋 <b>${esc(k.name)}</b> er optaget. Træneren sætter snart ${k.player_id === S.me?.id ? 'dig' : 'barnet'} på et hold.</div>`).join('')}
@@ -250,6 +252,7 @@ function trainerCard(o, today) {
 function bindTraining() {
   document.getElementById('welcomeOk')?.addEventListener('click', () => { try { localStorage.setItem('fp-welcome-' + S.groupId, '1'); } catch {} document.querySelector('.welcomecard')?.remove(); });
   bindEvents(viewTraining);
+  bindNameCard(viewTraining);
   // Træneren sender en påmindelse om én træning: til dem, der ikke har svaret, eller til alle (undtagen afbud)
   app.querySelectorAll('[data-remind]').forEach((b) => (b.onclick = async () => {
     const [sid, day, all] = b.dataset.remind.split('|');

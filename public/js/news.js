@@ -6,7 +6,7 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 export const NEWS = [
   {
     id: '2026-11-13g', date: '13. november 2026', admin: true, groups: true, title: 'Flere spilledage, cast til TV og store skærme',
-    items: ['📅 Når du opretter spilledage, kan du trykke <b>＋ En dag mere</b>. Dagen lægges ned som et lille kort, og du kan lave den næste, med sit eget sted, baner, spiltype og tid. Til sidst opretter du dem alle på én gang.', '📺 TV-knappen på spilledagen kan nu <b>caste</b> dagen direkte til et TV med Chromecast eller Google TV, ligesom fra telefonen. Du kan også åbne TV-skærmen i et nyt vindue.', '🖥 På store skærme bruger appen nu mere af pladsen, og banerne står side om side.'],
+    items: ['📅 Når du opretter spilledage, kan du trykke <b>＋ En dag mere</b>. Dagen lægges ned som et lille kort, og du kan lave den næste, med sit eget sted, baner, spiltype og tid. Til sidst opretter du dem alle på én gang.', '📺 TV-knappen på spilledagen kan nu <b>caste</b> dagen direkte til et TV med Chromecast eller Google TV, ligesom fra telefonen. TV\'et viser banerne set fra oven med navnene i hvert felt, ligesom på computeren. Du kan også åbne TV-skærmen i et nyt vindue.', '🖥 På store skærme bruger appen nu mere af pladsen, og banerne står side om side.'],
   },
   {
     id: '2026-11-13f', date: '13. november 2026', groups: true, title: 'Banerne set fra oven på computeren',

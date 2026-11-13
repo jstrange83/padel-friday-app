@@ -1,4 +1,5 @@
 // Egen profil: overblik øverst, ret oplysninger i en fold-ud. Første gang: velkomstformular.
+import { nameCard, bindNameCard } from './notify.js';
 import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
@@ -18,7 +19,7 @@ const parentOnly = () => ['klub', 'foraelder'].includes(S.joinInfo?.kind);
 function form(p, isNew) {
   const parent = isNew && parentOnly();
   return `<form class="card" id="pf">
-    <label>${parent ? 'Dit navn (forælder)' : 'Navn'}<input name="name" value="${esc(p.name || '')}" required maxlength="60" autocomplete="name"></label>
+    <label>${parent ? 'Dit fulde navn (forælder)' : 'Fornavn og efternavn'}<input name="name" value="${esc(p.name || '')}" required maxlength="60" autocomplete="name"></label>
     <label>Telefonnummer<input name="phone" type="tel" inputmode="tel" value="${esc(p.id ? fmtPhone(phoneOf(p.id)) : '')}" required autocomplete="tel" placeholder="Fx 12 34 56 78">
       <small class="muted">${parent ? 'Kun trænerne kan se det.' : 'Kun admins i dine grupper kan se det.'}</small></label>
     <div class="lbl">Køn</div>${radios('gender', GENDER, p.gender)}
@@ -79,7 +80,7 @@ export async function renderMyPadel() {
       <a class="row" href="#/nyt"><span class="grow">🆕 Nyt og på vej</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
     </div>`;
-  const tip = !phone ? `<a class="card warnbox" href="#/indstillinger">📱 ${viewing ? 'Spilleren mangler et telefonnummer ›' : 'Tilføj dit telefonnummer, så admin kan få fat i dig ›'}</a>` : '';
+  const tip = nameCard() + (!phone ? `<a class="card warnbox" href="#/indstillinger">📱 ${viewing ? 'Spilleren mangler et telefonnummer ›' : 'Tilføj dit telefonnummer, så admin kan få fat i dig ›'}</a>` : '');
   const mine = S.members.filter((m) => m.player_id === p.id && m.status !== 'fjernet');
   const chips = mine.length ? `<div class="gchips">${mine.map((m) => `<span class="gchip">${esc(group(m.group_id)?.name || 'Gruppe')}${m.status === 'afventer' ? ' ⏳' : roleIn(p.id, m.group_id) && roleIn(p.id, m.group_id) !== 'bruger' ? ` · ${roleNames(m.group_id)[roleIn(p.id, m.group_id)]}` : ''}</span>`).join('')}</div>` : '';
 
@@ -153,6 +154,7 @@ export async function renderMyPadel() {
 
 function afterMyPadel() {
   bind(false);
+  bindNameCard(() => renderMyPadel());
   const viewing = !!S.viewAs;
   myKidsSection().then((h) => { const box = document.getElementById('kidsBox'); if (box && h) { box.innerHTML = h; bindMyKids(() => renderMyPadel()); } });
   discoverRow().then((h) => { const nr = document.getElementById('notRow'); if (nr && h && !document.getElementById('discRow')) nr.insertAdjacentHTML('afterend', h); });
@@ -207,6 +209,9 @@ function bind(isNew) {
   const f = document.getElementById('pf');
   if (f) f.onsubmit = async (e) => {
     e.preventDefault();
+    // Fornavn og efternavn, så de andre kan se, hvem man er (børn og admins, der retter andre, er undtaget)
+    f.name.value = f.name.value.trim().replace(/\s+/g, ' ');
+    if (!S.viewAs && !S.isKid && (isNew || f.name.value !== (S.me?.name || '')) && !/\S+\s+\S+/.test(f.name.value)) { toast('Skriv både fornavn og efternavn', true); f.name.focus(); return; }
     const btn = f.querySelector('button');
     busy(btn, true);
     try {

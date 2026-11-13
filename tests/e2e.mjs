@@ -75,6 +75,14 @@ try {
   await page.click('button[type=submit]');
   await page.waitForSelector('text=Opret spilledag');
   ok((await text()).includes('ingen kommende spilledage'), 'tom oversigt viser opret-knap');
+  // Mangler efternavn: lille kort øverst; ét navn bliver afvist, og "Senere" skjuler kortet
+  await page.waitForSelector('#nameCard');
+  await page.click('#nameCard button.primary');
+  await wait(300);
+  ok(await page.locator('#nameCard').count() === 1, 'kun fornavn bliver ikke gemt');
+  await shot('efternavn');
+  await page.click('#nameLater');
+  ok(!(await page.locator('#nameCard').count()), 'Senere skjuler kortet');
   await shot('fredage-tom');
 
   // Opret 4 fredage med ét sæt pr. runde

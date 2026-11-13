@@ -2,7 +2,7 @@
 import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canPlan, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo, haptic } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
-import { pushPromptCard, bindPushPrompt } from './notify.js';
+import { pushPromptCard, bindPushPrompt, nameCard, bindNameCard } from './notify.js';
 import { editBtn } from '../editmode.js';
 
 // Kort til superadmin: slettede spillere der er kommet igen
@@ -81,6 +81,7 @@ export async function viewEvents() {
     ${groupBar(viewEvents)}
     ${side ? '<div class="wcols"><div class="wmain">' : ''}
     ${pendingCard()}
+    ${nameCard()}
     ${pushPromptCard()}
     ${noticeCard()}
     ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/indstillinger">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
@@ -97,6 +98,7 @@ export async function viewEvents() {
     try { await fn(); await viewEvents(); } catch { busy(btn, false); }
   };
   bindPushPrompt();
+  bindNameCard(() => hooks.route?.());
   const nok = document.getElementById('noticesOk');
   if (nok) nok.onclick = async () => {
     busy(nok, true);

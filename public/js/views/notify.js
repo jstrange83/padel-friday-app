@@ -80,3 +80,31 @@ export function bindPushPrompt() {
     try { await enablePush(); S.pushUndecided = false; toast('Notifikationer er slået til 🔔'); card.remove(); } catch (err) { toast(err.message || 'Det lykkedes ikke', true); busy(e.currentTarget, false); }
   };
 }
+
+// Mangler efternavn? Lille kort øverst, så man kan tilføje det med det samme (kun voksne, kun eget navn)
+const NAMESKIP = 'fp-name-later';
+export const needsLastName = () => !!S.me && !S.viewAs && !S.isKid && !/\S+\s+\S+/.test((S.me.name || '').trim());
+export function nameCard() {
+  if (!needsLastName()) return '';
+  try { if (+localStorage.getItem(NAMESKIP) > Date.now()) return ''; } catch {}
+  return `<form class="card namecard" id="nameCard"><b>👋 Hvad er dit efternavn?</b>
+    <p class="muted small">Så kan de andre i gruppen og klubben se, hvem du er. Skriv dit fulde navn.</p>
+    <input name="name" value="${esc(S.me.name || '')}" maxlength="60" autocomplete="name" aria-label="Fornavn og efternavn">
+    <div class="nact"><div><button type="button" class="btn ghost" id="nameLater">Senere</button></div><div><button class="btn primary">Gem navn</button></div></div></form>`;
+}
+export function bindNameCard(rerender) {
+  const f = document.getElementById('nameCard');
+  if (!f) return;
+  document.getElementById('nameLater').onclick = () => { try { localStorage.setItem(NAMESKIP, String(Date.now() + 3 * 864e5)); } catch {} f.remove(); };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const name = f.name.value.trim().replace(/\s+/g, ' ');
+    if (!/\S+\s+\S+/.test(name)) { toast('Skriv både fornavn og efternavn', true); f.name.focus(); return; }
+    const btn = f.querySelector('button.primary'); busy(btn, true);
+    try {
+      await q(sb.rpc('padel_save_profile', { p_name: name, p_gender: S.me.gender, p_side: S.me.side }));
+      S.me.name = name; if (S.profiles[S.me.id]) S.profiles[S.me.id].name = name;
+      toast('Tak! Dit navn er gemt'); await hooks.loadBase?.(); rerender?.();
+    } catch { busy(btn, false); }
+  };
+}

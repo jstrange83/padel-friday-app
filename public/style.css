@@ -1344,3 +1344,9 @@ html.inapp body { overscroll-behavior-y: contain; }
   .page { max-width: 1240px; }
   .wcols { grid-template-columns: minmax(0, 1fr) 520px; }
 }
+.namecard { border: 1px solid color-mix(in srgb, var(--accent) 50%, var(--line)); }
+.namecard p { margin: 4px 0 10px; }
+.namecard input { width: 100%; box-sizing: border-box; }
+.namecard .nact { display: flex; gap: 8px; margin-top: 10px; }
+.namecard .nact > div { flex: 1 1 0; }
+.namecard .nact .btn { width: 100%; }
