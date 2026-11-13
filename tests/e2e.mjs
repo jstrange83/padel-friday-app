@@ -85,14 +85,14 @@ try {
   ok((await page.locator('#roundsHint').innerText()).includes('6 runder'), '2 timer giver 6 runder');
   await shot('ny-fredag');
   await noOverflow('ny spilledag');
-  // ＋ Tilføj en dag mere: begge dage gentages, og dagen kan fjernes igen
-  await page.click('#addDate');
-  await page.waitForSelector('input[name=when2]');
-  ok((await page.locator('#createBtn').innerText()).includes('Opret 8 spilledage'), 'en dag mere giver 8 spilledage ved 4 uger');
+  // ＋ Opret en dag mere: dagen lægges ned som et kort, og formularen er klar til næste dag; kortet kan fjernes igen
+  await page.click('#addDay');
+  await page.waitForSelector('.evq');
+  ok((await page.locator('#createBtn').innerText()).includes('Opret 8 spilledage') && (await page.locator('#nfHead').innerText()).includes('Dag 2'), 'en dag mere giver 8 spilledage ved 4 uger, og formularen hedder Dag 2');
   await shot('ny-fredag-flere-dage');
   await noOverflow('flere dage');
-  await page.click('.daterow button');
-  ok(!(await page.locator('input[name=when2]').count()) && (await page.locator('#createBtn').innerText()).includes('Opret 4 spilledage'), 'den ekstra dag kan fjernes igen');
+  await page.click('[data-qdel="0"]');
+  ok(!(await page.locator('.evq').count()) && (await page.locator('#createBtn').innerText()).includes('Opret 4 spilledage'), 'den ekstra dag kan fjernes igen');
   await page.click('#createBtn');
   await page.waitForSelector('a.ev');
   ok((await page.locator('a.ev').count()) === 4, '4 fredage oprettet');
@@ -330,9 +330,10 @@ try {
 
   // TV-skærm: admin henter et hemmeligt link; skærmen viser baner, resultater og dagens stilling uden login
   await page.click('#tvEvent');
-  await page.waitForSelector('.qrmodal');
-  ok((await page.locator('.qrmodal').innerText()).includes('/tv/'), 'TV-link vises med QR-kode');
-  await page.click('.qrmodal button');
+  await page.waitForSelector('#castModal');
+  ok((await page.locator('#castModal').innerText()).includes('Vis på TV') && await page.locator('#castOpen').count() === 1 && !(await page.locator('.qrmodal').count()), 'TV-knappen tilbyder at caste eller åbne TV-skærmen (ingen QR-kode)');
+  await shot('tv-cast');
+  await page.click('#castClose');
   const tvTok = await page.evaluate(() => window.__mock.db().padel_tv_links[0].token);
   await page.goto(`http://localhost:8765/tv.html?k=${tvTok}`);
   await page.waitForSelector('aside h2');
@@ -1309,7 +1310,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Banerne set fra oven') && nm.includes('Opret flere spilledage på én gang'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Flere spilledage, cast til TV') && nm.includes('Banerne set fra oven'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -2288,14 +2289,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const evBefore = await page.evaluate(() => window.__mock.db().padel_events.length);
   await page.selectOption('select[name=count]', '2');
   await page.fill('input[name=when]', '2027-03-02T19:00');
-  await page.click('#addDate');
-  await page.fill('input[name=when2]', '2027-03-05T17:30');
-  await page.dispatchEvent('input[name=when2]', 'change');
+  await page.click('#addDay');
+  await page.waitForSelector('.evq');
+  await page.fill('input[name=when]', '2027-03-05T17:30');
+  await page.dispatchEvent('input[name=when]', 'change');
+  await page.locator('label:has(input[name=format][value=americano])').click();
   ok((await page.locator('#createBtn').innerText()).includes('Opret 4 spilledage'), 'to dage i 2 uger giver 4 spilledage');
   await page.click('#createBtn');
   await page.waitForSelector('a.ev');
   const made = await page.evaluate((b) => window.__mock.db().padel_events.slice(b).map((e) => new Date(e.starts_at)).map((d) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`).sort(), evBefore);
   ok(made.join(',') === ['12/3 17:30', '2/3 19:00', '5/3 17:30', '9/3 19:00'].sort().join(','), 'spilledagene får hver deres dato og tid: ' + made.join(', '));
+  ok(await page.evaluate((b) => { const e = window.__mock.db().padel_events.slice(b); return e.filter((x) => x.format === 'americano').length === 2 && e.filter((x) => x.format !== 'americano').length === 2; }, evBefore), 'hver dag kan have sin egen spiltype');
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

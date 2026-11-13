@@ -1313,3 +1313,34 @@ html.inapp body { overscroll-behavior-y: contain; }
 .lnew h2 { margin: 0 0 8px; }
 .lnew p { color: var(--text); opacity: .9; margin: 0 0 16px; max-width: 720px; line-height: 1.6; }
 @media (min-width: 900px) { .lwhy { grid-template-columns: repeat(4, 1fr); } .lwhy li { flex-direction: column; } }
+
+/* Ny spilledag: dagene, der er lagt til side, som små kort */
+.evq { display: flex; gap: 12px; align-items: center; padding: 12px 14px; margin: 8px 0; border-left: 4px solid var(--accent); }
+.evq .evqn { flex: 0 0 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 900; display: grid; place-items: center; }
+.evq small { display: block; }
+.evq .evqact { display: flex; gap: 12px; }
+.nfhead { font-weight: 800; font-size: 18px; margin-bottom: 6px; color: var(--accent); }
+.nfact { margin-top: 14px; display: flex; gap: 8px; }
+.nfact > div { flex: 1 1 0; min-width: 0; }
+.nfact .btn { width: 100%; white-space: nowrap; }
+@media (max-width: 420px) { .nfact { flex-direction: column-reverse; } }
+.nftip { display: block; margin-top: 8px; }
+.castcard .center { text-align: center; }
+.castcard .castbig { width: 100%; min-height: 52px; font-size: 18px; margin-top: 6px; }
+.castcard .castnote { display: block; margin: 8px 0 4px; }
+.castcard .mact .btn { flex: 1 1 0; min-width: 0; }
+.castcard .castclose { display: block; margin: 12px auto 0; }
+
+/* Store skærme: brug pladsen. Siderne vokser med skærmen, og banerne står side om side */
+@media (min-width: 1700px) {
+  .page { max-width: 1100px; }
+  .page.wide, .page.events, .page.admin, .page.profile, .page.fines { max-width: min(1800px, 100%); }
+  .wcols { grid-template-columns: minmax(0, 1fr) 460px; gap: 32px; }
+  .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); gap: 0 16px; }
+  .page.admin .abody, .page.profile, .page.fines { columns: 3 440px; }
+}
+@media (min-width: 2300px) {
+  .page.wide, .page.events, .page.admin, .page.profile, .page.fines { max-width: min(2200px, 100%); }
+  .page { max-width: 1240px; }
+  .wcols { grid-template-columns: minmax(0, 1fr) 520px; }
+}

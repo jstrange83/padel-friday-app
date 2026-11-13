@@ -138,7 +138,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang', group: true,
     q: 'Kan jeg oprette flere spilledage på én gang?',
-    a: `<p>Ja. Tryk <b>Opret spilledag</b>, vælg den første dag og tid, og vælg under <b>Gentag</b>, hvor mange uger i træk. Spiller I på flere forskellige dage, fx både tirsdag og fredag, så tryk <b>＋ Tilføj en dag mere</b> og vælg dag og tid. Hver dag gentages det valgte antal uger, og knappen viser, hvor mange spilledage der bliver oprettet.</p>`,
+    a: `<p>Ja. Tryk <b>Opret spilledag</b>, vælg den første dag og tid, og vælg under <b>Gentag</b>, hvor mange uger i træk. Spiller I på flere forskellige dage, steder eller med forskellige spiltyper, så tryk <b>＋ En dag mere</b>. Så lægges dagen ned som et lille kort, og du kan lave den næste med sine egne indstillinger. Kortene kan rettes eller fjernes, og knappen viser, hvor mange spilledage der bliver oprettet i alt.</p>`,
   },
   {
     cat: 'Tilmelding og konto', group: true,

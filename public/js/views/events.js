@@ -1,5 +1,5 @@
 // Oversigt over fredage, og formularen til at oprette eller rette fredage.
-import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canPlan, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo } from '../core.js';
+import { sb, S, app, hooks, FORMAT, MODE, isAdmin, canPlan, canJoin, group, groupBar, groupCenterIds, phoneOf, pendingForMe, nameOf, esc, centerById, fmtDate, toast, q, busy, radios, isWide, activeMembers, groupElo, haptic } from '../core.js';
 import { lineup } from '../lineup.js';
 import { signoffFine, fineWarn, kr } from './fines.js';
 import { pushPromptCard, bindPushPrompt } from './notify.js';
@@ -165,13 +165,12 @@ export async function viewEventForm(ev) {
     <h1>${ev ? 'Ret spilledag' : 'Ny spilledag'}</h1>
     <p class="muted">${esc(group()?.name || '')}</p>
     ${ev && confirmed ? `<div class="card tip">Der er allerede ${confirmed} godkendt${confirmed === 1 ? '' : 'e'} kamp${confirmed === 1 ? '' : 'e'}. De beholder deres point. Ændringer gælder de kommende runder.</div>` : ''}
+    ${ev ? '' : '<div id="evQueue"></div>'}
     <form class="card" id="nf">
+      ${ev ? '' : '<div class="nfhead" id="nfHead" hidden></div>'}
       <label>Center<select name="center">${centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
       <div class="lbl">Baner</div><div id="courts" class="checks"></div>
       <label>Dato og tid${ev ? '' : ' (første gang)'}<input type="datetime-local" name="when" value="${ev ? toLocalInput(ev.starts_at) : nextFriday()}" required></label>
-      ${ev ? '' : `<div id="moreDates"></div>
-        <div class="moredates"><button type="button" class="btn ghost sm" id="addDate">＋ Tilføj en dag mere</button>
-        <small class="muted moretip">Spiller I fx både tirsdag og fredag, så tilføj en dag mere. Hver dag gentages som valgt nedenfor.</small></div>`}
       ${ev ? '' : `<label>Gentag<select name="count">${[1, 2, 3, 4, 6, 8].map((n) => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n === 1 ? 'Kun denne dag' : `${n} uger i træk`}</option>`).join('')}</select>
         <small class="muted" id="countHint"></small></label>`}
       <label>Titel (valgfri)<input name="title" placeholder="${esc(group()?.name || '')}" maxlength="60" value="${esc(v.title || '')}"></label>
@@ -182,7 +181,8 @@ export async function viewEventForm(ev) {
         <small class="muted">Americano tæller ikke på ranglisten, før en admin tilføjer dagen bagefter.</small></label>
       <label id="minWrap"><span id="minLabel">Minutter pr. runde</span><input type="number" name="minutes" value="${v.round_minutes}" min="5" max="180" inputmode="numeric"><small id="roundsHint" class="muted"></small></label>
       <div class="lbl">Hold</div>${radios('mode', MODE, v.team_mode)}
-      <button class="btn primary" id="createBtn">${ev ? 'Gem ændringer' : 'Opret'}</button>
+      ${ev ? '<button class="btn primary" id="createBtn">Gem ændringer</button>' : `<div class="nfact"><div><button type="button" class="btn" id="addDay">＋ En dag mere</button></div><div><button class="btn primary" id="createBtn">Opret spilledag</button></div></div>
+      <small class="muted nftip">Spiller I også på en anden dag, et andet sted eller med en anden spiltype? Tryk <b>＋ En dag mere</b>, så gemmes denne dag som et lille kort, og du kan lave den næste.</small>`}
     </form>
   </div>`;
   const f = document.getElementById('nf');
@@ -205,43 +205,69 @@ export async function viewEventForm(ev) {
     if (changed) { f.minutes.value = ROUND_MIN[fm]; hint(); }
   };
   f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = () => fmt(true))); fmt(false);
-  // Flere dage på én gang: hver dag (med sit eget tidspunkt) gentages det valgte antal uger
-  const allDates = () => {
-    const starts = [f.when.value, ...[...f.querySelectorAll('[name=when2]')].map((x) => x.value)].filter(Boolean);
-    const seen = new Set();
-    return starts.flatMap((w) => weekDates(w, +f.count.value)).filter((d) => !isNaN(d) && !seen.has(+d) && seen.add(+d)).sort((a, b) => a - b);
+  // Flere dage på én gang: hver dag har sine egne indstillinger (sted, baner, spiltype, tid).
+  // "Opret en dag mere" lægger dagen i formularen ned som et lille kort, og formularen er klar til den næste.
+  const queue = [];
+  const read = () => {
+    const courts = [...f.querySelectorAll('[name=court]:checked')].map((x) => x.value);
+    if (!courts.length) { toast('Vælg mindst én bane', true); return null; }
+    if (!f.when.value) { toast('Vælg dato og tid', true); f.when.focus(); return null; }
+    return {
+      base: { center_id: f.center.value, title: f.title.value.trim() || null, format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30,
+        points_per_match: f.format.value === 'americano' ? +f.points.value : null, duration_minutes: +f.duration.value || 120, court_ids: courts },
+      when: f.when.value, count: ev ? 1 : +f.count.value,
+    };
   };
+  const load = (it) => {
+    const b = it.base;
+    f.center.value = b.center_id; drawCourts(b.court_ids);
+    f.when.value = it.when; f.count.value = String(it.count); f.title.value = b.title || '';
+    f.querySelector(`[name=format][value="${b.format}"]`).checked = true; fmt(false);
+    f.duration.value = String(b.duration_minutes); f.minutes.value = b.round_minutes; if (b.points_per_match) f.points.value = String(b.points_per_match);
+    f.querySelector(`[name=mode][value="${b.team_mode}"]`).checked = true; hint();
+  };
+  const datesOf = (it) => weekDates(it.when, it.count);
+  const total = () => queue.reduce((n, it) => n + it.count, 0) + (+f.count?.value || 1);
   if (!ev) {
-    const countHint = () => {
-      const ds = allDates(), show = ds.slice(0, 12);
-      document.getElementById('countHint').textContent = ds.length > 1 ? show.map((d) => fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })).join(', ') + (ds.length > show.length ? ` og ${ds.length - show.length} mere` : '') : '';
-      document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} spilledage` : 'Opret spilledag';
+    const fmtDay = (d) => fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' }) + ' kl. ' + fmtDate(d, { hour: '2-digit', minute: '2-digit' });
+    const draw = () => {
+      document.getElementById('evQueue').innerHTML = queue.map((it, i) => {
+        const b = it.base, ds = datesOf(it);
+        return `<div class="card evq"><div class="evqn">${i + 1}</div><div class="grow">
+          <b>${esc(fmtDay(ds[0]))}</b>
+          <small>${esc(centerById(b.center_id)?.name || '')} · ${b.court_ids.length} ${b.court_ids.length === 1 ? 'bane' : 'baner'} · ${esc(FORMAT[b.format])}${b.title ? ` · ${esc(b.title)}` : ''}</small>
+          <small class="muted">${it.count > 1 ? `${it.count} uger i træk, til ${esc(fmtDate(ds[ds.length - 1], { day: 'numeric', month: 'short' }))}` : 'Kun denne dag'}</small></div>
+          <span class="evqact"><button type="button" class="link sm" data-qedit="${i}">Ret</button><button type="button" class="link sm dn" data-qdel="${i}">Fjern</button></span></div>`;
+      }).join('');
+      const head = document.getElementById('nfHead');
+      head.hidden = !queue.length; head.textContent = `Dag ${queue.length + 1}`;
+      const ds = weekDates(f.when.value, +f.count.value);
+      document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
+      const n = total();
+      document.getElementById('createBtn').textContent = n > 1 ? `Opret ${n} spilledage` : 'Opret spilledag';
+      document.querySelectorAll('[data-qdel]').forEach((b) => (b.onclick = () => { queue.splice(+b.dataset.qdel, 1); draw(); }));
+      document.querySelectorAll('[data-qedit]').forEach((b) => (b.onclick = () => {
+        // Dagen i formularen bytter plads med den, man vil rette
+        const it = queue.splice(+b.dataset.qedit, 1)[0], cur = read();
+        if (cur) queue.push(cur);
+        load(it); draw(); f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
     };
-    const more = document.getElementById('moreDates');
-    document.getElementById('addDate').onclick = () => {
-      const ins = [f.when, ...f.querySelectorAll('[name=when2]')].filter((x) => x.value);
-      const last = ins.length ? new Date(ins[ins.length - 1].value) : new Date();
-      last.setDate(last.getDate() + 1);
-      const row = document.createElement('div');
-      row.className = 'daterow';
-      row.innerHTML = `<label class="grow">Dag ${f.querySelectorAll('[name=when2]').length + 2}<input type="datetime-local" name="when2" value="${toLocalInput(last.toISOString())}" required></label><button type="button" class="link sm dn" aria-label="Fjern dagen">Fjern</button>`;
-      more.appendChild(row);
-      row.querySelector('input').onchange = countHint;
-      row.querySelector('button').onclick = () => { row.remove(); more.querySelectorAll('.daterow label').forEach((l, i) => (l.firstChild.textContent = `Dag ${i + 2}`)); countHint(); };
-      row.querySelector('input').focus();
-      countHint();
+    document.getElementById('addDay').onclick = () => {
+      const it = read(); if (!it) return;
+      queue.push(it);
+      // Næste dag: samme indstillinger, dagen efter
+      const d = new Date(it.when); d.setDate(d.getDate() + 1); f.when.value = toLocalInput(d.toISOString());
+      draw(); haptic('light');
+      f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      toast(`Dag ${queue.length} er lagt til side. Lav den næste`);
     };
-    f.count.onchange = countHint; f.when.onchange = countHint; countHint();
+    f.count.onchange = draw; f.when.onchange = draw; draw();
   }
   f.onsubmit = async (e) => {
     e.preventDefault();
-    const courts = [...f.querySelectorAll('[name=court]:checked')].map((x) => x.value);
-    if (!courts.length) return toast('Vælg mindst én bane', true);
-    const base = {
-      center_id: f.center.value, title: f.title.value.trim() || null,
-      format: f.format.value, team_mode: f.mode.value, round_minutes: +f.minutes.value || 30, points_per_match: f.format.value === 'americano' ? +f.points.value : null,
-      duration_minutes: +f.duration.value || 120, court_ids: courts,
-    };
+    const cur = read(); if (!cur) return;
+    const base = cur.base;
     const btn = f.querySelector('button.primary');
     busy(btn, true);
     try {
@@ -254,7 +280,9 @@ export async function viewEventForm(ev) {
         location.hash = '#/fredag/' + ev.id;
         return;
       }
-      const rows = allDates().map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id, group_id: S.groupId }));
+      const seen = new Set();
+      const rows = [...queue, cur].flatMap((it) => datesOf(it).map((d) => ({ ...it.base, starts_at: d.toISOString(), ranked: it.base.format !== 'americano', created_by: S.me.id, group_id: S.groupId })))
+        .filter((r) => !seen.has(r.starts_at + r.center_id) && seen.add(r.starts_at + r.center_id)).sort((a, b) => a.starts_at.localeCompare(b.starts_at));
       const evs = await q(sb.from('padel_events').insert(rows).select());
       toast(evs.length === 1 ? 'Dagen er oprettet' : `${evs.length} spilledage er oprettet`);
       location.hash = evs.length === 1 ? '#/fredag/' + evs[0].id : '#/fredage';

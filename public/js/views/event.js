@@ -9,7 +9,7 @@ import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
 import { giveFormBody, bindGive, signoffFine, fineWarn, kr } from './fines.js';
 import { editBtn } from '../editmode.js';
-import { showQR } from '../qr.js';
+import { castTv } from '../cast.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -448,7 +448,7 @@ function roundBlock(c, r) {
   const sit = L.playing.filter((p) => !inRound(r).has(p));
   return `<div class="rhead"><h3>Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''} <span class="rtime">ca. ${hm(roundStart(r))}</span></h3>${tag}</div>
     ${sit.length ? `<div class="sitline">☕ Pause: ${sit.map((p) => `<b class="${p === me ? 'meName' : ''}">${esc(first(p))}</b>`).join(', ')}</div>` : ''}
-    ${rounds[r].map((m) => matchCard(c, m)).join('')}`;
+    <div class="mgrid">${rounds[r].map((m) => matchCard(c, m)).join('')}</div>`;
 }
 
 // Runderne som faner: man ser én runde ad gangen. Standard er den runde, hvor man selv skal spille.
@@ -744,9 +744,7 @@ function bind(c) {
   // TV-skærm: et hemmeligt link, der viser dagens baner, resultater og stilling live (uden login)
   act($('tvEvent'), async () => {
     const t = await q(sb.rpc('padel_tv_link_v2', { g: ev.group_id }));
-    const url = `${location.origin}/tv/${t}`;
-    try { await navigator.clipboard.writeText(url); toast('TV-linket er kopieret'); } catch {}
-    showQR(url, '📺 TV-skærm', `Åbn linket i browseren på et TV i centret, eller scan koden: ${url}`);
+    castTv(`${location.origin}/tv/${t}`);
   });
   $('shareEvent')?.addEventListener('click', () =>
     share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
