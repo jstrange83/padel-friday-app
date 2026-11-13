@@ -43,7 +43,7 @@ export async function viewRoadmap(app) {
     : `<p class="muted small">${S.rmTab === 'igang' ? 'Det arbejder vi på lige nu.' : 'Idéer og ønsker til appen. Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i <a href="#/forslag">Forslagskassen</a>.'}</p>
        ${list.map(card).join('') || `<p class="muted">${S.rmTab === 'igang' ? 'Intet lige nu.' : 'Ingen punkter endnu.'}</p>`}`;
   app.innerHTML = `<div class="page roadmap">
-    <button class="back" onclick="location.hash='#/profil'">‹ Profil</button>
+    <button class="back" onclick="location.hash='#/profil'">‹ Min padel</button>
     <h1>🆕 Nyt og på vej</h1>
     <div class="tabbar">${tabs.map(([k, t]) => `<button class="tab ${k === S.rmTab ? 'on' : ''}" data-rmtab="${k}">${t}</button>`).join('')}</div>
     ${isSuper() && S.rmTab !== 'bygget' ? `<details class="card rmnew" ${S.rmNew ? 'open' : ''}><summary><b>＋ Nyt punkt</b></summary>${itemForm()}</details>` : ''}

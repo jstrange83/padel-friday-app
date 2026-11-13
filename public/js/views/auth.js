@@ -135,12 +135,12 @@ function renderKidLogin(ji) {
   <div class="auth authx">
     <div class="hero" aria-hidden="true">${court()}</div>
     <h1 class="word">Padel</h1>
-    ${typed ? `<p class="intro">Skriv den kode, du har fået af din forælder. Du finder den også under <b>Profil</b>, når du er logget ind.</p>
+    ${typed ? `<p class="intro">Skriv den kode, du har fået af din forælder. Du finder den også under <b>Min padel → ⚙️ Indstillinger</b>, når du er logget ind.</p>
       <form id="kidForm"><label>Din kode<input name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(fmtKidCode(saved || ''))}"></label>
       <button class="btn primary big" id="kidGo">🎾 Kom i gang</button></form>`
     : `<p class="intro">Hej ${first}! Tryk på knappen, så er du logget ind i <b>${esc(ji.name)}</b> på denne telefon. Du skal ikke bruge e-mail eller adgangskode.</p>
     <button class="btn primary big" id="kidGo">🎾 Kom i gang</button>`}
-    <p class="muted small center">Bliver du logget ud, så bed din forælder om koden under <b>Profil → Mine børn → Eget login</b>.</p>
+    <p class="muted small center">Bliver du logget ud, så bed din forælder om koden under <b>Min padel → Mine børn → Eget login</b>.</p>
     <p class="center"><button class="link sm" id="kidMail">${typed ? '‹ Tilbage til log ind' : 'Jeg har allerede et login med e-mail'}</button></p>
   </div>`;
   document.getElementById('kidMail').onclick = () => { if (ji) S.joinInfo = { ...ji, kind: 'barnmail' }; renderAuth('login'); };

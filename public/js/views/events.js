@@ -83,7 +83,7 @@ export async function viewEvents() {
     ${pendingCard()}
     ${pushPromptCard()}
     ${noticeCard()}
-    ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/profil">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
+    ${!S.viewAs && !phoneOf(S.me.id) ? '<a class="card warnbox phonetip" href="#/indstillinger">📱 Tilføj dit telefonnummer, så admin kan få fat i dig ›</a>' : ''}
     ${coming.length ? `<div class="evlist">${coming.map(card).join('')}</div>` : (canPlan()
       ? '<div class="card empty"><p>Der er ingen kommende spilledage endnu. Opret en, så kan spillerne tilmelde sig.</p><a class="btn primary" href="#/ny-fredag">+ Opret spilledag</a></div>'
       : '<p class="muted pad">Der er ingen kommende spilledage endnu. Så snart en admin opretter en, kan du tilmelde dig her.</p>')}

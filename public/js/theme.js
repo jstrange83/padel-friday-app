@@ -31,7 +31,7 @@ export function viewTheme() {
   const cur = S.realMe?.theme || '';
   app.innerHTML = `
   <div class="page">
-    <button class="back" onclick="location.hash='#/profil'">‹ Profil</button>
+    <button class="back" onclick="location.hash='#/indstillinger'">‹ Indstillinger</button>
     <h1>🎨 Udseende</h1>
     <p class="muted">Vælg de farver, du kan lide. Det gælder kun for dig, og det følger med, hvis du logger ind på en anden telefon.</p>
     ${[['Mørke', 0], ['Lyse', 1]].map(([h, light]) => `<h3>${h}</h3><div class="themes">${THEMES.filter((t) => !!t[5] === !!light && (!t[6] || isSuper() || t[0] === cur)).map(([k, name, bg, card, acc]) => `

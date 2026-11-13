@@ -13,7 +13,7 @@ section b{display:block}section p{margin:4px 0 0;color:var(--muted);font-size:15
 a{color:var(--accent)}footer{margin-top:28px;font-size:14px}
 </style></head><body><main>
 <header><img src="/icon-192.png" alt=""><div><h1>Nyt og på vej</h1><div class="muted">Padelklubben-appen</div></div></header>
-<p>Her kan du se, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet. Er du med i appen, kan du stemme på det, du gerne vil have, under <b>Profil → Nyt og på vej</b>.</p>
+<p>Her kan du se, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet. Er du med i appen, kan du stemme på det, du gerne vil have, under <b>Min padel → Nyt og på vej</b>.</p>
 <div id="list"><p class="muted">Henter…</p></div>
 <footer class="muted"><a href="/">Åbn Padelklubben</a> · <a href="/support">Hjælp og kontakt</a> · <a href="/privatliv">Privatliv</a></footer>
 </main>
@@ -26,6 +26,6 @@ const { data, error } = await sb.rpc('padel_roadmap_public_v2');
 if (error) { el.innerHTML = '<p class="muted">Listen kunne ikke hentes lige nu. Prøv igen om lidt.</p>'; }
 else {
   const part = (st, t, empty) => { const xs = data.filter((r) => r.status === st); return `<h2>${t}</h2>${xs.map((r) => `<section><b>${esc(r.title)}</b>${r.body ? `<p>${esc(r.body)}</p>` : ''}${r.votes && st !== 'bygget' ? `<span class="votes">👍 ${r.votes}</span>` : ''}</section>`).join('') || `<p class="muted">${empty}</p>`}`; };
-  el.innerHTML = part('igang', '🔨 I gang', 'Intet lige nu.') + part('plan', '💡 På tegnebrættet', 'Ingen punkter endnu.') + part('bygget', '✅ Senest bygget', 'Se nyhederne i appen under Profil → Nyt og på vej.');
+  el.innerHTML = part('igang', '🔨 I gang', 'Intet lige nu.') + part('plan', '💡 På tegnebrættet', 'Ingen punkter endnu.') + part('bygget', '✅ Senest bygget', 'Se nyhederne i appen under Min padel → Nyt og på vej.');
 }
 </script></body></html>

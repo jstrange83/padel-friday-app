@@ -388,6 +388,18 @@ try {
   await page.click('#nav a:has-text("Spilledage")');
   await wait(300);
   ok(await page.locator('.phonetip').count() === 0, 'påmindelse væk efter gemt nummer');
+  // Min padel: spillerkort med point, placering og tal
+  await page.click('#nav a:has-text("Min padel")');
+  await page.waitForSelector('.pcard .prank');
+  await page.waitForSelector('.mtiles');
+  ok((await page.locator('.pcard').innerText()).includes('point') && (await page.locator('.mtiles').innerText()).toLowerCase().includes('kampe'), 'Min padel viser spillerkort, placering og sæsonens tal');
+  await wait(1100);
+  await shot('min-padel');
+  await noOverflow('min padel');
+  await page.click('#toSettings');
+  await page.waitForSelector('.page.settings .editbox');
+  await shot('indstillinger');
+  await noOverflow('indstillinger');
 
   // FAQ-søgning
   await page.goto('http://localhost:8765/#/faq');
@@ -412,8 +424,9 @@ try {
     await wait(400);
     ok((await page.locator('#toast').innerText()).includes('tilmeldt'), 'se som: kan tilmelde spilleren');
   }
-  await page.click('#nav a:has-text("Profil")');
-  await page.waitForSelector('.me-card');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.click('#toSettings');
+  await page.waitForSelector('.page.settings .me-card');
   if (!(await page.locator('.editbox[open]').count())) await page.locator('.editbox summary').click();
   await page.fill('#pf input[name=phone]', '87654321');
   await page.click('#pf button.primary');
@@ -517,7 +530,8 @@ try {
   const lordag = await page.evaluate(() => localStorage.getItem('fp-group'));
 
   // Log ind som Brian: ser kun Lørdagspadel, kan kun vælge Helsinge
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.click('#toSettings');
   await page.click('#logout');
   await page.waitForSelector('#authForm');
   await page.fill('input[name=email]', 'brian@test');
@@ -536,7 +550,8 @@ try {
   await wait(500);
 
   // Test Anne bruger invitationslinket og venter på godkendelse
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.click('#toSettings');
   await page.click('#logout');
   await page.waitForSelector('#authForm');
   await page.goto('http://localhost:8765/#/velkommen/' + lordag);
@@ -547,9 +562,10 @@ try {
   await page.click('button[type=submit]');
   await wait(700);
   ok((await page.locator('#toast').innerText()).includes('bedt om at komme med') || (await text()).includes('lørdagspadel'), 'anmodning sendt');
-  await page.click('#nav a:has-text("Profil")').catch(() => {});
+  await page.click('#nav a:has-text("Min padel")').catch(() => {});
   await wait(300);
   ok((await page.locator('.gchip').allInnerTexts()).some((t) => t.includes('⏳')), 'profil viser ventende anmodning');
+  await page.click('#toSettings');
   await page.click('#logout');
 
   // Ny spiller opretter sig via linket, men bekræfter mailen i en anden browser (linket huskes på kontoen)
@@ -622,8 +638,9 @@ try {
   await ip.click('#skipInstall');
   await ip.waitForSelector('#nav a');
   ok(await ip.locator('.gate').count() === 0, 'iPhone: spring over virker');
-  await ip.click('#nav a:has-text("Profil")');
-  await ip.waitForSelector('.me-card');
+  await ip.click('#nav a:has-text("Min padel")');
+  await ip.click('#toSettings');
+  await ip.waitForSelector('.page.settings .me-card');
   ok(await ip.locator('#installRow').count() === 1, 'iPhone: hjemmeskærm ligger under Profil');
   await iphone.close();
 
@@ -637,12 +654,13 @@ try {
   await page.click('[data-pgroup="g-fre"]');
   await wait(300);
   ok(await page.locator('details.plist:not([open])').count() === 1, 'spillerlisten under Admin er foldet sammen');
-  ok(!(await page.locator('#nav').innerText()).includes('Bøder'), 'bødekassen er slået fra som standard');
   await page.waitForSelector('[data-tab="indstillinger"]'); await page.click('[data-tab="indstillinger"]'); await page.waitForSelector('#finesOn');
   await page.check('#finesOn');
   await wait(500);
-  ok((await page.locator('#nav').innerText()).includes('Bøder'), 'Bøder kommer i menuen, når den slås til');
-  await page.click('#nav a:has-text("Bøder")');
+  ok((await page.locator('#nav a:not(.navfoot)').count()) <= 4 && !(await page.locator('#nav').innerText()).includes('Bøder'), 'højst 4 punkter i bunden; bødekassen ligger på Min padel');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.waitForSelector('a.owe');
+  await page.click('a.owe');
   await page.waitForSelector('.page.fines');
   await page.locator('details.givebox summary').click();
   await page.fill('#fineWho', 'anders');
@@ -883,7 +901,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a');
   await wait(400);
   ok(!(await page.locator('#fbModal').count()), 'popup vises kun én gang');
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
   await page.click('#sugRow');
   await page.waitForSelector('#sugForm');
   await page.fill('#sugForm textarea', 'Bøder skulle kunne betales med kort');
@@ -907,7 +925,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(400);
   await shot('forslag-admin');
   await loginAs('test2@fredagspadel.test');
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
   await page.waitForSelector('#sugRow .badge.new');
   ok((await page.locator('#sugRow').innerText()).includes('Nyt svar'), 'spilleren ser "Nyt svar" ved Forslagskasse');
   await page.click('#sugRow');
@@ -917,7 +935,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
 
   // Redigeringstilstand for superadmin: slå til, ret en kamp, slet en bøde, slå fra
   await loginAs('jimmy@test');
-  await page.goto('http://localhost:8765/#/profil');
+  await page.goto('http://localhost:8765/#/indstillinger');
   await page.waitForSelector('#editMode');
   await page.click('#testAppRow'); ok(await page.locator('.qrmodal svg').count() === 1, 'superadmin kan vise QR til test-appen'); await page.click('.qrmodal button');
   ok(!(await page.locator('#editBar').count()), 'redigering er slået fra som standard');
@@ -984,7 +1002,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   // Slet bruger: spilleren sletter sig selv, kommer igen og genaktiverer med samme point
   const elo3 = await page.evaluate(() => JSON.parse(sessionStorage.getItem('mockdb')).padel_group_members.find((m) => m.player_id === 'u-3' && m.group_id === 'g-fre').elo);
   await loginAs('test3@fredagspadel.test');
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.click('#toSettings');
   await page.waitForSelector('#deleteMe');
   await page.click('#deleteMe');
   await page.waitForSelector('#authForm');
@@ -1098,7 +1117,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a');
   await wait(400);
   if (await page.locator('#fbModal').count()) await page.click('#fbLater');
-  ok((await page.locator('#nav a:has-text("Profil") .navbadge').innerText()) === '1', 'tal på Profil ved ny besked');
+  ok((await page.locator('#nav a:has-text("Min padel") .navbadge').innerText()) === '1', 'tal på Profil ved ny besked');
   await page.goto('http://localhost:8765/#/beskeder');
   await page.waitForSelector('.notices-page');
   ok((await page.locator('.nrow').first().innerText()).includes('Du har fået en plads'), 'beskeden står under Beskeder');
@@ -1108,7 +1127,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(!(await page.locator('#nav .navbadge').count()), 'tallet forsvinder, når beskeden er læst');
 
   // Udseende: vælg pink, det gemmes og huskes efter genindlæsning
-  await page.click('#nav a:has-text("Profil")');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.click('#toSettings');
   await page.click('a[href="#/udseende"]');
   await page.waitForSelector('.themes');
   await page.click('[data-theme-key="pink"]');
@@ -1198,7 +1218,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Nyt og på vej') && nm.includes('Ny Admin med rettigheder'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Min padel') && nm.includes('Indsæt en liste med tilmeldte'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1744,7 +1764,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.goto('http://localhost:8765/#/klub-ind');
   await page.waitForSelector('.page.club');
   ok((await text()).includes('din forælder, der melder ind') && !(await page.locator('#joinForm').count()), 'børn kan ikke melde andre ind');
-  await page.goto('http://localhost:8765/#/profil');
+  await page.goto('http://localhost:8765/#/indstillinger');
   await page.waitForSelector('.kidcodebox');
   const oscarCode = await page.evaluate(() => window.__mock.db().padel_club_kids.find((k) => k.name === 'Oscar Test').login_code);
   ok((await page.locator('.kidcodebox b').innerText()).replace(/-/g, '').toLowerCase() === oscarCode, 'barnet kan se sin kode til login på Profil');
@@ -2129,7 +2149,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('#nav a');
   await pastGates();
   await page.evaluate(() => localStorage.setItem('fp-group', 'g-fre'));
-  await page.goto('http://localhost:8765/#/profil');
+  await page.goto('http://localhost:8765/#/indstillinger');
   await page.reload();
   await page.waitForSelector('.modecard');
   ok((await page.locator('.modecard .seg label').count()) === 3, 'superadmin kan vælge Superadmin, Mine roller eller Bruger');

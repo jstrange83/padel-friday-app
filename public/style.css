@@ -1155,3 +1155,48 @@ html.inapp body { overscroll-behavior-y: contain; }
 }
 .lend .btn { min-width: 220px; }
 .lnext { margin: 14px 0 0 !important; } .lnext a { color: var(--accent); }
+
+/* Min padel: spillerkort, tal der tæller op, mål og makkere */
+.mphead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mphead .tools { display: flex; gap: 6px; }
+.mphead .icon { font-size: 22px; position: relative; padding: 6px; }
+.pcard { position: relative; display: grid !important; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; overflow: hidden;
+  background: linear-gradient(135deg, var(--card2), var(--card)) !important; border: 1px solid var(--line); }
+.pcard::after { content: ''; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; border-radius: 50%; background: var(--accent); opacity: .08; pointer-events: none; }
+.pcard .pname { font-size: 20px; display: block; }
+.pcard .pts { text-align: right; color: var(--accent); }
+.pcard .pts b { font-size: 34px; line-height: 1; display: block; font-variant-numeric: tabular-nums; }
+.pcard .pts small { color: var(--muted); }
+.pcard .spark { width: 96px; height: 30px; display: block; margin-top: 4px; }
+.pcard .prank { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.pcard .prank b { font-size: 22px; } .pcard .prank small { color: var(--muted); }
+.pcard .prank::after { content: 'på ranglisten ›'; color: var(--muted); font-size: 13px; margin-left: auto; }
+.pcard.loading .grow::after { content: ''; display: block; height: 12px; width: 60%; margin-top: 8px; border-radius: 6px; background: var(--line); animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: .4; } }
+.pform { display: flex; gap: 4px; align-items: center; margin: 6px 0 4px; flex-wrap: wrap; }
+.pform i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); }
+.pform i.w { background: var(--up); } .pform i.l { background: var(--dn); }
+.pform .streak { font-size: 13px; font-weight: 700; margin-left: 6px; }
+.mtiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.mtiles > div { background: var(--card); border-radius: 14px; padding: 12px 6px; text-align: center; }
+.mtiles b { display: block; font-size: 24px; font-variant-numeric: tabular-nums; }
+.mtiles span { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.mtiles .up { color: var(--up); } .mtiles .dn { color: var(--dn); }
+.goal .ghead { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+.goal .ghead small { color: var(--muted); }
+.goal .bar { height: 10px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+.goal .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width 1s cubic-bezier(.2,.8,.2,1); }
+.goal .bar.go i { width: var(--w); }
+.duos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.duos .duo { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.duo small { color: var(--muted); } .duo b { font-size: 17px; } .duo span { font-size: 13px; color: var(--muted); }
+.duo em { font-style: normal; font-weight: 700; } .duo em.up { color: var(--up); } .duo em.dn { color: var(--dn); }
+.duos:has(> :only-child) { grid-template-columns: 1fr; }
+.owe { display: flex; align-items: center; gap: 12px; }
+.owe > span { font-size: 26px; } .owe small { display: block; color: var(--muted); }
+.owe .amt { color: var(--warn); } .owe.ok .amt { color: var(--muted); }
+.eggs { font-size: 15px; }
+.allstats { margin-top: 14px; }
+@media (max-width: 359px) { .mtiles { grid-template-columns: repeat(2, 1fr); } .pcard .pts b { font-size: 28px; } }
+@media (prefers-reduced-motion: reduce) { .goal .bar i { transition: none; } }
+.settings .me-card .pname { display: block; font-size: 18px; margin-bottom: 2px; }

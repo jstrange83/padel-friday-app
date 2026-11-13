@@ -199,12 +199,12 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg ændre appens farver?',
-    a: `<p>Ja, under <b>Profil → 🎨 Udseende</b>. Der er mørke farver (fx Pink, Hav, Lilla, Skov, Rubin og Sort og guld) og lyse farver (Lys, Lyserød, Himmelblå, Mint, Sand og Lavendel). Det gælder kun for dig og følger med på alle dine telefoner.</p>`,
+    a: `<p>Ja, under <b>Min padel → 🎨 Udseende</b>. Der er mørke farver (fx Pink, Hav, Lilla, Skov, Rubin og Sort og guld) og lyse farver (Lys, Lyserød, Himmelblå, Mint, Sand og Lavendel). Det gælder kun for dig og følger med på alle dine telefoner.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg få notifikationer på telefonen?',
-    a: `<p>Ja. Tryk på <b>🔔</b> på Spilledage (eller <b>Profil → Beskeder og notifikationer</b>) og slå <b>Notifikationer på denne enhed</b> til.</p>
+    a: `<p>Ja. Tryk på <b>🔔</b> på Spilledage (eller <b>Min padel → Beskeder og notifikationer</b>) og slå <b>Notifikationer på denne enhed</b> til.</p>
 <p>Du får fx besked, når du får en plads fra ventelisten. Admins får besked, når nogen vil være med i gruppen. Alle beskeder står også under 🔔 i appen.</p>
 <p>Bruger du <b>Padelklubben-appen fra Google Play</b>, spørger telefonen, om appen må sende notifikationer. Sig ja. Har du sagt nej, kan det ændres under telefonens <b>Indstillinger → Apps → Padelklubben → Notifikationer</b>.</p>
 <p>Bruger du appen i browseren på iPhone, skal den være lagt på hjemmeskærmen først (Del → Føj til hjemmeskærm), og så skal den åbnes derfra.</p>
@@ -213,7 +213,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg slette min profil?',
-    a: `<p>Ja, under <b>Profil → 🗑 Slet min profil</b>. Du forsvinder fra grupperne og ranglisten.</p>
+    a: `<p>Ja, under <b>Min padel → ⚙️ Indstillinger → Slet min profil</b>. Du forsvinder fra grupperne og ranglisten.</p>
 <p>Dine kampe og point gemmes. Kommer du igen med samme mail (du logger bare ind) eller samme telefonnummer, får du de samme point, som da du gik. En admin skal godkende dig i gruppen igen.</p>
 <p>Admin kan også slette en spiller. En gruppeadmin kan kun slette spillere, der ikke er med i andre grupper; ellers fjerner han dem fra sin egen gruppe.</p>`,
   },
@@ -223,9 +223,15 @@ export const FAQ = [
     a: `<p>Når en spiller har brugt invitationslinket, står der et rødt tal ved <b>Admin</b> i menuen, og øverst på <b>Spilledage</b> kommer kortet <b>✋ Vil gerne være med</b>. Tryk <b>Godkend</b> eller <b>Afvis</b> direkte der. Der sendes ingen mails.</p>`,
   },
   {
+    cat: 'Point og rangliste',
+    q: 'Hvor kan jeg se mine point og min statistik?',
+    a: `<p>Tryk <b>👤 Min padel</b> i bunden. Øverst står dit spillerkort med point, placering, form (de seneste kampe) og stime. Derunder sæsonens tal, dit næste mål, din bedste makker, din nemesis og dine seneste kampe.</p>
+<p>Tryk <b>📊 Al statistik og grafer</b> for at se pointkurven, alle makkere og modstandere og sammenligne dig med en anden spiller. Dine indstillinger ligger bag ⚙️ øverst.</p>`,
+  },
+  {
     cat: 'Tilmelding og konto',
     q: 'Hvor sender jeg et forslag til appen?',
-    a: `<p>Under <b>Profil → 💡 Forslagskasse</b>. Skriv dit forslag og tryk <b>Send</b>. Kun den, der står for appen, kan læse det, og svaret kommer i appen (ikke på mail). Når der er et nyt svar, står der <b>Nyt svar</b> ved Forslagskasse.</p>
+    a: `<p>Under <b>Min padel → 💡 Forslagskasse</b>. Skriv dit forslag og tryk <b>Send</b>. Kun den, der står for appen, kan læse det, og svaret kommer i appen (ikke på mail). Når der er et nyt svar, står der <b>Nyt svar</b> ved Forslagskasse.</p>
 <p>Når du har spillet et vist antal kampe, eller i en klub når dit barn har været til et antal træninger (eller du har været med i 3 uger), spørger appen også én gang, om du har et forslag.</p>`,
   },
   {
@@ -401,14 +407,14 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Hvordan melder jeg mit barn ind?',
     a: `<p>Åbn klubbens invitationslink (eller scan QR-koden fra træneren), opret dig som forælder, og udfyld barnets navn og fødselsår. Har du flere børn, trykker du <b>Tilføj et barn mere</b>.</p>
-<p>En træner godkender indmeldelsen og sætter barnet på et hold. Du får besked i appen. Senere kan du melde flere børn ind under <b>Profil → Mine børn</b>.</p>
+<p>En træner godkender indmeldelsen og sætter barnet på et hold. Du får besked i appen. Senere kan du melde flere børn ind under <b>Min padel → Mine børn</b>.</p>
 <p>Man kan kun melde et barn ind i en klub via klubbens eget link, eller når man selv er med i klubben. Har du ikke linket, så spørg klubben eller træneren.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
     q: 'Kan voksne også melde sig ind i en klub?',
     a: `<p>Ja, hvis klubben også er for voksne. Åbn klubbens link, opret dig, og vælg <b>Mig selv</b> på indmeldelsen. Navnet tages fra din profil, og du udfylder fødselsdato, køn, billeder og evt. hvad trænerne skal vide. I en klub for både børn og voksne kan du også vælge <b>Et barn</b> og melde dine børn ind samme sted.</p>
-<p>En træner godkender dig og sætter dig på et hold. Bagefter svarer du selv <b>✓ Kommer</b> eller <b>Afbud</b> under Træning, ligesom forældre gør for deres børn. Dine oplysninger retter du under <b>Profil → Mit medlemskab</b>.</p>
+<p>En træner godkender dig og sætter dig på et hold. Bagefter svarer du selv <b>✓ Kommer</b> eller <b>Afbud</b> under Træning, ligesom forældre gør for deres børn. Dine oplysninger retter du under <b>Min padel → Mit medlemskab</b>.</p>
 <p>Klubbens admin vælger under <b>Admin → ⚙️ Indstillinger → Klubbens indstillinger</b>, om klubben er for børn, voksne eller begge dele.</p>`,
   },
   {
@@ -421,8 +427,8 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Kan mit barn få sit eget login? Og den anden forælder eller bedsteforældre?',
-    a: `<p>Ja. Under <b>Profil → Mine børn</b> trykker du på barnet:</p>
-<ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon. Barnet trykker <b>Kom i gang</b> og er logget ind. Der skal ikke bruges e-mail eller adgangskode. Koden står også som tekst, så den kan skrives ind under <b>Barn uden e-mail? Log ind med din kode</b> (fx når appen er lagt på hjemmeskærmen på en iPhone). Barnet kan se sin kode under Profil. Trykker du <b>Nyt login</b>, laves en ny kode, og den gamle holder op med at virke. Børn kan ikke selv melde andre ind.</li>
+    a: `<p>Ja. Under <b>Min padel → Mine børn</b> trykker du på barnet:</p>
+<ul><li><b>📱 Eget login</b> viser en QR-kode, som barnet scanner med sin telefon. Barnet trykker <b>Kom i gang</b> og er logget ind. Der skal ikke bruges e-mail eller adgangskode. Koden står også som tekst, så den kan skrives ind under <b>Barn uden e-mail? Log ind med din kode</b> (fx når appen er lagt på hjemmeskærmen på en iPhone). Barnet kan se sin kode under Min padel → ⚙️ Indstillinger. Trykker du <b>Nyt login</b>, laves en ny kode, og den gamle holder op med at virke. Børn kan ikke selv melde andre ind.</li>
 <li><b>👪 Familie</b> sender et link til den anden forælder, bedsteforældre eller andre, der henter og bringer. De får samme adgang som dig: de kan se træninger, give afbud og får påmindelser. Linket virker én gang, så tryk igen for hver person.</li></ul>
 <p>Under barnet kan du se, hvem der har adgang, og fjerne en person med ✕. Er forældrene skilt, kan begge forældre have adgang, så den, der har barnet, selv kan give afbud. Under <b>🔔 Påmindelser</b> ved barnet kan hver forælder vælge kun at få påmindelser i <b>lige uger</b>, <b>ulige uger</b> eller på <b>bestemte dage</b> (fx 7/7, 9/5 eller weekender). Man kan stadig altid se træningerne og give afbud. Har ingen i familien valgt en dag, får alle påmindelsen.</p>`,
   },
@@ -450,7 +456,7 @@ export const FAQ = [
     cat: 'Juniorklub', club: true,
     q: 'Kan jeg ønske et bestemt hold?',
     a: `<p>Ja. Ved indmeldelsen kan du vælge <b>Ønsket hold</b>. Holdene står med dag og tidspunkt, så du kan vælge det, der passer bedst. Træneren ser ønsket og bestemmer.</p>
-<p>Er barnet allerede på et hold, kan du under <b>Profil → Mine børn</b> trykke på barnet og vælge <b>Ønsk et andet hold</b>. Trænerne får besked og kan flytte barnet eller afvise ønsket. Ønsket forsvinder, når barnet er flyttet.</p>`,
+<p>Er barnet allerede på et hold, kan du under <b>Min padel → Mine børn</b> trykke på barnet og vælge <b>Ønsk et andet hold</b>. Trænerne får besked og kan flytte barnet eller afvise ønsket. Ønsket forsvinder, når barnet er flyttet.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
@@ -468,13 +474,13 @@ export const FAQ = [
     a: `<ul><li><b>Admin</b> styrer klubbens indstillinger, kontingent, hold, trænere og kasserer og ser alle børn.</li>
 <li><b>Træner</b> styrer sine egne hold.</li>
 <li><b>Kasserer</b> ser og bekræfter kontingent, sender påmindelser og henter en liste til regnskabet (Admin → Kontingent). Der er også et overblik med beløb, lagkage, pr. hold og indbetalinger over tid.</li>
-<li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Profil → Mine børn.</li></ul>
-<p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → ⚙️ Indstillinger → Bestyrelse og børneattest). Læs mere om, hvad der gemmes, under Profil → Privatliv.</p>`,
+<li><b>Forældre</b> ser kun deres egne børn, giver afbud og retter barnets oplysninger under Min padel → Mine børn.</li></ul>
+<p>Admin registrerer også, hvornår der er indhentet børneattest på trænerne (Admin → ⚙️ Indstillinger → Bestyrelse og børneattest). Læs mere om, hvad der gemmes, under Min padel → ⚙️ Indstillinger → Privatliv.</p>`,
   },
   {
     cat: 'Juniorklub', club: true,
     q: 'Kan jeg få træningerne i min kalender?',
-    a: `<p>Ja. Tryk <b>📅 Få træningerne i din kalender</b> nederst under Træning (eller under Profil). Vælg iPhone/Outlook eller Google Kalender. Så kommer træningerne i telefonens kalender og opdateres selv, hvis en tid ændres eller en træning aflyses.</p>
+    a: `<p>Ja. Tryk <b>📅 Få træningerne i din kalender</b> nederst under Træning (eller under Min padel). Vælg iPhone/Outlook eller Google Kalender. Så kommer træningerne i telefonens kalender og opdateres selv, hvis en tid ændres eller en træning aflyses.</p>
 <p>Linket er personligt. Har du delt det ved en fejl, kan du lave et nyt samme sted.</p>`,
   },
   {
@@ -517,7 +523,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan skriver jeg til trænerne eller bestyrelsen?',
-    a: `<p>Gå til <b>Profil → Skriv til klubben</b> (eller tryk <b>✉️ Skriv til trænerne</b> på Træning). Vælg om beskeden er til <b>trænerne</b>, <b>bestyrelsen</b>, <b>kassereren</b> eller <b>klubbens admin</b>, og hvilket barn det drejer sig om.</p>
+    a: `<p>Gå til <b>Min padel → Skriv til klubben</b> (eller tryk <b>✉️ Skriv til trænerne</b> på Træning). Vælg om beskeden er til <b>trænerne</b>, <b>bestyrelsen</b>, <b>kassereren</b> eller <b>klubbens admin</b>, og hvilket barn det drejer sig om.</p>
 <p>Svarene kommer samme sted, og du får en notifikation. Barnets anden forælder kan også læse med.</p>`,
   },
   {
@@ -554,7 +560,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Hvordan svarer jeg som træner eller bestyrelse på beskeder?',
-    a: `<p>Beskeder til dig står under <b>Profil → Samtaler med medlemmer</b>, og du får en notifikation. Trænere får kun beskeder om børn på deres egne hold.</p>
+    a: `<p>Beskeder til dig står under <b>Min padel → Samtaler med medlemmer</b>, og du får en notifikation. Trænere får kun beskeder om børn på deres egne hold.</p>
 <p>Når sagen er klaret, kan du trykke <b>✓ Løst</b>. Skriver nogen igen, åbner samtalen igen. Under <b>Admin → Børn</b> kan du også trykke <b>✉️ Skriv til forældrene</b> ud for et barn.</p>`,
   },
   {
@@ -566,7 +572,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang', group: true,
     q: 'Hvordan skriver jeg til gruppens admin?',
-    a: `<p>Gå til <b>Profil → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
+    a: `<p>Gå til <b>Min padel → Skriv til admin</b>, og skriv din besked. Alle gruppens admins kan se den og svare. Svaret kommer samme sted, og du får en notifikation.</p>
 <p>Beskederne kan kun læses af dem, der er med i samtalen.</p>`,
   },
   {
@@ -584,7 +590,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Hvad kommer der i appen?',
-    a: `<p>Se under <b>Profil → Nyt og på vej</b>. Der står, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet. Tryk 👍 ved det, du gerne vil have.</p>
+    a: `<p>Se under <b>Min padel → Nyt og på vej</b>. Der står, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet. Tryk 👍 ved det, du gerne vil have.</p>
 <p>Listen kan også ses uden login på <a href="/nyt" target="_blank" rel="noopener">padelklubben.dk/nyt</a>. Har du en idé, så skriv den i <a href="#/forslag">Forslagskassen</a>.</p>`,
   },
   {
@@ -607,7 +613,7 @@ export const FAQ = [
   {
     cat: 'Roller og adgang',
     q: 'Kan jeg se appen som almindelig bruger, selvom jeg er admin?',
-    a: `<p>Ja. Under <b>Profil → Visning</b> kan du vælge <b>Bruger</b>, så ser du appen som en almindelig spiller. Superadmin kan også vælge <b>Mine roller</b>, så ser man kun de grupper og klubber, man selv er med i, med den rolle man har dér.</p>
+    a: `<p>Ja. Under <b>Min padel → ⚙️ Indstillinger → Visning</b> kan du vælge <b>Bruger</b>, så ser du appen som en almindelig spiller. Superadmin kan også vælge <b>Mine roller</b>, så ser man kun de grupper og klubber, man selv er med i, med den rolle man har dér.</p>
 <p>Så længe du ikke ser appen med alle dine rettigheder, står der en bjælke øverst med en knap, som skifter tilbage.</p>`,
   },
 ];

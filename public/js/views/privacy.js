@@ -47,9 +47,9 @@ export function viewPrivacy() {
 
     <div class="card"><h3>Ret og slet</h3>
       <ul>
-        <li>Du kan selv rette dine oplysninger under Profil, og forældre kan rette deres barns oplysninger under Profil → Mine børn.</li>
-        <li>Du kan slette din profil under Profil → Slet min profil, eller skrive til kontakt@padelklubben.dk. Dine kampe og point gemmes, så ranglisten passer, men du forsvinder fra grupperne.</li>
-        <li>Et barn meldes ud under Profil → Mine børn. Vil du have barnets oplysninger helt slettet, så bed klubbens admin om det.</li>
+        <li>Du kan selv rette dine oplysninger under Min padel → ⚙️ Indstillinger, og forældre kan rette deres barns oplysninger under Min padel → Mine børn.</li>
+        <li>Du kan slette din profil under Min padel → ⚙️ Indstillinger → Slet min profil, eller skrive til kontakt@padelklubben.dk. Dine kampe og point gemmes, så ranglisten passer, men du forsvinder fra grupperne.</li>
+        <li>Et barn meldes ud under Min padel → Mine børn. Vil du have barnets oplysninger helt slettet, så bed klubbens admin om det.</li>
         <li>Du har ret til at få at vide, hvad der er gemt om dig, og til at klage til Datatilsynet (datatilsynet.dk).</li>
       </ul></div>
   </div>`;

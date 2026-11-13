@@ -10,7 +10,7 @@ export async function viewSuggest() {
   const mine = await q(sb.from('padel_suggestions').select('*').eq('player_id', S.me.id).order('created_at', { ascending: false }));
   app.innerHTML = `
   <div class="page suggest">
-    <button class="back" onclick="location.hash='#/profil'">‹ Profil</button>
+    <button class="back" onclick="location.hash='#/profil'">‹ Min padel</button>
     <h1>💡 Forslagskasse</h1>
     <p class="muted">Har du en idé til appen, eller er der noget, der driller? Skriv det her. Kun den, der står for appen, kan læse det, og du får svar her i appen.</p>
     ${S.viewAs ? '<div class="card warnbox">Du ser appen som en anden spiller. Forslag sendes i dit eget navn.</div>' : ''}
@@ -63,7 +63,7 @@ export async function maybeAskFeedback() {
   document.body.appendChild(wrap);
   const close = () => wrap.remove();
   const f = wrap.querySelector('#fbForm');
-  wrap.querySelector('#fbLater').onclick = async () => { close(); try { await q(sb.rpc('padel_feedback_asked')); } catch {} toast('Du kan altid skrive under Profil → Forslagskasse'); };
+  wrap.querySelector('#fbLater').onclick = async () => { close(); try { await q(sb.rpc('padel_feedback_asked')); } catch {} toast('Du kan altid skrive under Min padel → Forslagskasse'); };
   f.onsubmit = async (e) => {
     e.preventDefault();
     if (!f.text.value.trim()) return toast('Skriv dit forslag, eller tryk Ikke nu', true);
@@ -108,7 +108,7 @@ export function bindSuggestTab(refresh) {
   app.querySelectorAll('[data-sug2rm]').forEach((b) => (b.onclick = async () => {
     const x = (S.suggestions || []).find((y) => y.id === b.dataset.sug2rm);
     busy(b, true);
-    try { await suggestionToRoadmap(x.text); toast('Sat på listen "På vej" som skjult. Ret og vis det under Profil → Nyt og på vej'); b.textContent = '✓ På listen'; } catch { busy(b, false); }
+    try { await suggestionToRoadmap(x.text); toast('Sat på listen "På vej" som skjult. Ret og vis det under Min padel → Nyt og på vej'); b.textContent = '✓ På listen'; } catch { busy(b, false); }
   }));
   app.querySelectorAll('form[data-sug]').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();

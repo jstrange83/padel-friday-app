@@ -5,12 +5,16 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-13', date: '13. november 2026', title: 'Min padel',
+    items: ['👤 <b>Profil</b> hedder nu <b>Min padel</b> og viser dit spillerkort: point, placering, form og stime, sæsonens tal, dit næste mål, din bedste makker og din nemesis.', '⚙️ Indstillingerne (navn, telefon, notifikationer, udseende m.m.) ligger bag tandhjulet øverst på Min padel.', '💸 Bødekassen ligger nu på Min padel, så der højst er 4 knapper i bunden.'],
+  },
+  {
     id: '2026-11-12e', date: '12. november 2026', admin: true, groups: true, title: 'Indsæt en liste med tilmeldte',
     items: ['📋 På en spilledag kan du nu trykke <b>Indsæt en liste</b> og sætte navne, mails eller telefonnumre ind, fx fra MATCHi, Excel eller en besked. Alle, appen kender, bliver tilmeldt med det samme, og du får at vide, hvem den ikke kender.'],
   },
   {
     id: '2026-11-12d', date: '12. november 2026', title: 'Nyt og på vej',
-    items: ['🆕 Under <b>Profil → Nyt og på vej</b> kan du nu se, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet.', '👍 Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i Forslagskassen.'],
+    items: ['🆕 Under <b>Min padel → Nyt og på vej</b> kan du nu se, hvad der er bygget, hvad vi arbejder på lige nu, og hvad der er på tegnebrættet.', '👍 Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i Forslagskassen.'],
   },
   {
     id: '2026-11-12c', date: '12. november 2026', admin: true, title: 'Ny Admin med rettigheder',
@@ -38,7 +42,7 @@ export const NEWS = [
   },
   {
     id: '2026-11-10b', date: '10. november 2026', club: true, title: 'Familie og børns eget login',
-    items: ['👪 Under <b>Profil → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.', '🔔 Skilte forældre (fx 7/7): hver forælder kan vælge kun at få påmindelser i sine egne uger eller dage, under <b>🔔 Påmindelser</b> ved barnet.'],
+    items: ['👪 Under <b>Min padel → Mine børn</b> hedder knappen nu <b>Familie</b>. Send linket til den anden forælder, bedsteforældre eller andre, der henter og bringer. Du kan se, hvem der har adgang, og fjerne nogen igen.', '📱 Børn kan nu få <b>eget login uden e-mail</b>. Tryk <b>Eget login</b>, lad barnet scanne koden og trykke <b>Kom i gang</b>.', '🔔 Skilte forældre (fx 7/7): hver forælder kan vælge kun at få påmindelser i sine egne uger eller dage, under <b>🔔 Påmindelser</b> ved barnet.'],
   },
   {
     id: '2026-11-10', date: '10. november 2026', admin: true, title: 'Grafer på fremmøde og kontingent',
@@ -46,7 +50,7 @@ export const NEWS = [
   },
   {
     id: '2026-11-07', date: '7. november 2026', title: 'Vælg dine egne farver',
-    items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du vælge en af de lyse: <b>Lys, Lyserød, Himmelblå, Mint, Sand eller Lavendel</b>. Der er også flere mørke, fx Pink, Hav, Skov og Rubin. Du finder det under <b>Profil → Udseende</b>.'],
+    items: ['🎨 Husk, at du selv kan vælge, hvordan appen ser ud. Synes du, den er for mørk, kan du vælge en af de lyse: <b>Lys, Lyserød, Himmelblå, Mint, Sand eller Lavendel</b>. Der er også flere mørke, fx Pink, Hav, Skov og Rubin. Du finder det under <b>Min padel → ⚙️ Indstillinger → Udseende</b>.'],
     link: ['🎨 Vælg farver', '#/udseende'],
   },
   {
@@ -71,11 +75,11 @@ export const NEWS = [
   },
   {
     id: '2026-10-26', date: '26. oktober 2026', groups: true, title: 'Skriv til admin',
-    items: ['💬 Under <b>Profil → Skriv til admin</b> kan du nu sende en besked til gruppens admin. Svaret kommer samme sted, og du får en notifikation.'],
+    items: ['💬 Under <b>Min padel → Skriv til admin</b> kan du nu sende en besked til gruppens admin. Svaret kommer samme sted, og du får en notifikation.'],
   },
   {
     id: '2026-10-25c', date: '25. oktober 2026', admin: true, title: 'Se appen som almindelig bruger',
-    items: ['👁 Under <b>Profil → Visning</b> kan du nu vælge at se appen som en almindelig spiller. Så kan du se, hvordan den ser ud for de andre. En bjælke øverst fører dig tilbage.'],
+    items: ['👁 Under <b>Min padel → ⚙️ Indstillinger → Visning</b> kan du nu vælge at se appen som en almindelig spiller. Så kan du se, hvordan den ser ud for de andre. En bjælke øverst fører dig tilbage.'],
   },
   {
     id: '2026-10-25a', date: '25. oktober 2026', admin: true, title: 'Nyt for admins',
@@ -91,9 +95,9 @@ export const NEWS = [
     items: [
       '🎾 <b>Tast resultatet direkte på din kamp</b>. Ingen skal starte runderne, så hver bane kan spille i sit eget tempo.',
       '🔢 Runderne vælges med knapperne <b>1–6</b>, og <b>Din næste kamp</b> står øverst på spilledagen.',
-      '🔔 <b>Notifikationer</b>: få besked, når du får en plads fra ventelisten. Slå til under Profil → Beskeder.',
+      '🔔 <b>Notifikationer</b>: få besked, når du får en plads fra ventelisten. Slå til under Min padel → Beskeder.',
       '🏆 <b>Én fælles rangliste</b> for alle grupper, med samme point uanset hvor du spiller.',
-      '🎨 Vælg dine egne farver under <b>Profil → Udseende</b> (fx pink).',
+      '🎨 Vælg dine egne farver under <b>Min padel → ⚙️ Indstillinger → Udseende</b> (fx pink).',
       '💡 Har du en idé? Skriv den i <b>Forslagskassen</b> under Profil.',
       '💻 Appen virker nu også fint på computeren.',
     ],
@@ -147,10 +151,10 @@ export function maybeShowNews() {
   return true;
 }
 
-// Siden med alle nyheder (Profil → Nyt i appen)
+// Siden med alle nyheder (Min padel → Nyt i appen)
 export function viewNews(app) {
   app.innerHTML = `<div class="page">
-    <button class="back" onclick="location.hash='#/profil'">‹ Profil</button>
+    <button class="back" onclick="location.hash='#/profil'">‹ Min padel</button>
     <h1>🆕 Nyt i appen</h1>
     ${forMe().map((n) => `<div class="card">${entry(n)}</div>`).join('') || '<p class="muted">Ingen nyheder endnu.</p>'}
   </div>`;

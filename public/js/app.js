@@ -4,7 +4,7 @@ import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, vi
 import { viewPrivacy } from './views/privacy.js';
 import { viewThreads, viewThread, viewCompose } from './views/messages.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
-import { renderProfile } from './views/profile.js';
+import { renderProfile, renderSettings } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
 import { viewEvents, viewEventForm, askOpenSpots } from './views/events.js';
 import { viewEvent } from './views/event.js';
@@ -199,13 +199,12 @@ function renderNav() {
   const items = [['#/fredage', '🎾', 'Spilledage']];
   // Gruppens admin kan vælge ingen rangliste; så er den skjult for spillerne
   if (group()?.ranking_mode !== 'ingen' || isAdmin()) items.push(['#/rangliste', '🏆', 'Rangliste']);
-  // Bødekassen vises kun i grupper, hvor admin har slået den til
-  if (group()?.fines_enabled) items.push(['#/boeder', '💸', 'Bøder']);
-  items.push(['#/profil', '👤', 'Profil']);
+  // Højst 4 punkter i bunden: Bøder ligger nu på Min padel
+  items.push(['#/profil', '👤', 'Min padel']);
   if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/indstillinger') || cur.startsWith('#/boeder') || cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
@@ -215,11 +214,11 @@ function renderNav() {
 function renderClubNav() {
   const cur = location.hash || '#/traening';
   const pend = S.viewAs ? 0 : (S.clubPending || 0) + pendingForMe().length + (S.notices?.length || 0);
-  const items = [['#/traening', '🎾', 'Træning'], ['#/opslag', '📣', 'Opslag'], ['#/profil', '👤', 'Profil']];
+  const items = [['#/traening', '🎾', 'Træning'], ['#/opslag', '📣', 'Opslag'], ['#/profil', '👤', 'Min padel']];
   if (canRun() || hasAnyRight() || pend || anyRight()) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
-    (h === '#/profil' && /^#\/(faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
+    (h === '#/profil' && /^#\/(indstillinger|faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
 }
 
@@ -270,6 +269,7 @@ const ROUTES = {
   rangliste: () => viewRanking(),
   spiller: (id) => viewPlayer(id),
   profil: () => renderProfile(false),
+  indstillinger: () => renderSettings(),
   faq: () => viewFaq(),
   boeder: () => viewFines(),
   forslag: () => viewSuggest(),
@@ -294,7 +294,7 @@ async function route() {
   window.scrollTo(0, 0);
   let [, page, id] = (location.hash || '#/fredage').split('?')[0].split('/');
   renderNav();
-  if (!S.groupId && !['profil', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern', 'samtaler', 'samtale'].includes(page)) return viewNoGroup();
+  if (!S.groupId && !['profil', 'indstillinger', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern', 'samtaler', 'samtale'].includes(page)) return viewNoGroup();
   if (isClub() && (!page || NOT_IN_CLUB.includes(page))) page = 'traening';
   try { await (ROUTES[page] || ROUTES.fredage)(id); } catch (e) { console.error(e); }
   renderNav();
