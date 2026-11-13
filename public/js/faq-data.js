@@ -258,6 +258,7 @@ export const FAQ = [
     q: 'Hvordan sender vi et nyhedsbrev?',
     a: `<p>Gå til <b>Admin → 📰 Nyhedsbrev</b> og tryk <b>Skriv et nyt nyhedsbrev</b>. Skriv en overskrift (den bliver også emnet på mailen), en indledning og et eller flere afsnit. Hvert afsnit kan få en knap med et link, fx til en tilmelding. Ved siden af (på telefonen nedenunder) ser du, hvordan mailen kommer til at se ud.</p>
 <p>Tryk <b>Send en test til mig</b> for at se mailen i din egen indbakke, og <b>Send</b>, når den er klar. Du kan også gemme som kladde og skrive videre senere. Mailen får gruppens eller klubbens farve, og svarer nogen på den, går svaret til den mail, der er sat op under Påmindelser på mail.</p>
+<p>Tryk <b>✨ Lad AI læse den igennem</b>, så retter AI stavefejl, foreslår bedre formuleringer og stiller mailen pænt op med afsnit, overskrifter og punktlister. Du ser forslaget først, og intet bliver ændret, før du trykker <b>Brug forslaget</b>. Du kan også fortryde bagefter. AI finder ikke på nye datoer, priser eller links, men læs det altid igennem før du sender. Skriver du linjer, der starter med en bindestreg, bliver de til en punktliste.</p>
 <p>Admin kan altid sende nyhedsbreve. Andre kan få lov med fluebenet <b>📰 Nyhedsbrev</b> under <b>Admin → 🔑 Rettigheder</b>.</p>`,
   },
   {

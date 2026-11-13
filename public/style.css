@@ -1245,3 +1245,18 @@ html.inapp body { overscroll-behavior-y: contain; }
 #nf .daterow .link { margin-bottom: 14px; white-space: nowrap; }
 #nf #addDate { margin: 2px 0 4px; }
 #nf .moretip { display: block; margin-bottom: 12px; }
+.nlmail ul { margin: 0 0 12px; padding-left: 20px; }
+.nlmail li { margin: 0 0 6px; line-height: 1.55; font-size: 15px; color: #2b2a3d; }
+.nlmail li::marker { color: var(--c); }
+.nlai { border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.nlai-top { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 10px; }
+.nlai-top small { display: block; margin-top: 2px; }
+.nlai-ic { font-size: 26px; line-height: 1; }
+.nlai #nlAi { width: 100%; }
+.nlai #nlUndo { display: block; margin: 10px auto 0; }
+.modal-card.nlaicard { max-width: 640px; max-height: calc(100vh - 32px); overflow: auto; }
+.nlchanges { margin: 4px 0 12px; padding-left: 20px; }
+.nlchanges li { margin: 2px 0; }
+.nlaiprev { margin: 0 -6px 8px; }
+.nlaicard .mact .btn { flex: 1 1 0; }
+.nlmail h1, .nlmail h2 { text-align: left; }

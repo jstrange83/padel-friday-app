@@ -15,9 +15,17 @@ const okUrl = (u: unknown) => typeof u === "string" && /^https?:\/\/[^\s"'<>]+$/
 const hex = (c: unknown) => (typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c) ? c : "#5b3ee6");
 // Lys eller mørk tekst på farven
 const ink = (c: string) => { const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? "#14112b" : "#ffffff"; };
-// Tekst: afsnit ved tomme linjer, linjeskift bevares, links bliver klikbare
-const para = (t: unknown, color: string) => String(t ?? "").trim().split(/\n\s*\n/).filter(Boolean).map((p) =>
-  `<p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#2b2a3d">${esc(p).replace(/\n/g, "<br>").replace(/(https?:\/\/[^\s<]+)/g, `<a href="$1" style="color:${color};font-weight:bold">$1</a>`)}</p>`).join("");
+// Tekst: afsnit ved tomme linjer, linjeskift bevares, links bliver klikbare, linjer med "- " bliver en punktliste
+const link = (h: string, color: string) => h.replace(/(https?:\/\/[^\s<]+)/g, `<a href="$1" style="color:${color};font-weight:bold">$1</a>`);
+const BUL = /^\s*[-•*]\s+/;
+const para = (t: unknown, color: string) => String(t ?? "").trim().split(/\n\s*\n/).filter(Boolean).map((blk) => {
+  const out: string[] = []; let txt: string[] = [], li: string[] = [];
+  const flushT = () => { if (txt.length) out.push(`<p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:#2b2a3d">${link(txt.map(esc).join("<br>"), color)}</p>`); txt = []; };
+  const flushL = () => { if (li.length) out.push(`<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 14px">${li.map((x) => `<tr><td valign="top" style="padding:0 10px 6px 2px;color:${color};font-size:16px;line-height:1.6">●</td><td style="padding:0 0 6px;font-size:16px;line-height:1.6;color:#2b2a3d">${link(esc(x), color)}</td></tr>`).join("")}</table>`); li = []; };
+  for (const ln of blk.split("\n")) { if (BUL.test(ln)) { flushT(); li.push(ln.replace(BUL, "")); } else { flushL(); txt.push(ln); } }
+  flushT(); flushL();
+  return out.join("");
+}).join("");
 
 type Sec = { heading?: string; text?: string; button_text?: string; button_url?: string };
 function render(b: Record<string, unknown>, unsub: string | null) {

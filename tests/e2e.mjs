@@ -1237,12 +1237,30 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(pv.includes('Nyt fra fredagspadel') && pv.includes('Juleturnering') && pv.includes('Nye bolde') && pv.includes('Tilmeld dig'), 'forhåndsvisningen viser mailen, mens man skriver');
   await shot('nyhedsbrev-skriv');
   await noOverflow('nyhedsbrev');
+  // ✨ AI læser nyhedsbrevet igennem: forslaget vises først, kan bruges og fortrydes
+  await page.fill('[data-sec="1"] textarea[name=text]', 'Vi har fået nye bolde uden stafefejl');
+  await page.click('#nlAi');
+  await page.waitForSelector('#aiModal');
+  ok((await page.locator('#aiModal').innerText()).includes('Rettet 1 stavefejl') && (await page.locator('#aiModal .nlmail li').count()) >= 2, 'AI viser, hvad der er rettet, og mailen med punktliste');
+  await shot('nyhedsbrev-ai');
+  await noOverflow('AI-forslag');
+  ok(await page.inputValue('[data-sec="1"] textarea[name=text]') === 'Vi har fået nye bolde uden stafefejl', 'intet ændres, før man trykker Brug forslaget');
+  await page.click('#aiYes');
+  await page.waitForSelector('#nlUndo');
+  ok((await page.inputValue('[data-sec="1"] textarea[name=text]')).startsWith('Vi har fået nye bolde uden stavefejl'), 'AI-forslaget sættes ind i teksten');
+  await page.click('#nlUndo');
+  await page.waitForSelector('#nlAi');
+  ok(await page.inputValue('[data-sec="1"] textarea[name=text]') === 'Vi har fået nye bolde uden stafefejl' && !(await page.locator('#nlUndo').count()), 'AI-ændringerne kan fortrydes');
+  await page.click('#nlAi');
+  await page.waitForSelector('#aiModal');
+  await page.click('#aiYes');
+  await page.waitForSelector('#nlUndo');
   await page.click('#nlTest');
   await wait(500);
   ok(await page.evaluate(() => (window.__nlSent || []).some((x) => x.test)), 'man kan sende en test til sig selv');
   await page.click('#nlSend');
   await page.waitForSelector('.nlrow-item');
-  ok(await page.evaluate(() => (window.__mock.db().padel_newsletters_v2 || []).some((n) => n.title === 'Nyt fra fredagspadel' && n.status === 'sendt' && n.sections.length === 2 && n.recipients > 0)), 'nyhedsbrevet sendes til gruppen');
+  ok(await page.evaluate(() => (window.__mock.db().padel_newsletters_v2 || []).some((n) => n.title.startsWith('Nyt fra fredagspadel') && n.status === 'sendt' && n.sections.length === 2 && n.recipients > 0)), 'nyhedsbrevet sendes til gruppen');
   ok((await page.locator('.nlrow-item').first().innerText()).includes('Sendt'), 'listen viser det sendte nyhedsbrev');
   await shot('nyhedsbrev-liste');
   // Spilleren kan slå nyhedsbreve fra under Notifikationer og mails

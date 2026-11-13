@@ -1051,6 +1051,12 @@ export function createClient() {
     // Edge-funktion: barnets login uden e-mail (samme regler som padel-kid-login)
     functions: {
       async invoke(name, { body } = {}) {
+        // AI-hjælp til nyhedsbreve: retter "stafefejl" og laver en punktliste
+        if (name === 'padel-newsletter-ai') {
+          if (!nlRight(body?.group)) return { data: null, error: { message: 'Det har du ikke adgang til' } };
+          const fix = (t) => String(t || '').replace(/stafefejl/g, 'stavefejl');
+          return { data: { title: fix(body.title) + ' 🎾', intro: fix(body.intro), sections: (body.sections || []).map((x) => ({ ...x, heading: fix(x.heading), text: fix(x.text) + '\n\n- Husk bat\n- Husk vand' })), changes: ['Rettet 1 stavefejl', 'Lavet en punktliste'] }, error: null };
+        }
         if (name !== 'padel-kid-login') return { data: null, error: { message: 'Ukendt funktion' } };
         const k = db.padel_club_kids.find((x) => x.login_code === String(body?.code || '').toLowerCase().replace(/[^a-z0-9]/g, '') && ['ansoegt', 'aktiv'].includes(x.status) && !x.adult);
         if (!k) return { data: null, error: { message: 'Linket virker ikke længere. Bed din forælder om et nyt.' } };

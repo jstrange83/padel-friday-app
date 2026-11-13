@@ -5,8 +5,17 @@ import { sb, S, app, esc, toast, q, busy, group, fmtDate, nameOf, haptic } from 
 const MAX = 12;
 const hex = (c) => (/^#[0-9a-f]{6}$/i.test(c || '') ? c : '#5b3ee6');
 const ink = (c) => { const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#14112b' : '#ffffff'; };
-const para = (t, color) => String(t || '').trim().split(/\n\s*\n/).filter(Boolean)
-  .map((p) => `<p>${esc(p).replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, `<a href="$1" style="color:${color}">$1</a>`)}</p>`).join('');
+// Samme regler som mailen: tom linje = nyt afsnit, links bliver klikbare, linjer med "- " bliver en punktliste
+const link = (h, color) => h.replace(/(https?:\/\/[^\s<]+)/g, `<a href="$1" style="color:${color}">$1</a>`);
+const BUL = /^\s*[-•*]\s+/;
+const para = (t, color) => String(t || '').trim().split(/\n\s*\n/).filter(Boolean).map((blk) => {
+  const out = []; let txt = [], li = [];
+  const fT = () => { if (txt.length) out.push(`<p>${link(txt.map(esc).join('<br>'), color)}</p>`); txt = []; };
+  const fL = () => { if (li.length) out.push(`<ul>${li.map((x) => `<li>${link(esc(x), color)}</li>`).join('')}</ul>`); li = []; };
+  for (const ln of blk.split('\n')) { if (BUL.test(ln)) { fT(); li.push(ln.replace(BUL, '')); } else { fL(); txt.push(ln); } }
+  fT(); fL();
+  return out.join('');
+}).join('');
 const okUrl = (u) => /^https?:\/\/[^\s"'<>]+$/i.test((u || '').trim());
 
 // Forhåndsvisning: samme opbygning som mailen
@@ -22,6 +31,28 @@ function preview(d) {
     <div class="nlsec"><span class="nlbtn">Åbn Padelklubben →</span></div>
     <div class="nlfoot">Skrevet af ${esc(S.me?.name || '')} · ${esc(group()?.name || '')} via Padelklubben.<br>Vil du ikke have nyhedsbreve? Afmeld her.</div>
   </div>`;
+}
+
+function showAi(before, ai, refresh) {
+  const sug = { title: ai.title || before.title, intro: ai.intro || '', sections: ai.sections?.length ? ai.sections : before.sections };
+  const wrap = document.createElement('div');
+  wrap.className = 'modal'; wrap.id = 'aiModal';
+  wrap.innerHTML = `<div class="modal-card nlaicard" role="dialog" aria-modal="true" aria-labelledby="aiTitle">
+    <h2 id="aiTitle">✨ AI's forslag</h2>
+    ${ai.changes?.length ? `<ul class="nlchanges">${ai.changes.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}
+    <div class="nlaiprev">${preview(sug)}</div>
+    <p class="muted small">Læs det igennem. Du kan stadig rette i teksten bagefter, og du kan fortryde.</p>
+    <div class="mact"><button class="btn" id="aiNo">Behold min</button><button class="btn primary" id="aiYes">Brug forslaget</button></div></div>`;
+  document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.onclick = (ev) => { if (ev.target === wrap) close(); };
+  wrap.querySelector('#aiNo').onclick = close;
+  wrap.querySelector('#aiYes').onclick = () => {
+    const d = S.nlDraft;
+    S.nlUndo = { title: d.title, intro: d.intro, sections: d.sections.map((x) => ({ ...x })) };
+    Object.assign(d, { title: sug.title, intro: sug.intro, sections: sug.sections.map((x) => ({ heading: x.heading || '', text: x.text || '', button_text: x.button_text || '', button_url: x.button_url || '' })) });
+    close(); refresh(); toast('Forslaget er sat ind. Husk at gemme');
+  };
 }
 
 const blank = () => ({ id: null, title: '', intro: '', sections: [{ heading: '', text: '', button_text: '', button_url: '' }] });
@@ -62,6 +93,10 @@ function editor(d) {
         ${(d.sections || []).map(sec).join('')}
         ${sent || (d.sections || []).length >= MAX ? '' : '<button type="button" class="btn ghost" id="nlAdd">＋ Tilføj afsnit</button>'}
       </form>
+      ${sent ? '' : `<div class="card nlai"><div class="nlai-top"><span class="nlai-ic">✨</span><div><b>Ret og gør pæn med AI</b>
+        <small class="muted">AI retter stavefejl, foreslår bedre formuleringer og stiller mailen pænt op med afsnit, overskrifter og punktlister. Du ser forslaget, før noget bliver ændret.</small></div></div>
+        <button class="btn" id="nlAi">✨ Lad AI læse den igennem</button>
+        ${S.nlUndo ? '<button class="link sm" id="nlUndo">↩️ Fortryd AI\'s ændringer</button>' : ''}</div>`}
       ${sent ? '<button class="btn" id="nlCopy">📄 Brug som skabelon til et nyt</button>' : `<div class="nlactions">
         <button class="btn" id="nlSave">💾 Gem kladde</button>
         <button class="btn" id="nlTest">🧪 Test til mig</button></div>
@@ -90,10 +125,10 @@ async function save() {
 }
 
 export function bindNewsletter(refresh) {
-  document.getElementById('nlNew')?.addEventListener('click', () => { S.nlDraft = blank(); refresh(); });
+  document.getElementById('nlNew')?.addEventListener('click', () => { S.nlDraft = blank(); S.nlUndo = null; refresh(); });
   app.querySelectorAll('[data-nlopen]').forEach((b) => (b.onclick = () => {
     const n = (S.nlList || []).find((x) => x.id === b.dataset.nlopen);
-    S.nlDraft = { ...n, sections: n.sections?.length ? n.sections : blank().sections };
+    S.nlDraft = { ...n, sections: n.sections?.length ? n.sections : blank().sections }; S.nlUndo = null;
     refresh();
   }));
   if (!S.nlDraft) return;
@@ -105,6 +140,22 @@ export function bindNewsletter(refresh) {
   app.querySelectorAll('[data-del]').forEach((b) => (b.onclick = () => { const d = readForm(); d.sections.splice(+b.dataset.del, 1); if (!d.sections.length) d.sections = blank().sections; refresh(); }));
   app.querySelectorAll('[data-up]').forEach((b) => (b.onclick = () => { const d = readForm(), i = +b.dataset.up; [d.sections[i - 1], d.sections[i]] = [d.sections[i], d.sections[i - 1]]; refresh(); }));
   document.getElementById('nlCopy')?.addEventListener('click', () => { const d = S.nlDraft; S.nlDraft = { ...blank(), title: d.title, intro: d.intro, sections: d.sections.map((s) => ({ ...s })) }; refresh(); });
+  // ✨ AI: læs igennem, ret og stil pænt op. Forslaget vises først; intet ændres, før man trykker Brug forslaget.
+  document.getElementById('nlAi')?.addEventListener('click', async (e) => {
+    const d = readForm();
+    const hasText = d.title.trim() || d.intro.trim() || d.sections.some((x) => x.heading.trim() || x.text.trim());
+    if (!hasText) return toast('Skriv lidt først, så kan AI læse det igennem', true);
+    const btn = e.currentTarget; busy(btn, true); btn.textContent = '✨ AI læser…';
+    try {
+      const { data, error } = await sb.functions.invoke('padel-newsletter-ai', { body: { group: S.groupId, group_name: group()?.name, title: d.title, intro: d.intro, sections: clean(d) } });
+      if (error) { let m = error.message; try { m = (await error.context?.json())?.error || m; } catch {} throw new Error(m); }
+      showAi(d, data, refresh);
+    } catch (err) {
+      toast(/ikke sat op/.test(err.message) ? 'AI-hjælpen er ikke slået til endnu' : err.message || 'AI\'en svarede ikke. Prøv igen.', true);
+    }
+    busy(btn, false); btn.textContent = '✨ Lad AI læse den igennem';
+  });
+  document.getElementById('nlUndo')?.addEventListener('click', () => { const u = S.nlUndo; S.nlUndo = null; Object.assign(S.nlDraft, u); refresh(); toast('AI\'s ændringer er fortrudt'); });
   const need = () => { if (!f.title.value.trim()) { toast('Giv nyhedsbrevet en overskrift', true); f.title.focus(); return false; } return true; };
   document.getElementById('nlSave')?.addEventListener('click', async (e) => {
     if (!need()) return;
