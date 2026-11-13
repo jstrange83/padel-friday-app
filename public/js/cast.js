@@ -6,7 +6,8 @@ import { esc, toast, haptic } from './core.js';
 let conn = null; // den aktive cast-forbindelse
 
 export function castTv(url) {
-  const canCast = 'PresentationRequest' in window && !window.Capacitor?.isNativePlatform?.();
+  const native = !!window.Capacitor?.isNativePlatform?.();
+  const canCast = 'PresentationRequest' in window && !native;
   const box = document.createElement('div');
   box.className = 'modal'; box.id = 'castModal';
   box.innerHTML = `<div class="modal-card castcard" role="dialog" aria-modal="true" aria-labelledby="castTitle">
@@ -16,8 +17,9 @@ export function castTv(url) {
     : `<p class="center">Banerne, resultaterne og stillingen vises live på TV'et og opdaterer sig selv.</p>
       ${canCast ? `<button class="btn primary castbig" id="castGo">📡 Cast til TV</button>
         <small class="muted center castnote" id="castNote">Vælg dit TV på listen. Det skal have Chromecast eller Google TV og være på samme wifi.</small>`
-      : window.Capacitor?.isNativePlatform?.()
-        ? `<p class="muted small center">Fra appen kan der ikke castes endnu. Åbn <b>padelklubben.dk</b> i Chrome på telefonen eller computeren, log ind, og tryk på TV-knappen på spilledagen dér. Så kommer Cast-knappen frem.</p>`
+      : native
+        ? `<button class="btn primary castbig" id="castApp">📡 Cast til TV</button>
+          <small class="muted center castnote">Chrome åbner, hvor du trykker <b>Cast til TV</b> og vælger dit TV. Bagefter kan du gå tilbage til appen.</small>`
         : `<p class="muted small center">Din browser kan ikke caste. Brug Chrome på en computer eller en Android-telefon, eller åbn TV-skærmen på en computer, der er sluttet til TV'et.</p>`}
       <div class="mact"><button class="btn" id="castOpen">🖥 Åbn TV-skærmen her</button><button class="btn" id="castCopy">🔗 Kopiér link</button></div>
       <button class="link sm castclose" id="castClose">Luk</button>`}
@@ -31,6 +33,8 @@ export function castTv(url) {
   box.querySelector('#castCopy')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(url); toast('Linket er kopieret. Åbn det i browseren på TV\'et'); } catch { prompt('Kopiér linket', url); }
   });
+  // I Android-appen: Chrome kan caste, så siden åbnes dér (padelklubben.dk åbner uden for appen)
+  box.querySelector('#castApp')?.addEventListener('click', () => { location.href = 'https://padelklubben.dk/cast?u=' + encodeURIComponent(url); });
   const go = box.querySelector('#castGo');
   if (go) {
     const req = new PresentationRequest([url]);

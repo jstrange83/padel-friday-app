@@ -36,6 +36,10 @@
       "destination": "/nyt.html"
     },
     {
+      "source": "/cast",
+      "destination": "/cast.html"
+    },
+    {
       "source": "/afmeld",
       "destination": "/afmeld.html"
     },

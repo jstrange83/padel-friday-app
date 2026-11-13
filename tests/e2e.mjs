@@ -342,6 +342,15 @@ try {
   ok((await page.locator('#castModal').innerText()).includes('Vis på TV') && await page.locator('#castOpen').count() === 1 && !(await page.locator('.qrmodal').count()), 'TV-knappen tilbyder at caste eller åbne TV-skærmen (ingen QR-kode)');
   await shot('tv-cast');
   await page.click('#castClose');
+  // Cast-siden, som appen åbner i Chrome: godtager kun links til vores egne TV-sider
+  await page.goto('http://localhost:8765/cast.html?u=https%3A%2F%2Fevil.example%2Ftv%2Fx');
+  await page.waitForSelector('#box');
+  ok((await page.locator('#box').innerText()).includes('Linket mangler'), 'cast-siden afviser fremmede links');
+  await page.goto('http://localhost:8765/cast.html?u=' + encodeURIComponent('https://padelklubben.dk/tv/abc'));
+  await page.waitForSelector('#box');
+  ok(await page.locator('#go').count() === 1 || (await page.locator('#box').innerText()).includes('Chrome'), 'cast-siden viser Cast til TV');
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('#nav a');
   const tvTok = await page.evaluate(() => window.__mock.db().padel_tv_links[0].token);
   await page.goto(`http://localhost:8765/tv.html?k=${tvTok}`);
   await page.waitForSelector('aside h2');
