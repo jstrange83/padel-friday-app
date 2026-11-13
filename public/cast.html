@@ -39,7 +39,7 @@ else {
       const c = await req.start();
       box.innerHTML = '<p>✅ Dagen vises nu på TV\'et. Du kan gå tilbage til appen.</p><button id="stop">Stop visning</button>';
       document.getElementById('stop').onclick = () => { try { c.terminate(); } catch {} box.innerHTML = '<p>Visningen er stoppet.</p>'; };
-    } catch (err) { e.target.disabled = false; if (err && err.name !== 'AbortError' && err.name !== 'NotAllowedError') note.textContent = 'Det lykkedes ikke at caste. Prøv igen, eller åbn TV-skærmen her.'; }
+    } catch (err) { e.target.disabled = false; if (err && err.name !== 'AbortError' && err.name !== 'NotAllowedError') note.innerHTML = 'Det lykkedes ikke at caste. Prøv igen, eller åbn TV-skærmen her og brug telefonens <b>skærmspejling</b> (Smart View / Cast skærm).<br><small>(' + (err.name || 'fejl') + ': ' + String(err.message || '').slice(0, 120) + ')</small>'; }
   };
 }
 </script></body></html>
