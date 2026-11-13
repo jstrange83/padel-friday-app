@@ -357,6 +357,17 @@ function teamHtml(l, r, me) {
   return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
 }
 
+// Computer: banen set fra oven med navnene i hvert felt. Hold A til venstre, hold B til højre, nettet i midten.
+// Set fra hver spillers egen side står venstre-spilleren (V) til venstre: for hold A er det øverst, for hold B nederst.
+function courtHtml(m, me, score) {
+  const box = (pid, side, pos) => `<div class="pbox ${pos} ${pid === me ? 'me' : ''}"><b>${esc(first(pid))}</b><small>${side === 'V' ? 'Venstre' : 'Højre'}</small></div>`;
+  return `<div class="pcourt">
+    <div class="phalf a"><div class="pback"></div><div class="pserve">${box(m.a_left, 'V', 'top')}${box(m.a_right, 'H', 'bot')}</div></div>
+    <div class="pnet">${score}</div>
+    <div class="phalf b"><div class="pserve">${box(m.b_right, 'H', 'top')}${box(m.b_left, 'V', 'bot')}</div><div class="pback"></div></div>
+  </div>`;
+}
+
 function matchCard(c, m) {
   const { ev, me, run, delta, isAm, isSet, unit } = c;
   const onA = [m.a_left, m.a_right].includes(me), onB = [m.b_left, m.b_right].includes(me);
@@ -392,6 +403,7 @@ function matchCard(c, m) {
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
+    ${courtHtml(m, me, m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}

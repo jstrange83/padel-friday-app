@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-13f', date: '13. november 2026', groups: true, title: 'Banerne set fra oven på computeren',
+    items: ['🎾 På computeren vises hver bane nu som en padelbane set fra oven, med spillernes navne i hvert felt, så man kan se, hvem der står i venstre og højre side. Resultatet står på nettet. På telefonen er det som før.'],
+  },
+  {
     id: '2026-11-13e', date: '13. november 2026', admin: true, title: 'AI-hjælp til nyhedsbreve',
     items: ['✨ Med den <b>betalte udgave</b> får nyhedsbrevet knappen <b>Lad AI læse den igennem</b>. AI retter stavefejl, foreslår bedre formuleringer og stiller mailen pænt op med afsnit, overskrifter og punktlister.', '👀 Du ser forslaget og hvad der er ændret, før noget bliver rettet, og du kan fortryde bagefter.', '📝 Skriver du selv linjer, der starter med en bindestreg, bliver de nu til en pæn punktliste i mailen.'],
   },
