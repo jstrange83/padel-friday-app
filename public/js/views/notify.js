@@ -1,5 +1,5 @@
 // Beskeder i appen (fx plads fra ventelisten) og notifikationer på telefonen.
-import { sb, S, app, hooks, esc, toast, q, busy, fmtDate } from '../core.js';
+import { sb, S, app, hooks, esc, toast, q, busy, fmtDate, group } from '../core.js';
 import { pushSupported, pushOn, enablePush, disablePush, isIOS, standalone, isNativeApp } from '../push.js';
 
 export async function loadUnread() {
@@ -16,6 +16,17 @@ async function pushCard() {
       : on ? 'Slået til. Du får besked, fx når du får en plads fra ventelisten.' : 'Slå til for at få besked på telefonen eller computeren, fx når du får en plads fra ventelisten.'}</p></div>`;
 }
 
+// Nyhedsbreve på mail: slå fra eller til for hver gruppe og klub, man er med i
+async function newsletterCard() {
+  const mine = [...new Set(S.members.filter((m) => m.player_id === S.realMe?.id && m.status === 'aktiv').map((m) => m.group_id))].filter((g) => group(g));
+  if (!mine.length || S.isKid) return '';
+  let off = [];
+  try { off = (await q(sb.rpc('padel_newsletter_my_optouts_v2'))).map((x) => (typeof x === 'string' ? x : Object.values(x)[0])); } catch {}
+  return `<div class="card nloptcard"><b>📰 Nyhedsbreve på mail</b>
+    <p class="muted small">Admins kan sende nyhedsbreve til gruppen eller klubben. Slå fra, hvis du ikke vil have dem.</p>
+    ${mine.map((g) => `<label class="switch"><input type="checkbox" data-nlopt="${g}" ${off.includes(g) ? '' : 'checked'}><span>${esc(group(g).name)}</span></label>`).join('')}</div>`;
+}
+
 export async function viewNotices() {
   // Under "Se som" vises ingen beskeder: de tilhører kun den, de er sendt til (ellers ville man se sine egne admin-beskeder)
   const list = S.viewAs ? [] : await q(sb.from('padel_notifications').select('*').eq('user_id', S.realMe.id).is('done_at', null).order('created_at', { ascending: false }).limit(50));
@@ -23,13 +34,19 @@ export async function viewNotices() {
   <div class="page notices-page">
     <button class="back" onclick="history.length > 1 ? history.back() : (location.hash = '#/fredage')">‹ Tilbage</button>
     <h1>🔔 Beskeder</h1>
-    ${S.viewAs ? '<div class="card warnbox">Beskeder kan kun ses af den, de er sendt til, så de vises ikke, når du ser appen som en anden.</div>' : await pushCard()}
+    ${S.viewAs ? '<div class="card warnbox">Beskeder kan kun ses af den, de er sendt til, så de vises ikke, når du ser appen som en anden.</div>' : await pushCard() + await newsletterCard()}
     ${list.length ? `<div class="list">${list.map((n) => `
       <a class="row nrow ${n.read_at ? '' : 'unread'}" href="${esc(n.url || '#/fredage')}">
         <div class="grow"><b>${esc(n.title)}</b>${n.body ? `<small>${esc(n.body)}</small>` : ''}<small class="muted">${fmtDate(n.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>
       </a>`).join('')}</div>` : S.viewAs ? '' : '<p class="muted">Ingen beskeder endnu.</p>'}
   </div>`;
   bindPushToggle(viewNotices);
+  app.querySelectorAll('[data-nlopt]').forEach((t) => (t.onchange = async () => {
+    t.disabled = true;
+    try { await q(sb.rpc('padel_newsletter_set_optout_v2', { g: t.dataset.nlopt, p_off: !t.checked })); toast(t.checked ? `Du får nyhedsbreve fra ${group(t.dataset.nlopt)?.name}` : `Du får ikke flere nyhedsbreve fra ${group(t.dataset.nlopt)?.name}`); }
+    catch { t.checked = !t.checked; }
+    t.disabled = false;
+  }));
   if (list.some((n) => !n.read_at)) { try { await q(sb.rpc('padel_notifications_read')); } catch {} S.unread = 0; hooks.renderNav?.(); }
 }
 

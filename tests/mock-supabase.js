@@ -576,6 +576,8 @@ Object.assign(RPC, {
 
 // Etape 1: oplysninger, trænere på hold, kasserer
 const isAdm = (g) => me()?.is_superadmin || GM(g, uid())?.status === 'aktiv' && GM(g, uid())?.role === 'admin';
+const nlRight = (g) => isAdm(g) || (db.padel_rights_v2 || []).some((x) => x.group_id === g && x.user_id === uid() && x.rights.includes('nyhedsbrev'));
+const nlRecipients = (g) => db.padel_group_members.filter((m) => m.group_id === g && m.status === 'aktiv' && !(db.padel_newsletter_optout_v2 || []).some((o) => o.group_id === g && o.user_id === m.player_id && o.off)).map((m) => db.padel_profiles.find((p) => p.id === m.player_id)).filter((p) => p?.email);
 const treasurer = (g) => isAdm(g) || db.padel_club_staff.some((x) => x.group_id === g && x.user_id === uid() && x.treasurer);
 Object.assign(RPC, {
   padel_club_apply_v2: ({ g, p_kids }) => {
@@ -856,6 +858,31 @@ Object.assign(RPC, {
     upsert('padel_roadmap_v2', ['id'], { id, title: p_title, body: p_body, status: p_status, audience: p_audience, hidden: !!p_hidden, sort: p_sort ?? 100 });
     return id;
   },
+  // Nyhedsbreve på mail (padel_newsletters_v2)
+  padel_newsletter_list_v2: ({ g }) => { if (!nlRight(g)) throw new Error('Det har du ikke adgang til'); return (db.padel_newsletters_v2 || []).filter((n) => n.group_id === g).sort((a, b) => (b.sent_at || b.updated_at).localeCompare(a.sent_at || a.updated_at)); },
+  padel_newsletter_count_v2: ({ g }) => { if (!nlRight(g)) throw new Error('Det har du ikke adgang til'); return nlRecipients(g).length; },
+  padel_newsletter_save_v2: ({ p_id, g, p_title, p_intro, p_sections }) => {
+    if (!nlRight(g)) throw new Error('Det har du ikke adgang til');
+    if (!p_title?.trim()) throw new Error('Nyhedsbrevet mangler en overskrift');
+    db.padel_newsletters_v2 ||= [];
+    const old = p_id && db.padel_newsletters_v2.find((n) => n.id === p_id);
+    if (old?.status === 'sendt') throw new Error('Nyhedsbrevet er allerede sendt');
+    const id = p_id || uuid();
+    upsert('padel_newsletters_v2', ['id'], { id, group_id: g, title: p_title, intro: p_intro, sections: p_sections || [], status: 'kladde', created_by: old?.created_by || uid(), updated_at: now(), sent_at: null, sent_by: null, recipients: 0 });
+    return id;
+  },
+  padel_newsletter_send_v2: ({ p_id, p_test }) => {
+    const n = (db.padel_newsletters_v2 || []).find((x) => x.id === p_id);
+    if (!n || !nlRight(n.group_id)) throw new Error('Det har du ikke adgang til');
+    if (n.status === 'sendt') throw new Error('Nyhedsbrevet er allerede sendt');
+    (window.__nlSent ||= []).push({ id: p_id, test: !!p_test });
+    if (p_test) return 1;
+    const c = nlRecipients(n.group_id).length;
+    Object.assign(n, { status: 'sendt', sent_at: now(), sent_by: uid(), recipients: c });
+    return c;
+  },
+  padel_newsletter_my_optouts_v2: () => (db.padel_newsletter_optout_v2 || []).filter((x) => x.user_id === uid() && x.off).map((x) => x.group_id),
+  padel_newsletter_set_optout_v2: ({ g, p_off }) => { db.padel_newsletter_optout_v2 ||= []; upsert('padel_newsletter_optout_v2', ['group_id', 'user_id'], { group_id: g, user_id: uid(), off: !!p_off }); },
   // Rettigheder med flueben (padel_rights_v2)
   padel_my_rights_v2: () => (db.padel_rights_v2 || []).filter((x) => x.user_id === uid() && x.rights.length && GM(x.group_id, uid())?.status === 'aktiv').map((x) => ({ group_id: x.group_id, rights: x.rights })),
   padel_user_rights_v2: ({ p_user }) => (db.padel_rights_v2 || []).filter((x) => x.user_id === p_user && x.rights.length && isAdm(x.group_id) && GM(x.group_id, p_user)?.status === 'aktiv').map((x) => ({ group_id: x.group_id, rights: x.rights })),
@@ -863,7 +890,7 @@ Object.assign(RPC, {
   padel_set_rights_v2: ({ g, p_user, p_rights }) => {
     if (!isAdm(g)) throw new Error('Kun gruppens admin kan give rettigheder');
     const club = db.padel_groups.find((x) => x.id === g)?.kind === 'klub';
-    const cat = club ? ['traening', 'medlemmer', 'kontingent', 'opslag', 'arrangementer'] : ['koere', 'spilledage', 'medlemmer', 'boeder'];
+    const cat = club ? ['traening', 'medlemmer', 'kontingent', 'opslag', 'arrangementer', 'nyhedsbrev'] : ['koere', 'spilledage', 'medlemmer', 'boeder', 'nyhedsbrev'];
     const r = [...new Set((p_rights || []).filter((x) => cat.includes(x)))].sort();
     db.padel_rights_v2 ||= [];
     upsert('padel_rights_v2', ['group_id', 'user_id'], { group_id: g, user_id: p_user, rights: r });

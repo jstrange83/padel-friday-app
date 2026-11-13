@@ -1203,3 +1203,45 @@ html.inapp body { overscroll-behavior-y: contain; }
 .inviteboard { margin: 12px 0; border-top: 1px solid var(--line); padding-top: 10px; }
 .inviteboard summary { cursor: pointer; }
 .inviteboard form label { display: block; margin: 8px 0; }
+
+/* ---------- Nyhedsbrev (Admin) ---------- */
+.nlwrap { display: grid; gap: 16px; }
+.nlwrap form .card label { display: block; }
+.nlwrap textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-top: 6px; }
+.page.admin .abody.tab-nyhedsbrev { columns: auto; }
+.nlsecedit .ftop { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.nlsecedit .ftop span { display: flex; gap: 12px; }
+#nlAdd { width: 100%; margin: 4px 0 12px; }
+.nlactions { display: flex; gap: 8px; margin: 8px 0; }
+.nlactions .btn { flex: 1 1 0; min-width: 0; width: auto; white-space: nowrap; }
+.nlsend { width: 100%; margin-bottom: 8px; }
+.nledit .okbox { border-left: 4px solid var(--up, #22c55e); }
+.nlprev .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 0 0 8px; }
+.nlmail { background: #f1f0f8; border-radius: 18px; padding: 12px; color: #2b2a3d; font-family: Arial, Helvetica, sans-serif; }
+.nlmail > div { background: #fff; }
+.nlmail > div:nth-child(2) { border-radius: 0; }
+.nlhead { background: var(--c) !important; color: var(--on); padding: 22px 22px 24px; border-radius: 16px 16px 0 0; }
+.nlhead .nlrow { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; font-weight: 700; opacity: .9; }
+.nlhead img { width: 32px; height: 32px; border-radius: 8px; }
+.nlhead h1 { margin: 14px 0 4px; font-size: 24px; line-height: 1.15; color: var(--on); }
+.nlhead small { opacity: .8; font-size: 13px; }
+.nlintro, .nlsec { padding: 16px 22px 6px; }
+.nlintro p { font-size: 16px; }
+.nlmail p { margin: 0 0 12px; line-height: 1.55; font-size: 15px; color: #2b2a3d; overflow-wrap: anywhere; }
+.nlsec + .nlsec { border-top: 1px solid #ecebf5; }
+.nlsec h2 { margin: 0 0 8px; font-size: 18px; color: #14112b; }
+.nlsec h2 i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin: 0 9px 2px 0; }
+.nlbtn { display: inline-block; background: var(--c); color: var(--on); font-weight: 700; padding: 11px 18px; border-radius: 11px; margin: 2px 0 12px; font-size: 14px; }
+.nlfoot { background: #f7f6fc !important; color: #6b6985; font-size: 12px; line-height: 1.6; padding: 14px 22px; border-radius: 0 0 16px 16px; }
+.nlrow-item small { display: block; }
+.nloptcard .switch { margin-top: 8px; }
+@media (min-width: 1000px) {
+  .nlwrap { grid-template-columns: minmax(0, 1fr) minmax(0, 560px); align-items: start; }
+  .nlprev { position: sticky; top: 16px; }
+}
+
+/* Ny spilledag: flere dage på én gang */
+#nf .daterow { display: flex; align-items: flex-end; gap: 10px; }
+#nf .daterow .link { margin-bottom: 14px; white-space: nowrap; }
+#nf #addDate { margin: 2px 0 4px; }
+#nf .moretip { display: block; margin-bottom: 12px; }

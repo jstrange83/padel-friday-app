@@ -36,6 +36,10 @@
       "destination": "/nyt.html"
     },
     {
+      "source": "/afmeld",
+      "destination": "/afmeld.html"
+    },
+    {
       "source": "/tv/:token",
       "destination": "/tv.html"
     }

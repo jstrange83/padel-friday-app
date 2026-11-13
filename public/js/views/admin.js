@@ -7,6 +7,7 @@ import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { rightsTab, bindRights, loadGroupRights, rightsCount } from './rights.js';
+import { loadNewsletters, newsletterTab, bindNewsletter } from './newsletter.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
 import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, seesTraining, hasAdults, audience } from './club.js';
 
@@ -22,6 +23,7 @@ function adminSections() {
     club && seesTraining() ? ['fremmode', '📊', 'Fremmøde', 'Hvem kom til træning'] : null,
     club && isTreasurer() ? ['kontingent', '💳', 'Kontingent', 'Hvem har betalt'] : null,
     adm || (club && canRun()) || (!club && hasRight('medlemmer')) ? ['spillere', '👥', club ? 'Medlemmer' : 'Spillere', !club && pend ? `${pend} venter på svar` : `${nPlayers} med · invitation`, club ? 0 : pend] : null,
+    S.groupId && hasRight('nyhedsbrev') ? ['nyhedsbrev', '📰', 'Nyhedsbrev', 'Skriv en flot mail til alle'] : null,
     adm && S.groupId ? ['rettigheder', '🔑', 'Rettigheder', nr ? `${nr} ${nr === 1 ? 'person har' : 'personer har'} flueben` : 'Hvem må hvad'] : null,
     adm && S.groupId ? ['indstillinger', '⚙️', 'Indstillinger', club ? 'Klubben, bestyrelse, mails' : 'Rangliste, bolde, bøder, mails'] : null,
     isSuper() ? ['grupper', '🗂', 'Grupper', 'Alle grupper og klubber (superadmin)'] : null,
@@ -39,10 +41,11 @@ export async function viewAdmin() {
   if (!S.adminTab && secs.length === 1) S.adminTab = secs[0][0];
   const tab = S.adminTab;
   if (tab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
+  if (tab === 'nyhedsbrev' && (S.nlFor !== S.groupId || !S.nlList)) { S.nlDraft = null; await loadNewsletters(); }
   if (club && ['boern', 'hold', 'kontingent', 'spillere', 'indstillinger'].includes(tab)) { await loadClub(S.groupId); await loadClubPending(); }
   if (club && tab === 'fremmode') await loadAttendance(S.attWeeks || 8);
   if (club && tab === 'indstillinger' && isAdmin() && S.clubInvitesG !== S.groupId) { S.clubInvitesG = S.groupId; try { S.clubInvites = await q(sb.rpc('padel_club_open_invites_v2', { g: S.groupId })); } catch { S.clubInvites = []; } }
-  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab }[tab];
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab, nyhedsbrev: newsletterTab }[tab];
   const sec = secs.find(([k]) => k === tab);
   app.innerHTML = tab ? `
   <div class="page admin">
@@ -70,6 +73,7 @@ export async function viewAdmin() {
   if (tab === 'fremmode') bindClubAttendance(clubRefresh);
   if (tab === 'indstillinger' && club) { bindClubSettings(clubRefresh); bindClubStaff(clubRefresh); }
   if (tab === 'rettigheder') bindRights(viewAdmin);
+  if (tab === 'nyhedsbrev') bindNewsletter(() => { viewAdmin(); });
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { S.gmemOpen = false; setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
   app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });

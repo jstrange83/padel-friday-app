@@ -5,6 +5,14 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-13d', date: '13. november 2026', admin: true, groups: true, title: 'Opret flere spilledage på én gang',
+    items: ['📅 Når du opretter spilledage, kan du nu trykke <b>＋ Tilføj en dag mere</b>, fx hvis I spiller både tirsdag og fredag. Hver dag får sin egen dato og tid og gentages det antal uger, du vælger.'],
+  },
+  {
+    id: '2026-11-13c', date: '13. november 2026', admin: true, title: 'Nyhedsbreve på mail',
+    items: ['📰 Under <b>Admin → Nyhedsbrev</b> kan du nu skrive et flot nyhedsbrev til hele gruppen eller klubben, med overskrift, afsnit og knapper med links. Du ser mailen, mens du skriver, kan sende en test til dig selv og gemme som kladde.', '🔑 Andre end admin kan få lov med fluebenet <b>Nyhedsbrev</b> under Admin → Rettigheder.', '🔕 Alle kan afmelde sig nederst i mailen eller under Notifikationer og mails.'],
+  },
+  {
     id: '2026-11-13b', date: '13. november 2026', admin: true, club: true, title: 'Invitér bestyrelsen med mail',
     items: ['✉️ Under <b>Admin → Indstillinger → Bestyrelse og børneattest</b> kan du nu invitere resten af bestyrelsen med deres mail og vælge deres post. Er de allerede i appen, kommer de med med det samme. Ellers får de en mail, og når de opretter sig med samme mail, kommer de automatisk med.', '🧑‍💼 Man kan nu have <b>flere poster</b>, fx både bestyrelsesmedlem og kasserer, og en træner kan også sidde i bestyrelsen.', '🛠 Posten <b>Udvikler af appen</b> kan vælges, og trænere i én klub bliver ikke længere vist som trænere i andre klubber.'],
   },

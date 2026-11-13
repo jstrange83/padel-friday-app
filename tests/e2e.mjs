@@ -85,6 +85,14 @@ try {
   ok((await page.locator('#roundsHint').innerText()).includes('6 runder'), '2 timer giver 6 runder');
   await shot('ny-fredag');
   await noOverflow('ny spilledag');
+  // ＋ Tilføj en dag mere: begge dage gentages, og dagen kan fjernes igen
+  await page.click('#addDate');
+  await page.waitForSelector('input[name=when2]');
+  ok((await page.locator('#createBtn').innerText()).includes('Opret 8 spilledage'), 'en dag mere giver 8 spilledage ved 4 uger');
+  await shot('ny-fredag-flere-dage');
+  await noOverflow('flere dage');
+  await page.click('.daterow button');
+  ok(!(await page.locator('input[name=when2]').count()) && (await page.locator('#createBtn').innerText()).includes('Opret 4 spilledage'), 'den ekstra dag kan fjernes igen');
   await page.click('#createBtn');
   await page.waitForSelector('a.ev');
   ok((await page.locator('a.ev').count()) === 4, '4 fredage oprettet');
@@ -1200,6 +1208,56 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('.rcard[data-ruser="u-2"] [data-rnone]');
   await wait(400);
   ok(await page.evaluate(() => !(window.__mock.db().padel_rights_v2 || []).find((x) => x.user_id === 'u-2')?.rights.length), 'rettigheden kan fjernes igen med Ingen');
+  // Nyhedsbrev: Bo får rettigheden og skriver et nyhedsbrev til gruppen
+  await page.fill('#rightsFind', 'Test Bo');
+  if (await page.locator('[data-radd="u-2"]').count()) await page.click('[data-radd="u-2"]');
+  await page.waitForSelector('.rcard[data-ruser="u-2"]');
+  await page.locator('.rcard[data-ruser="u-2"] label:has(input[data-rk="nyhedsbrev"])').click();
+  await wait(500);
+  ok(await page.evaluate(() => (window.__mock.db().padel_rights_v2 || []).find((x) => x.group_id === 'g-fre' && x.user_id === 'u-2')?.rights.includes('nyhedsbrev')), 'admin kan give rettigheden Nyhedsbrev');
+  await loginAs('test2@fredagspadel.test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('#nlNew');
+  ok((await page.locator('#nav').innerText()).includes('Admin'), 'med rettigheden Nyhedsbrev får Bo Admin i menuen');
+  ok((await page.locator('.nlintro-card').innerText()).match(/sendes til \d+/), 'Nyhedsbrev viser, hvor mange det sendes til');
+  await page.click('#nlNew');
+  await page.waitForSelector('#nlForm');
+  await page.fill('#nlForm input[name=title]', 'Nyt fra fredagspadel');
+  await page.fill('#nlForm textarea[name=intro]', 'Hej alle sammen');
+  await page.fill('[data-sec="0"] input[name=heading]', 'Juleturnering');
+  await page.fill('[data-sec="0"] textarea[name=text]', 'Vi spiller den 18. december.\n\nSe mere på https://padelklubben.dk');
+  await page.fill('[data-sec="0"] input[name=button_text]', 'Tilmeld dig');
+  await page.fill('[data-sec="0"] input[name=button_url]', 'https://padelklubben.dk');
+  await page.click('#nlAdd');
+  await page.waitForSelector('[data-sec="1"]');
+  ok(await page.inputValue('[data-sec="0"] input[name=heading]') === 'Juleturnering', 'teksten bliver stående, når man tilføjer et afsnit');
+  await page.fill('[data-sec="1"] input[name=heading]', 'Nye bolde');
+  await wait(200);
+  const pv = await page.locator('#nlPreview').innerText();
+  ok(pv.includes('Nyt fra fredagspadel') && pv.includes('Juleturnering') && pv.includes('Nye bolde') && pv.includes('Tilmeld dig'), 'forhåndsvisningen viser mailen, mens man skriver');
+  await shot('nyhedsbrev-skriv');
+  await noOverflow('nyhedsbrev');
+  await page.click('#nlTest');
+  await wait(500);
+  ok(await page.evaluate(() => (window.__nlSent || []).some((x) => x.test)), 'man kan sende en test til sig selv');
+  await page.click('#nlSend');
+  await page.waitForSelector('.nlrow-item');
+  ok(await page.evaluate(() => (window.__mock.db().padel_newsletters_v2 || []).some((n) => n.title === 'Nyt fra fredagspadel' && n.status === 'sendt' && n.sections.length === 2 && n.recipients > 0)), 'nyhedsbrevet sendes til gruppen');
+  ok((await page.locator('.nlrow-item').first().innerText()).includes('Sendt'), 'listen viser det sendte nyhedsbrev');
+  await shot('nyhedsbrev-liste');
+  // Spilleren kan slå nyhedsbreve fra under Notifikationer og mails
+  await page.goto('http://localhost:8765/#/beskeder');
+  await page.waitForSelector('[data-nlopt="g-fre"]');
+  await page.locator('label:has([data-nlopt="g-fre"])').click();
+  await wait(400);
+  ok(await page.evaluate(() => (window.__mock.db().padel_newsletter_optout_v2 || []).some((x) => x.group_id === 'g-fre' && x.user_id === 'u-2' && x.off)), 'man kan slå nyhedsbreve fra for en gruppe');
+  await noOverflow('nyhedsbrev fra');
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/admin');
+  await page.waitForSelector('[data-tab="rettigheder"]'); await page.click('[data-tab="rettigheder"]');
+  await page.waitForSelector('.rcard[data-ruser="u-2"]');
+  await page.click('.rcard[data-ruser="u-2"] [data-rnone]');
+  await wait(400);
   // Superadmin tilføjer et punkt til "På vej" og flytter det til I gang
   await page.goto('http://localhost:8765/#/nyt');
   await page.waitForSelector('[data-rmtab="plan"]');
@@ -1218,7 +1276,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Min padel') && nm.includes('Indsæt en liste med tilmeldte'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Opret flere spilledage på én gang') && nm.includes('Nyhedsbreve på mail'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -2190,6 +2248,21 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#viewAsBar #stopViewAs');
   await wait(600);
   ok(!(await page.locator('#viewAsBar').count()), 'tilbage til superadmin');
+
+  // Opret flere spilledage på forskellige dage på én gang (tirsdag og fredag i 2 uger)
+  await page.goto('http://localhost:8765/#/ny-fredag');
+  await page.waitForSelector('#nf');
+  const evBefore = await page.evaluate(() => window.__mock.db().padel_events.length);
+  await page.selectOption('select[name=count]', '2');
+  await page.fill('input[name=when]', '2027-03-02T19:00');
+  await page.click('#addDate');
+  await page.fill('input[name=when2]', '2027-03-05T17:30');
+  await page.dispatchEvent('input[name=when2]', 'change');
+  ok((await page.locator('#createBtn').innerText()).includes('Opret 4 spilledage'), 'to dage i 2 uger giver 4 spilledage');
+  await page.click('#createBtn');
+  await page.waitForSelector('a.ev');
+  const made = await page.evaluate((b) => window.__mock.db().padel_events.slice(b).map((e) => new Date(e.starts_at)).map((d) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`).sort(), evBefore);
+  ok(made.join(',') === ['12/3 17:30', '2/3 19:00', '5/3 17:30', '9/3 19:00'].sort().join(','), 'spilledagene får hver deres dato og tid: ' + made.join(', '));
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

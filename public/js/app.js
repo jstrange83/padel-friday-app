@@ -203,7 +203,7 @@ function renderNav() {
   if (group()?.ranking_mode !== 'ingen' || isAdmin()) items.push(['#/rangliste', '🏆', 'Rangliste']);
   // Højst 4 punkter i bunden: Bøder ligger nu på Min padel
   items.push(['#/profil', '👤', 'Min padel']);
-  if (isAdmin() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
+  if (isAdmin() || anyRight() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
     (h === '#/profil' && (cur.startsWith('#/indstillinger') || cur.startsWith('#/boeder') || cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));

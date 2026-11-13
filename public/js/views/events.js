@@ -169,6 +169,9 @@ export async function viewEventForm(ev) {
       <label>Center<select name="center">${centers.map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
       <div class="lbl">Baner</div><div id="courts" class="checks"></div>
       <label>Dato og tid${ev ? '' : ' (første gang)'}<input type="datetime-local" name="when" value="${ev ? toLocalInput(ev.starts_at) : nextFriday()}" required></label>
+      ${ev ? '' : `<div id="moreDates"></div>
+        <div class="moredates"><button type="button" class="btn ghost sm" id="addDate">＋ Tilføj en dag mere</button>
+        <small class="muted moretip">Spiller I fx både tirsdag og fredag, så tilføj en dag mere. Hver dag gentages som valgt nedenfor.</small></div>`}
       ${ev ? '' : `<label>Gentag<select name="count">${[1, 2, 3, 4, 6, 8].map((n) => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n === 1 ? 'Kun denne dag' : `${n} uger i træk`}</option>`).join('')}</select>
         <small class="muted" id="countHint"></small></label>`}
       <label>Titel (valgfri)<input name="title" placeholder="${esc(group()?.name || '')}" maxlength="60" value="${esc(v.title || '')}"></label>
@@ -202,11 +205,31 @@ export async function viewEventForm(ev) {
     if (changed) { f.minutes.value = ROUND_MIN[fm]; hint(); }
   };
   f.querySelectorAll('[name=format]').forEach((r) => (r.onchange = () => fmt(true))); fmt(false);
+  // Flere dage på én gang: hver dag (med sit eget tidspunkt) gentages det valgte antal uger
+  const allDates = () => {
+    const starts = [f.when.value, ...[...f.querySelectorAll('[name=when2]')].map((x) => x.value)].filter(Boolean);
+    const seen = new Set();
+    return starts.flatMap((w) => weekDates(w, +f.count.value)).filter((d) => !isNaN(d) && !seen.has(+d) && seen.add(+d)).sort((a, b) => a - b);
+  };
   if (!ev) {
     const countHint = () => {
-      const ds = weekDates(f.when.value, +f.count.value);
-      document.getElementById('countHint').textContent = ds.length > 1 ? ds.map((d) => fmtDate(d, { day: 'numeric', month: 'short' })).join(', ') : '';
+      const ds = allDates(), show = ds.slice(0, 12);
+      document.getElementById('countHint').textContent = ds.length > 1 ? show.map((d) => fmtDate(d, { weekday: 'short', day: 'numeric', month: 'short' })).join(', ') + (ds.length > show.length ? ` og ${ds.length - show.length} mere` : '') : '';
       document.getElementById('createBtn').textContent = ds.length > 1 ? `Opret ${ds.length} spilledage` : 'Opret spilledag';
+    };
+    const more = document.getElementById('moreDates');
+    document.getElementById('addDate').onclick = () => {
+      const ins = [f.when, ...f.querySelectorAll('[name=when2]')].filter((x) => x.value);
+      const last = ins.length ? new Date(ins[ins.length - 1].value) : new Date();
+      last.setDate(last.getDate() + 1);
+      const row = document.createElement('div');
+      row.className = 'daterow';
+      row.innerHTML = `<label class="grow">Dag ${f.querySelectorAll('[name=when2]').length + 2}<input type="datetime-local" name="when2" value="${toLocalInput(last.toISOString())}" required></label><button type="button" class="link sm dn" aria-label="Fjern dagen">Fjern</button>`;
+      more.appendChild(row);
+      row.querySelector('input').onchange = countHint;
+      row.querySelector('button').onclick = () => { row.remove(); more.querySelectorAll('.daterow label').forEach((l, i) => (l.firstChild.textContent = `Dag ${i + 2}`)); countHint(); };
+      row.querySelector('input').focus();
+      countHint();
     };
     f.count.onchange = countHint; f.when.onchange = countHint; countHint();
   }
@@ -231,7 +254,7 @@ export async function viewEventForm(ev) {
         location.hash = '#/fredag/' + ev.id;
         return;
       }
-      const rows = weekDates(f.when.value, +f.count.value).map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id, group_id: S.groupId }));
+      const rows = allDates().map((d) => ({ ...base, starts_at: d.toISOString(), ranked: base.format !== 'americano', created_by: S.me.id, group_id: S.groupId }));
       const evs = await q(sb.from('padel_events').insert(rows).select());
       toast(evs.length === 1 ? 'Dagen er oprettet' : `${evs.length} spilledage er oprettet`);
       location.hash = evs.length === 1 ? '#/fredag/' + evs[0].id : '#/fredage';

@@ -7,6 +7,7 @@ export const GROUP_RIGHTS = [
   ['spilledage', '📅', 'Spilledage', 'Oprette og rette spilledage'],
   ['medlemmer', '👥', 'Spillere', 'Godkende nye spillere og rette deres oplysninger'],
   ['boeder', '💸', 'Bødekasse', 'Godkende bøder og betalinger'],
+  ['nyhedsbrev', '📰', 'Nyhedsbrev', 'Skrive og sende nyhedsbreve på mail til gruppen'],
 ];
 export const CLUB_RIGHTS = [
   ['traening', '🗓', 'Træninger', 'Se alle hold, tilmeldinger og afbud og krydse fremmøde af (men ikke rette hold og tider)'],
@@ -14,12 +15,13 @@ export const CLUB_RIGHTS = [
   ['kontingent', '💳', 'Kontingent', 'Se og registrere, hvem der har betalt'],
   ['opslag', '📣', 'Opslag', 'Skrive opslag til hele klubben'],
   ['arrangementer', '🎉', 'Arrangementer', 'Oprette og styre arrangementer'],
+  ['nyhedsbrev', '📰', 'Nyhedsbrev', 'Skrive og sende nyhedsbreve på mail til klubben'],
 ];
 export const rightsFor = (g = S.groupId) => (isClub(g) ? CLUB_RIGHTS : GROUP_RIGHTS);
 
 // Har jeg fået nogen rettigheder i den valgte gruppe? (så får jeg Admin i menuen)
 // (I en spillegruppe giver kun Spillere en side under Admin; de andre virker ude i appen)
-export const anyRight = (g = S.groupId) => viewMode() !== 'bruger' && (isClub(g) ? !!S.rights?.[g]?.length : !!S.rights?.[g]?.includes('medlemmer'));
+export const anyRight = (g = S.groupId) => viewMode() !== 'bruger' && (isClub(g) ? !!S.rights?.[g]?.length : ['medlemmer', 'nyhedsbrev'].some((r) => S.rights?.[g]?.includes(r)));
 
 export async function loadGroupRights(g = S.groupId) {
   S.groupRights ||= {};

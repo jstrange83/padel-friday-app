@@ -28,7 +28,7 @@ const audiences = [
   ['🧒', 'Klubber og foreninger', 'Juniorafdelingen eller klubbens voksne. Træninger, hold og kontingent samlet ét sted.', [
     'Træninger med afbud og fremmøde',
     'Hold, trænere og træningstider',
-    'Kontingent, opslag og arrangementer',
+    'Kontingent, opslag, arrangementer og nyhedsbreve på mail',
     'Beskeder, hvor forældrene altid er med',
     'Flueben til bestyrelse og trænere: hvem må hvad',
   ]],

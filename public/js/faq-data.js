@@ -136,6 +136,11 @@ export const FAQ = [
 <p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {
+    cat: 'Roller og adgang', group: true,
+    q: 'Kan jeg oprette flere spilledage på én gang?',
+    a: `<p>Ja. Tryk <b>Opret spilledag</b>, vælg den første dag og tid, og vælg under <b>Gentag</b>, hvor mange uger i træk. Spiller I på flere forskellige dage, fx både tirsdag og fredag, så tryk <b>＋ Tilføj en dag mere</b> og vælg dag og tid. Hver dag gentages det valgte antal uger, og knappen viser, hvor mange spilledage der bliver oprettet.</p>`,
+  },
+  {
     cat: 'Tilmelding og konto', group: true,
     q: 'Hvad sker der, når en spilledag bliver aflyst?',
     a: `<p>Admin eller en superbruger kan trykke <b>🚫 Aflys dagen</b>, så længe dagen ikke er gået i gang, og skrive en årsag. Alle tilmeldte får besked på telefonen og på mail. Dagen bliver stående som <b>Aflyst</b> (og senere under Tidligere), så man kan se den bagefter. Man kan ikke tilmelde sig en aflyst dag, der kommer ingen bøde for at melde fra efter aflysningen (bøder til dem, der meldte fra inden, bliver stående), og den tæller ikke som en dag, du har misset i "fredage i træk" eller "uger i træk". Aflysningen kan fortrydes, og så får de tilmeldte besked igen.</p>`,
@@ -247,6 +252,18 @@ export const FAQ = [
 <p>Har gruppen en MobilePay Box, finder admin linket i MobilePay ved at åbne boksen og trykke <b>Del boks</b>. Linket sættes ind under <b>Bøder → Indstillinger</b>.</p>
 <p>Når den er slået til, kan alle i gruppen se bøderne under <b>💸 Bøder</b> i menuen. Admin og superbrugere giver bøderne, enten i bødekassen eller med <b>💸 Giv en bøde</b> nederst på spilledagen.</p>
 <p>Får du en bøde, vises den næste gang du åbner appen.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Hvordan sender vi et nyhedsbrev?',
+    a: `<p>Gå til <b>Admin → 📰 Nyhedsbrev</b> og tryk <b>Skriv et nyt nyhedsbrev</b>. Skriv en overskrift (den bliver også emnet på mailen), en indledning og et eller flere afsnit. Hvert afsnit kan få en knap med et link, fx til en tilmelding. Ved siden af (på telefonen nedenunder) ser du, hvordan mailen kommer til at se ud.</p>
+<p>Tryk <b>Send en test til mig</b> for at se mailen i din egen indbakke, og <b>Send</b>, når den er klar. Du kan også gemme som kladde og skrive videre senere. Mailen får gruppens eller klubbens farve, og svarer nogen på den, går svaret til den mail, der er sat op under Påmindelser på mail.</p>
+<p>Admin kan altid sende nyhedsbreve. Andre kan få lov med fluebenet <b>📰 Nyhedsbrev</b> under <b>Admin → 🔑 Rettigheder</b>.</p>`,
+  },
+  {
+    cat: 'Roller og adgang',
+    q: 'Hvordan slår jeg nyhedsbreve fra?',
+    a: `<p>Tryk <b>Afmeld her</b> nederst i mailen, eller gå til <b>Min padel → ⚙️ → 🔔 Notifikationer og mails</b> og slå nyhedsbreve fra for gruppen eller klubben. Du får stadig påmindelser og beskeder om dine spilledage og træninger.</p>`,
   },
   {
     cat: 'Roller og adgang',
@@ -523,7 +540,8 @@ export const FAQ = [
 <li>🧒 <b>Medlemmer</b>: godkende nye og sætte dem på hold.</li>
 <li>💳 <b>Kontingent</b>: se og registrere, hvem der har betalt.</li>
 <li>📣 <b>Opslag</b>: skrive opslag til hele klubben.</li>
-<li>🎉 <b>Arrangementer</b>: oprette og styre arrangementer.</li></ul>
+<li>🎉 <b>Arrangementer</b>: oprette og styre arrangementer.</li>
+<li>📰 <b>Nyhedsbrev</b>: skrive og sende nyhedsbreve på mail til klubben.</li></ul>
 <p>Det gemmes med det samme. Admin har altid alle rettigheder, og trænere styrer deres egne hold. Alle i klubben kan se bestyrelse og trænere med telefonnummer under <b>Opslag → Bestyrelse og trænere</b>.</p>`,
   },
   {
@@ -613,8 +631,9 @@ export const FAQ = [
 <ul><li>▶️ <b>Køre spilledagen</b>: starte runder, rette hold, til- og afmelde andre og godkende resultater (det samme som en superbruger).</li>
 <li>📅 <b>Spilledage</b>: oprette og rette spilledage.</li>
 <li>👥 <b>Spillere</b>: godkende nye spillere og rette deres oplysninger (men ikke ændre roller).</li>
-<li>💸 <b>Bødekasse</b>: godkende bøder og betalinger.</li></ul>
-<p>I en klub kan du give Træninger, Medlemmer, Kontingent, Opslag og Arrangementer. Admin må altid alt.</p>`,
+<li>💸 <b>Bødekasse</b>: godkende bøder og betalinger.</li>
+<li>📰 <b>Nyhedsbrev</b>: skrive og sende nyhedsbreve på mail til gruppen.</li></ul>
+<p>I en klub kan du give Træninger, Medlemmer, Kontingent, Opslag, Arrangementer og Nyhedsbrev. Admin må altid alt.</p>`,
   },
   {
     cat: 'Roller og adgang',
