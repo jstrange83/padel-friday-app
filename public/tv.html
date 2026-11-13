@@ -78,8 +78,9 @@
   .pod.p1 .pb { height:7vw; } .pod.p2 .pb { height:5vw; } .pod.p3 .pb { height:3.6vw; }
   .spons { display:flex; align-items:center; gap:2vw; flex-wrap:wrap; }
   .spons span { color:var(--mut); font-size:1vw; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
-  .spons img { height:3.2vw; max-width:12vw; object-fit:contain; background:#fff; border-radius:.5vw; padding:.3vw .6vw; }
-  .spons b { color:var(--txt); font-size:1.4vw; }
+  .spons .sp { display:flex; align-items:center; gap:.7vw; }
+  .spons img { height:3.2vw; max-width:12vw; object-fit:contain; background:#fff; border-radius:.5vw; padding:.25vw .5vw; }
+  .spons b { color:var(--txt); font-size:1.2vw; }
   .flash { position:fixed; inset:0; background:rgba(11,22,38,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5vw; z-index:5; animation:in .35s ease-out; }
   .flash .k { color:var(--acc); font-weight:800; letter-spacing:.15em; font-size:1.6vw; text-transform:uppercase; }
   .flash .s { font-size:12vw; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
@@ -174,7 +175,7 @@ function render(d) {
     <main>${look?.message ? `<div class="msg">${esc(look.message)}</div>` : ''}${main}</main>
     <aside><h2>${sideTitle}</h2><div class="rows">${side || '<p style="color:var(--mut)">Ingen resultater endnu.</p>'}</div>
       <div class="qr">${qrSvg(qrUrl)}<span>${ev ? 'Scan og se kampene, og meld resultater i appen' : d.next ? 'Scan og tilmeld dig næste spilledag' : 'Følg med i Padelklubben-appen'}</span></div></aside>
-    <footer>${sp.length ? `<div class="spons"><span>Tak til vores sponsorer</span>${sp.map((x) => x.logo ? `<img src="${esc(x.logo)}" alt="${esc(x.name)}">` : `<b>${esc(x.name)}</b>`).join('')}</div>` : `Opdaterer automatisk · ${esc(d.group)}`}</footer>`;
+    <footer>${sp.length ? `<div class="spons"><span>Tak til vores sponsorer</span>${sp.map((x) => `<div class="sp">${x.logo ? `<img src="${esc(x.logo)}" alt="">` : ''}<b>${esc(x.name)}</b></div>`).join('')}</div>` : `Opdaterer automatisk · ${esc(d.group)}`}</footer>`;
   clock();
 }
 
