@@ -1215,6 +1215,12 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('.rcard[data-ruser="u-2"] label:has(input[data-rk="nyhedsbrev"])').click();
   await wait(500);
   ok(await page.evaluate(() => (window.__mock.db().padel_rights_v2 || []).find((x) => x.group_id === 'g-fre' && x.user_id === 'u-2')?.rights.includes('nyhedsbrev')), 'admin kan give rettigheden Nyhedsbrev');
+  // Superadmin giver gruppen den betalte udgave, så AI-hjælpen kan bruges
+  await page.click('[data-tab="grupper"]');
+  await page.waitForSelector('#plusMode');
+  await page.locator('label:has(#plusMode)').click();
+  await page.waitForSelector('#plusUntil');
+  ok(await page.evaluate(() => window.__mock.db().padel_groups.find((x) => x.id === 'g-fre').plus === true), 'superadmin slår den betalte udgave til for gruppen');
   await loginAs('test2@fredagspadel.test');
   await page.goto('http://localhost:8765/#/admin');
   await page.waitForSelector('#nlNew');
@@ -1262,6 +1268,15 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.waitForSelector('.nlrow-item');
   ok(await page.evaluate(() => (window.__mock.db().padel_newsletters_v2 || []).some((n) => n.title.startsWith('Nyt fra fredagspadel') && n.status === 'sendt' && n.sections.length === 2 && n.recipients > 0)), 'nyhedsbrevet sendes til gruppen');
   ok((await page.locator('.nlrow-item').first().innerText()).includes('Sendt'), 'listen viser det sendte nyhedsbrev');
+  // Uden den betalte udgave er AI-hjælpen låst
+  await page.evaluate(() => { window.__mock.db().padel_groups.find((x) => x.id === 'g-fre').plus = false; window.__mock.save(); });
+  await page.reload();
+  await page.waitForSelector('#nlNew');
+  await page.click('#nlNew');
+  await page.waitForSelector('#nlForm');
+  ok(await page.locator('.nlai.locked').count() === 1 && !(await page.locator('#nlAi').count()), 'uden betalt udgave er AI-hjælpen låst');
+  await page.click('#nlBack');
+  await page.waitForSelector('.nlrow-item');
   await shot('nyhedsbrev-liste');
   // Spilleren kan slå nyhedsbreve fra under Notifikationer og mails
   await page.goto('http://localhost:8765/#/beskeder');

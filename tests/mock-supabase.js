@@ -821,6 +821,7 @@ Object.assign(RPC, {
     return n;
   },
   // Centre med egen officiel rangliste
+  padel_set_plus_v2: ({ g, p_on, p_until }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { plus: !!p_on, plus_until: p_on ? p_until || null : null }); },
   padel_set_center_mode_v2: ({ g, p_on }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); const gr = db.padel_groups.find((x) => x.id === g); if (p_on) gr.ranking_mode = 'gruppe'; else if (gr.is_center) gr.ranking_mode = 'alle'; gr.is_center = !!p_on; },
   padel_set_center_look_v2: ({ g, p_color, p_message }) => { if (!isAdm(g)) throw new Error('Kun centrets admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { brand_color: p_color || null, tv_message: p_message || null }); },
   padel_tv_look_v2: ({ p_token }) => { const t = (db.padel_tv_links || []).find((x) => x.token === p_token); const gr = t && db.padel_groups.find((x) => x.id === t.group_id); return gr ? { color: gr.brand_color || null, message: gr.tv_message || null, center: !!gr.is_center } : null; },
@@ -1053,7 +1054,8 @@ export function createClient() {
       async invoke(name, { body } = {}) {
         // AI-hjælp til nyhedsbreve: retter "stafefejl" og laver en punktliste
         if (name === 'padel-newsletter-ai') {
-          if (!nlRight(body?.group)) return { data: null, error: { message: 'Det har du ikke adgang til' } };
+          const gr = db.padel_groups.find((x) => x.id === body?.group);
+          if (!me()?.is_superadmin && !(nlRight(body?.group) && gr?.plus)) return { data: null, error: { message: 'AI-hjælpen kræver den betalte udgave' } };
           const fix = (t) => String(t || '').replace(/stafefejl/g, 'stavefejl');
           return { data: { title: fix(body.title) + ' 🎾', intro: fix(body.intro), sections: (body.sections || []).map((x) => ({ ...x, heading: fix(x.heading), text: fix(x.text) + '\n\n- Husk bat\n- Husk vand' })), changes: ['Rettet 1 stavefejl', 'Lavet en punktliste'] }, error: null };
         }

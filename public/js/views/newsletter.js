@@ -1,6 +1,9 @@
 // Admin → Nyhedsbrev: skriv et flot nyhedsbrev til gruppen eller klubben, se det som mail, send en test til dig selv, og send til alle.
 // Kræver rettigheden "nyhedsbrev" (admin har den altid). Mailen laves af edge function padel-newsletter i samme design som forhåndsvisningen.
-import { sb, S, app, esc, toast, q, busy, group, fmtDate, nameOf, haptic } from '../core.js';
+import { sb, S, app, esc, toast, q, busy, group, fmtDate, nameOf, haptic, hasRight } from '../core.js';
+
+// AI-hjælpen: superadmin altid; ellers kun grupper med den betalte udgave (databasen tjekker det samme)
+const aiAllowed = () => (S.realMe?.is_superadmin && !S.viewAs) || (hasRight('nyhedsbrev') && !!group()?.plus && (!group()?.plus_until || group().plus_until >= new Date().toISOString().slice(0, 10)));
 
 const MAX = 12;
 const hex = (c) => (/^#[0-9a-f]{6}$/i.test(c || '') ? c : '#5b3ee6');
@@ -93,10 +96,12 @@ function editor(d) {
         ${(d.sections || []).map(sec).join('')}
         ${sent || (d.sections || []).length >= MAX ? '' : '<button type="button" class="btn ghost" id="nlAdd">＋ Tilføj afsnit</button>'}
       </form>
-      ${sent ? '' : `<div class="card nlai"><div class="nlai-top"><span class="nlai-ic">✨</span><div><b>Ret og gør pæn med AI</b>
+      ${sent ? '' : aiAllowed() ? `<div class="card nlai"><div class="nlai-top"><span class="nlai-ic">✨</span><div><b>Ret og gør pæn med AI</b>
         <small class="muted">AI retter stavefejl, foreslår bedre formuleringer og stiller mailen pænt op med afsnit, overskrifter og punktlister. Du ser forslaget, før noget bliver ændret.</small></div></div>
         <button class="btn" id="nlAi">✨ Lad AI læse den igennem</button>
-        ${S.nlUndo ? '<button class="link sm" id="nlUndo">↩️ Fortryd AI\'s ændringer</button>' : ''}</div>`}
+        ${S.nlUndo ? '<button class="link sm" id="nlUndo">↩️ Fortryd AI\'s ændringer</button>' : ''}</div>`
+      : `<div class="card nlai locked"><div class="nlai-top"><span class="nlai-ic">✨</span><div><b>Ret og gør pæn med AI</b> <span class="badge">⭐ Betalt udgave</span>
+        <small class="muted">Med den betalte udgave kan AI rette stavefejl, foreslå bedre formuleringer og stille nyhedsbrevet pænt op. Vil I have den, så skriv til <a href="mailto:kontakt@padelklubben.dk?subject=Betalt%20udgave%20af%20Padelklubben">kontakt@padelklubben.dk</a>.</small></div></div></div>`}
       ${sent ? '<button class="btn" id="nlCopy">📄 Brug som skabelon til et nyt</button>' : `<div class="nlactions">
         <button class="btn" id="nlSave">💾 Gem kladde</button>
         <button class="btn" id="nlTest">🧪 Test til mig</button></div>

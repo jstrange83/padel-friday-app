@@ -1,5 +1,5 @@
 // Padel: AI-hjælp til nyhedsbreve. Retter stavefejl, foreslår bedre formuleringer og stiller mailen pænt op.
-// Kaldes fra appen af en, der har rettigheden "nyhedsbrev". Krop: { group, title, intro, sections: [{ heading, text, button_text, button_url }] }
+// Kaldes fra appen af superadmin eller en med rettigheden "nyhedsbrev" i en gruppe med den betalte udgave. Krop: { group, title, intro, sections: [{ heading, text, button_text, button_url }] }
 // Svar: { title, intro, sections, changes: [tekst] }. Nøglen ANTHROPIC_API_KEY ligger som hemmelighed i Supabase.
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -53,8 +53,9 @@ Deno.serve(async (req) => {
     if (!u?.user) return json({ error: "Du skal være logget ind" }, 401);
     const b = await req.json().catch(() => null);
     if (!b?.group) return json({ error: "Mangler gruppe" }, 400);
-    const { data: ok } = await user.rpc("padel_has_right_v2", { g: b.group, r: "nyhedsbrev" });
-    if (!ok) return json({ error: "Det har du ikke adgang til" }, 403);
+    // Superadmin altid; ellers kun grupper med den betalte udgave
+    const { data: ok } = await user.rpc("padel_ai_allowed_v2", { g: b.group });
+    if (!ok) return json({ error: "AI-hjælpen kræver den betalte udgave" }, 402);
     // Højst PER_DAY forslag pr. person pr. dag
     const { data: used, error: uerr } = await admin.rpc("padel_ai_use_v2", { p_user: u.user.id, p_max: PER_DAY });
     if (uerr) return json({ error: "Prøv igen om lidt" }, 500);

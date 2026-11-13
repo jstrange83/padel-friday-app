@@ -213,6 +213,9 @@ function groupsTab() {
         <button class="icon" id="renameGroup" aria-label="Omdøb gruppe">✏️</button></div>
       ${group()?.kind !== 'klub' ? `<label class="switch centermode"><input type="checkbox" id="centerMode" ${group()?.is_center ? 'checked' : ''}><span>🏟 Center med egen officiel rangliste</span></label>
       <p class="muted small">${group()?.is_center ? 'Gruppen er et center: point her tæller kun på centrets egen rangliste (alle starter på 1000) og ikke på den fælles. Kun synligt for superadmin indtil videre.' : 'Slå til for et padelcenter, der holder officielle ranglisteaftener med sin egen rangliste.'}</p>` : ''}
+      <label class="switch plusmode"><input type="checkbox" id="plusMode" ${group()?.plus ? 'checked' : ''}><span>⭐ Betalt udgave</span></label>
+      <p class="muted small">${group()?.plus ? `Gruppen har den betalte udgave${group()?.plus_until ? ` til og med ${new Date(group().plus_until).toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' })}` : ''}: admins og dem med fluebenet Nyhedsbrev kan bruge AI-hjælpen.` : 'Slå til, når gruppen har betalt. Så kan gruppens admins bruge AI-hjælpen til nyhedsbreve.'}</p>
+      ${group()?.plus ? `<label class="plusuntil">Betalt til og med <small class="muted">(tom = ingen slutdato)</small><input type="date" id="plusUntil" value="${group()?.plus_until || ''}"></label>` : ''}
       <div class="lbl">Centre</div>
       <div class="checks">${S.centers.map((c) => `<label><input type="checkbox" name="gc" value="${c.id}" ${allowed.includes(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span></label>`).join('')}</div>
       <details class="gmem" ${S.gmemOpen || !admins.length ? 'open' : ''}><summary><b>👥 Medlemmer og roller</b><span class="muted">${mem.length} ›</span></summary>
@@ -278,6 +281,15 @@ function bind() {
   if (cm) cm.onchange = async () => {
     if (!confirm(cm.checked ? `Gør ${group()?.name} til et center med egen officiel rangliste?\n\nKampe her tæller så kun på centrets egen rangliste (alle starter på 1000).` : `Slå center fra for ${group()?.name}?`)) { cm.checked = !cm.checked; return; }
     try { await q(sb.rpc('padel_set_center_mode_v2', { g, p_on: cm.checked })); toast(cm.checked ? 'Gruppen er nu et center' : 'Center er slået fra'); await refresh(); } catch { cm.checked = !cm.checked; }
+  };
+  // Betalt udgave (superadmin): låser AI-hjælpen op for gruppens admins
+  const pm = document.getElementById('plusMode');
+  if (pm) pm.onchange = async () => {
+    try { await q(sb.rpc('padel_set_plus_v2', { g, p_on: pm.checked, p_until: null })); Object.assign(group(), { plus: pm.checked, plus_until: null }); toast(pm.checked ? `${group()?.name} har nu den betalte udgave ⭐` : 'Den betalte udgave er slået fra'); await refresh(); } catch { pm.checked = !pm.checked; }
+  };
+  const pu = document.getElementById('plusUntil');
+  if (pu) pu.onchange = async () => {
+    try { await q(sb.rpc('padel_set_plus_v2', { g, p_on: true, p_until: pu.value || null })); group().plus_until = pu.value || null; toast(pu.value ? 'Slutdatoen er gemt' : 'Ingen slutdato'); await refresh(); } catch {}
   };
   const cl = document.getElementById('centerLook');
   if (cl) {
