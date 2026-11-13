@@ -249,7 +249,10 @@ const RPC = {
     }
     return { group: gr.name, now: now(),
       event: ev && { id: ev.id, title: ev.title, starts_at: ev.starts_at, status: ev.status, current_round: ev.current_round, format: ev.format, round_minutes: ev.round_minutes, duration_minutes: ev.duration_minutes, center: db.padel_centers.find((c) => c.id === ev.center_id)?.name },
-      next: null,
+      next: (() => { const n = db.padel_events.filter((e) => e.group_id === g && !e.cancelled_at && e.starts_at > now() && e.id !== ev?.id).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+        if (!n) return null; const su = db.padel_signups.filter((x) => x.event_id === n.id);
+        return { id: n.id, starts_at: n.starts_at, title: n.title, center: db.padel_centers.find((c) => c.id === n.center_id)?.name, signed: su.length, spots: n.court_ids.length * 4, names: su.map((x) => short(x.player_id)) }; })(),
+      last: null,
       courts: ev ? db.padel_courts.filter((c) => ev.court_ids.includes(c.id)).sort((a, b) => a.sort - b.sort).map((c) => ({ id: c.id, name: c.name })) : [],
       matches: ms.map((m) => ({ round: m.round_no, court: m.court_id, a: [short(m.a_left), short(m.a_right)], b: [short(m.b_left), short(m.b_right)], sa: m.score_a, sb: m.score_b, status: m.status,
         d: db.padel_elo_changes.find((x) => x.match_id === m.id && x.player_id === m.a_left && x.active)?.delta ?? null })),
@@ -823,8 +826,9 @@ Object.assign(RPC, {
   // Centre med egen officiel rangliste
   padel_set_plus_v2: ({ g, p_on, p_until }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { plus: !!p_on, plus_until: p_on ? p_until || null : null }); },
   padel_set_center_mode_v2: ({ g, p_on }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); const gr = db.padel_groups.find((x) => x.id === g); if (p_on) gr.ranking_mode = 'gruppe'; else if (gr.is_center) gr.ranking_mode = 'alle'; gr.is_center = !!p_on; },
+  padel_set_sponsors_v2: ({ g, p_sponsors }) => { if (!isAdm(g)) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).sponsors = (p_sponsors || []).filter((x) => x.name).slice(0, 12); },
   padel_set_center_look_v2: ({ g, p_color, p_message }) => { if (!isAdm(g)) throw new Error('Kun centrets admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { brand_color: p_color || null, tv_message: p_message || null }); },
-  padel_tv_look_v2: ({ p_token }) => { const t = (db.padel_tv_links || []).find((x) => x.token === p_token); const gr = t && db.padel_groups.find((x) => x.id === t.group_id); return gr ? { color: gr.brand_color || null, message: gr.tv_message || null, center: !!gr.is_center } : null; },
+  padel_tv_look_v2: ({ p_token }) => { const t = (db.padel_tv_links || []).find((x) => x.token === p_token); const gr = t && db.padel_groups.find((x) => x.id === t.group_id); return gr ? { color: gr.brand_color || null, message: gr.tv_message || null, center: !!gr.is_center, sponsors: gr.sponsors || [] } : null; },
   padel_import_signups_v2: ({ e, p_lines }) => {
     const ev = db.padel_events.find((x) => x.id === e);
     const added = [], already = [], missing = [];
@@ -1076,6 +1080,7 @@ export function createClient() {
     // Billeder: gemmes kun i hukommelsen; stierne skal ligge i brugerens egen mappe
     storage: { from: () => ({
       async upload(path, blob) { if (!path.startsWith(uid() + '/')) return { data: null, error: { message: 'new row violates row-level security policy' } }; (window.__imgs ||= {})[path] = URL.createObjectURL(blob); return { data: { path }, error: null }; },
+      getPublicUrl(path) { return { data: { publicUrl: window.__imgs?.[path] || 'data:image/png;base64,iVBORw0KGgo=' } }; },
       async createSignedUrls(paths) { return { data: paths.map((p) => ({ path: p, signedUrl: window.__imgs?.[p] || null })), error: null }; },
     }) },
     async rpc(name, args) {

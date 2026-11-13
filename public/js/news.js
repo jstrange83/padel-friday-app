@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-13h', date: '13. november 2026', admin: true, groups: true, title: 'TV-skærmen: sponsorer og mere at se',
+    items: ['🤝 Centre kan lægge <b>sponsorer</b> ind med navn og logo under <b>Admin → Indstillinger</b>. De vises nederst på TV-skærmen.', '📺 Mellem spilledagene viser TV\'et nu, hvem der er tilmeldt næste gang, ledige pladser og podiet fra sidste spilledag.', '🔳 QR-koden på TV\'et fører nu direkte til spilledagen, så man kan se kampene og melde resultater.', '🛠 En spilledag, der stadig er i gang fra dagen før, vises nu også på TV\'et.'],
+  },
+  {
     id: '2026-11-13g', date: '13. november 2026', admin: true, groups: true, title: 'Flere spilledage, cast til TV og store skærme',
     items: ['📅 Når du opretter spilledage, kan du trykke <b>＋ En dag mere</b>. Dagen lægges ned som et lille kort, og du kan lave den næste, med sit eget sted, baner, spiltype og tid. Til sidst opretter du dem alle på én gang.', '📺 TV-knappen på spilledagen kan nu <b>caste</b> dagen direkte til et TV med Chromecast eller Google TV, ligesom fra telefonen. TV\'et viser banerne set fra oven med navnene i hvert felt, ligesom på computeren. Det virker også fra Android-appen: Chrome åbner, og du vælger dit TV. Du kan også åbne TV-skærmen i et nyt vindue.', '🖥 På store skærme bruger appen nu mere af pladsen, og banerne står side om side.'],
   },

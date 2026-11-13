@@ -90,7 +90,14 @@ function settingsTab() {
       <div class="lbl">Farve</div><div class="swatches">${COLORS.map((c) => `<label class="sw" style="--c:${c}"><input type="radio" name="color" value="${c}" ${col.toLowerCase() === c ? 'checked' : ''}><span></span></label>`).join('')}
         <label class="sw own" title="Egen farve"><input type="color" name="own" value="${col || '#c6ef3e'}"></label></div>
       <label>Besked på skærmen <small class="muted">(fx "Fredagsturnering kl. 19, tilmeld dig i baren")</small><input name="msg" maxlength="140" value="${esc(group()?.tv_message || '')}"></label>
-      <div class="mact"><button class="btn sm primary">Gem</button></div></form>` : ''}
+      <div class="mact"><button class="btn sm primary">Gem</button></div></form>
+    <div class="card sponsors" id="sponsorsCard"><b>🤝 Sponsorer på TV-skærmen</b>
+      <p class="muted small">Logoerne vises nederst på TV-skærmen under "Tak til vores sponsorer".</p>
+      ${(group()?.sponsors || []).map((x, i) => `<div class="sprow">${x.logo ? `<img src="${esc(x.logo)}" alt="">` : '<span class="nologo">🤝</span>'}<b class="grow">${esc(x.name)}</b><button type="button" class="link sm dn" data-spdel="${i}">Fjern</button></div>`).join('')}
+      ${(group()?.sponsors || []).length < 12 ? `<form id="sponsorAdd"><label>Sponsorens navn<input name="name" maxlength="60" required placeholder="Fx Gilleleje Bageri"></label>
+        <label>Logo <small class="muted">(valgfrit, PNG eller JPG)</small><input name="logo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"></label>
+        <div class="mact"><button class="btn sm primary">＋ Tilføj sponsor</button></div></form>` : ''}
+    </div>` : ''}
     <div class="card gset"><b>⚙️ ${ctr ? 'Centrets' : 'Gruppens'} indstillinger</b>
     ${ctr ? '<p class="muted small">🏆 Centret har sin egen officielle rangliste. Alle starter på 1000 point, og kampene her tæller ikke på den fælles rangliste.</p>' : ''}
     <div class="rankmode" ${ctr ? 'hidden' : ''}><div class="lbl">🏆 Rangliste</div>
@@ -290,6 +297,29 @@ function bind() {
   const pu = document.getElementById('plusUntil');
   if (pu) pu.onchange = async () => {
     try { await q(sb.rpc('padel_set_plus_v2', { g, p_on: true, p_until: pu.value || null })); group().plus_until = pu.value || null; toast(pu.value ? 'Slutdatoen er gemt' : 'Ingen slutdato'); await refresh(); } catch {}
+  };
+  // Sponsorer (centre): navn og logo, vises på TV-skærmen
+  const saveSponsors = async (list) => { await q(sb.rpc('padel_set_sponsors_v2', { g, p_sponsors: list })); group().sponsors = list; };
+  app.querySelectorAll('[data-spdel]').forEach((b) => (b.onclick = async () => {
+    const list = [...(group()?.sponsors || [])]; list.splice(+b.dataset.spdel, 1);
+    try { await saveSponsors(list); toast('Sponsoren er fjernet'); await refresh(); } catch {}
+  }));
+  const spf = document.getElementById('sponsorAdd');
+  if (spf) spf.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = spf.querySelector('button'); busy(btn, true);
+    try {
+      let logo = null; const file = spf.logo.files[0];
+      if (file) {
+        if (file.size > 2e6) { toast('Logoet må højst fylde 2 MB', true); busy(btn, false); return; }
+        const path = `${S.realMe.id}/sponsor-${Date.now()}.${(file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z]/g, '')}`;
+        const up = await sb.storage.from('padel-public').upload(path, file, { contentType: file.type, upsert: false });
+        if (up.error) throw new Error(up.error.message);
+        logo = sb.storage.from('padel-public').getPublicUrl(path).data.publicUrl;
+      }
+      await saveSponsors([...(group()?.sponsors || []), { name: spf.name.value.trim(), logo }]);
+      toast('Sponsoren er tilføjet 🤝'); await refresh();
+    } catch (err) { if (err?.message) toast(err.message, true); busy(btn, false); }
   };
   const cl = document.getElementById('centerLook');
   if (cl) {

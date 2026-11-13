@@ -1350,3 +1350,7 @@ html.inapp body { overscroll-behavior-y: contain; }
 .namecard .nact { display: flex; gap: 8px; margin-top: 10px; }
 .namecard .nact > div { flex: 1 1 0; }
 .namecard .nact .btn { width: 100%; }
+.sponsors .sprow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.sponsors .sprow img { width: 64px; height: 36px; object-fit: contain; background: #fff; border-radius: 6px; padding: 2px 4px; }
+.sponsors .sprow .nologo { width: 64px; text-align: center; font-size: 22px; }
+.sponsors form { margin-top: 10px; }

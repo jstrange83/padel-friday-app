@@ -514,6 +514,13 @@ try {
   await wait(500);
   ok(await page.evaluate(() => { const g = window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel'); return g.brand_color === '#8b5cf6' && g.tv_message === 'Ranglisteaften kl. 19'; }), 'centret vælger farve og besked til TV-skærmen');
   ok(await page.locator('.rankmode').isHidden(), 'et center har altid sin egen rangliste (valget er skjult)');
+  // Sponsorer på TV-skærmen
+  await page.waitForSelector('#sponsorAdd');
+  await page.fill('#sponsorAdd input[name=name]', 'Gilleleje Bageri');
+  await page.setInputFiles('#sponsorAdd input[name=logo]', { name: 'logo.png', mimeType: 'image/png', buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await page.click('#sponsorAdd button');
+  await page.waitForSelector('.sprow');
+  ok(await page.evaluate(() => { const s = window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel').sponsors; return s?.length === 1 && s[0].name === 'Gilleleje Bageri' && !!s[0].logo; }), 'centret kan tilføje en sponsor med logo');
   await shot('center-indstillinger');
   await noOverflow('center indstillinger');
   await page.click('[data-tab="grupper"]');
@@ -1327,7 +1334,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Flere spilledage, cast til TV') && nm.includes('Banerne set fra oven'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('TV-skærmen: sponsorer') && nm.includes('Flere spilledage, cast til TV'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

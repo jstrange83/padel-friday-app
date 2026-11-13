@@ -65,6 +65,21 @@
   .idle .big { font-size:4vw; font-weight:800; line-height:1.05; }
   .idle .big em { color:var(--acc); font-style:normal; }
   .idle p { font-size:1.5vw; color:var(--mut); margin:0; }
+  .idle p b { color:var(--txt); } .idle p b.hot { color:var(--acc); }
+  .idle .names { display:flex; flex-wrap:wrap; gap:.6vw; max-width:60vw; }
+  .idle .names span { background:var(--card); border:1px solid var(--line); border-radius:99px; padding:.35vw 1vw; font-size:1.2vw; font-weight:700; }
+  .idle .cta { font-size:1.2vw; }
+  .podium { margin-top:1.4vw; }
+  .ptitle { color:var(--mut); font-size:1.2vw; font-weight:700; margin-bottom:.6vw; }
+  .pods { display:flex; align-items:flex-end; gap:1vw; }
+  .pod { width:12vw; text-align:center; display:flex; flex-direction:column; align-items:center; gap:.2vw; }
+  .pod .pm { font-size:2.4vw; } .pod b { font-size:1.4vw; } .pod small { color:var(--mut); font-size:.9vw; }
+  .pod .pb { width:100%; background:var(--card); border:2px solid var(--line); border-radius:.6vw .6vw 0 0; font-size:2vw; font-weight:900; color:var(--acc); display:grid; place-items:center; margin-top:.4vw; }
+  .pod.p1 .pb { height:7vw; } .pod.p2 .pb { height:5vw; } .pod.p3 .pb { height:3.6vw; }
+  .spons { display:flex; align-items:center; gap:2vw; flex-wrap:wrap; }
+  .spons span { color:var(--mut); font-size:1vw; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
+  .spons img { height:3.2vw; max-width:12vw; object-fit:contain; background:#fff; border-radius:.5vw; padding:.3vw .6vw; }
+  .spons b { color:var(--txt); font-size:1.4vw; }
   .flash { position:fixed; inset:0; background:rgba(11,22,38,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.5vw; z-index:5; animation:in .35s ease-out; }
   .flash .k { color:var(--acc); font-weight:800; letter-spacing:.15em; font-size:1.6vw; text-transform:uppercase; }
   .flash .s { font-size:12vw; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
@@ -89,7 +104,10 @@ const tz = { timeZone: 'Europe/Copenhagen' };
 const hm = (d) => new Date(d).toLocaleTimeString('da-DK', { ...tz, hour: '2-digit', minute: '2-digit' }).replace(':', '.');
 const day = (d, o) => new Date(d).toLocaleDateString('da-DK', { ...tz, ...o });
 const sign = (n) => (n > 0 ? `+${n}` : `${n}`);
-const qrSvg = (() => { const q = qrcode(0, 'M'); q.addData(location.origin + '/'); q.make(); return q.createSvgTag({ cellSize: 6, margin: 1, scalable: true }); })();
+// QR-koden peger på den spilledag, der vises (så man lander lige på kampene), ellers på appen
+const APPURL = 'https://padelklubben.dk';
+const qrCache = {};
+const qrSvg = (url) => qrCache[url] ||= (() => { const q = qrcode(0, 'M'); q.addData(url); q.make(); return q.createSvgTag({ cellSize: 6, margin: 1, scalable: true }); })();
 let last = null, seen = null, flashTimer = 0;
 
 function clock() { const el = document.getElementById('clock'); if (el) el.textContent = hm(Date.now()); }
@@ -139,18 +157,24 @@ function render(d) {
       side = d.standings.map((r, i) => `<div class="row"><span class="pos">${i === 0 ? '👑' : i + 1}</span><b>${esc(r.name)}<small>${r.w} sejre · ${r.f}–${r.a} partier</small></b><span class="v ${r.pts > 0 ? 'up' : r.pts < 0 ? 'dn' : ''}">${sign(r.pts)}</span></div>`).join('');
     }
   } else {
-    const n = d.next;
-    main = `<div class="idle"><div class="kicker">${esc(d.group)}</div>
+    const n = d.next, pod = d.last?.podium || [];
+    const free = n ? Math.max(0, (n.spots || 0) - n.signed) : 0;
+    main = `<div class="idle">
       ${n ? `<div class="big">Næste spilledag<br><em>${esc(day(n.starts_at, { weekday: 'long', day: 'numeric', month: 'long' }))} kl. ${hm(n.starts_at)}</em></div>
-      <p>${esc(n.center || '')}${n.title ? ` · ${esc(n.title)}` : ''} · ${n.signed} tilmeldt</p>` : '<div class="big">Ingen spilledag <em>i dag</em></div>'}
-      <p>Tilmeld dig i Padelklubben-appen. Scan koden for at åbne den.</p></div>`;
+      <p>${esc(n.center || '')}${n.title ? ` · ${esc(n.title)}` : ''} · <b>${n.signed} tilmeldt</b>${n.spots ? free ? ` · <b class="hot">${free} ${free === 1 ? 'ledig plads' : 'ledige pladser'}</b>` : ' · <b>Fuldt</b>' : ''}</p>
+      ${(n.names || []).length ? `<div class="names">${n.names.map((x) => `<span>${esc(x)}</span>`).join('')}</div>` : ''}` : '<div class="big">Ingen spilledag <em>i dag</em></div>'}
+      ${pod.length ? `<div class="podium"><div class="ptitle">🏆 Sidste spilledag · ${esc(day(d.last.starts_at, { weekday: 'long', day: 'numeric', month: 'long' }))}</div>
+        <div class="pods">${[1, 0, 2].filter((i) => pod[i]).map((i) => `<div class="pod p${i + 1}"><div class="pm">${['🥇', '🥈', '🥉'][i]}</div><b>${esc(pod[i].name)}</b><small>${pod[i].w} ${pod[i].w === 1 ? 'sejr' : 'sejre'}</small><div class="pb">${i + 1}</div></div>`).join('')}</div></div>` : ''}
+      <p class="cta">Tilmeld dig i Padelklubben-appen. Scan koden for at åbne den.</p></div>`;
   }
+  const sp = (look?.sponsors || []).filter((x) => x?.name);
+  const qrUrl = ev ? `${APPURL}/#/fredag/${ev.id}` : d.next?.id ? `${APPURL}/#/fredag/${d.next.id}` : APPURL;
   app.innerHTML = `<header><div><div class="kicker">${esc(d.group)}</div><h1>${esc(day(d.now, { weekday: 'long', day: 'numeric', month: 'long' }))}</h1>
       <div class="sub">${ev ? esc(ev.title || 'Spilledag') : 'Padelklubben'}</div></div><div class="clock" id="clock"></div></header>
     <main>${look?.message ? `<div class="msg">${esc(look.message)}</div>` : ''}${main}</main>
     <aside><h2>${sideTitle}</h2><div class="rows">${side || '<p style="color:var(--mut)">Ingen resultater endnu.</p>'}</div>
-      <div class="qr">${qrSvg}<span>Følg med og meld resultater i Padelklubben-appen</span></div></aside>
-    <footer>Opdaterer automatisk · ${esc(d.group)}</footer>`;
+      <div class="qr">${qrSvg(qrUrl)}<span>${ev ? 'Scan og se kampene, og meld resultater i appen' : d.next ? 'Scan og tilmeld dig næste spilledag' : 'Følg med i Padelklubben-appen'}</span></div></aside>
+    <footer>${sp.length ? `<div class="spons"><span>Tak til vores sponsorer</span>${sp.map((x) => x.logo ? `<img src="${esc(x.logo)}" alt="${esc(x.name)}">` : `<b>${esc(x.name)}</b>`).join('')}</div>` : `Opdaterer automatisk · ${esc(d.group)}`}</footer>`;
   clock();
 }
 
