@@ -5,8 +5,8 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
-    id: '2026-11-14', date: '14. november 2026', groups: true, title: 'Vinderchance og badges',
-    items: ['🏅 På <b>Min padel</b> kan du nu samle <b>badges</b>: første sejr, 10, 25, 50 og 100 kampe, sejre i træk, æg-giver, fast inventar, nye makkere og modstandere, point-milepæle og nr. 1 på ranglisten. Låste badges viser, hvor langt du mangler.', '📊 Før en kamp er spillet, viser appen nu holdenes <b>vinderchance</b> i procent, ud fra spillernes point. Under <b>Din næste kamp</b> kan du se jeres egen chance.'],
+    id: '2026-11-14', date: '14. november 2026', groups: true, title: 'Vinderchance, badges og din måned',
+    items: ['📆 <b>Din måned i padel</b>: På Min padel kan du se månedens tal og højdepunkter (største sejr, flest point i én kamp, månedens makker) og dele dem med et tryk.', '🏅 På <b>Min padel</b> kan du nu samle <b>badges</b>: første sejr, 10, 25, 50 og 100 kampe, sejre i træk, æg-giver, fast inventar, nye makkere og modstandere, point-milepæle og nr. 1 på ranglisten. Låste badges viser, hvor langt du mangler.', '📊 Før en kamp er spillet, viser appen nu holdenes <b>vinderchance</b> i procent, ud fra spillernes point. Under <b>Din næste kamp</b> kan du se jeres egen chance.'],
   },
   {
     id: '2026-11-13h', date: '13. november 2026', admin: true, groups: true, title: 'TV-skærmen: sponsorer og mere at se',

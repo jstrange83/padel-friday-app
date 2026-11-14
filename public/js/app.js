@@ -4,7 +4,7 @@ import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, vi
 import { viewPrivacy } from './views/privacy.js';
 import { viewThreads, viewThread, viewCompose } from './views/messages.js';
 import { renderAuth, renderNewPassword } from './views/auth.js';
-import { renderProfile, renderSettings } from './views/profile.js';
+import { renderProfile, renderSettings, renderMonth } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
 import { viewEvents, viewEventForm, askOpenSpots } from './views/events.js';
 import { viewEvent } from './views/event.js';
@@ -206,7 +206,7 @@ function renderNav() {
   if (isAdmin() || anyRight() || pendingForMe().length || S.notices?.length) items.push(['#/admin', '⚙️', 'Admin']);
   const cur = location.hash || '#/fredage';
   const active = (h) => cur.startsWith(h) || (h === '#/fredage' && /^#\/(fredag|ny-fredag|ret-fredag)/.test(cur)) ||
-    (h === '#/profil' && (cur.startsWith('#/indstillinger') || cur.startsWith('#/boeder') || cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
+    (h === '#/profil' && (cur.startsWith('#/indstillinger') || cur.startsWith('#/maaned') || cur.startsWith('#/boeder') || cur.startsWith('#/faq') || cur.startsWith('#/forslag') || cur.startsWith('#/beskeder') || /^#\/(samtale|ny-besked)/.test(cur) || cur.startsWith('#/udseende') || cur.startsWith('#/nyt'))) || (h === '#/rangliste' && cur.startsWith('#/spiller'));
   // Tal på Admin, når nogen venter på godkendelse
   const pend = S.viewAs ? 0 : pendingForMe().length + (S.notices?.length || 0);
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter på godkendelse">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
@@ -220,7 +220,7 @@ function renderClubNav() {
   if (canRun() || hasAnyRight() || pend || anyRight()) items.push(['#/admin', '⚙️', 'Admin']);
   const page = cur.split('/')[1] || '';
   const active = (h) => cur.startsWith(h) || (h === '#/traening' && (!page || NOT_IN_CLUB.includes(page))) ||
-    (h === '#/profil' && /^#\/(indstillinger|faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
+    (h === '#/profil' && /^#\/(indstillinger|maaned|faq|forslag|beskeder|udseende|nyt|privatliv|samtale|ny-besked)/.test(cur)) || (h === '#/traening' && /^#\/(boern|klub-ind)/.test(cur));
   navEl.innerHTML = items.map(([h, i, t]) => `<a href="${h}" class="${active(h) ? 'on' : ''}"><span>${i}</span>${h === '#/admin' && pend ? `<b class="navbadge" aria-label="${pend} venter">${pend}</b>` : ''}${h === '#/profil' && S.unread && !S.viewAs ? `<b class="navbadge" aria-label="${S.unread} nye beskeder">${S.unread}</b>` : ''}${t}</a>`).join('') + navFoot();
 }
 
@@ -272,6 +272,7 @@ const ROUTES = {
   spiller: (id) => viewPlayer(id),
   profil: () => renderProfile(false),
   indstillinger: () => renderSettings(),
+  maaned: () => renderMonth(),
   faq: () => viewFaq(),
   boeder: () => viewFines(),
   forslag: () => viewSuggest(),

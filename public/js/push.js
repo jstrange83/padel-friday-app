@@ -85,7 +85,8 @@ export async function enablePush() {
   let sub = await reg.pushManager.getSubscription();
   if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(key) });
   const j = sub.toJSON();
-  await q(sb.rpc('padel_save_push', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth }));
+  // mobile = notifikationer i telefonens browser. Har man også appen på telefonen, sendes beskeden kun til appen (ingen dobbelte)
+  await q(sb.rpc('padel_save_push_v2', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_mobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) }));
 }
 
 export async function disablePush() {
@@ -104,8 +105,18 @@ export async function disablePush() {
 }
 
 // Kaldes når man er logget ind: i appen fornys token stille og roligt (det kan skifte), og tryk på notifikationer virker.
+let webRefreshed = false;
 export async function refreshNativePush() {
   const np = nativePush();
+  // Browser: gem abonnementet igen én gang pr. åbning (så det ved, om det er en telefon, og ingen beskeder kommer dobbelt)
+  if (!np && !webRefreshed && !isNativeApp() && pushSupported() && Notification.permission === 'granted') {
+    webRefreshed = true;
+    try {
+      const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription();
+      if (sub) { const j = sub.toJSON(); await q(sb.rpc('padel_save_push_v2', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_mobile: /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) })); }
+    } catch {}
+    return;
+  }
   if (!np || nativeReady) return;
   try {
     if ((await np.checkPermissions()).receive !== 'granted' || !store.get()) { await setupNative(np); nativeReady = true; return; }

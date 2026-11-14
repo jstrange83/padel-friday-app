@@ -1404,3 +1404,19 @@ html.inapp body { overscroll-behavior-y: contain; }
 .ctable .r { text-align: right; } .ctable a { color: var(--text); font-weight: 600; }
 .ctable .up { color: var(--up); } .ctable .dn { color: var(--dn); }
 @media (min-width: 900px) { .cnow { grid-template-columns: 1fr 1fr; } .page.admin .abody.tab-center { columns: auto; } }
+
+/* Din måned i padel */
+.monthlink { display: flex; align-items: center; gap: 12px; color: var(--text); }
+.monthlink > span:first-child { font-size: 26px; } .monthlink small { display: block; color: var(--muted); }
+.mnav { display: flex; align-items: center; gap: 10px; } .mnav h1 { flex: 1; margin: 0; font-size: clamp(22px, 6vw, 32px); }
+.mnav .icon:disabled { opacity: .3; }
+.mhero { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, var(--card)), var(--card) 75%); }
+.mbig { display: flex; flex-direction: column; } .mbig b { font-size: 40px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; } .mbig span { color: var(--muted); }
+.mbig b.up { color: var(--up); } .mbig b.dn { color: var(--dn); }
+.mspark { grid-column: 1 / -1; } .mspark svg { width: 100%; height: 56px; }
+.mhl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.mhl .card { margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.mhl small { color: var(--muted); } .mhl b { font-size: 26px; } .mhl b.up { color: var(--up); } .mhl span { color: var(--muted); font-size: 14px; }
+.page.month #mShare { margin-top: 16px; }
+@media (min-width: 700px) { .mhero { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1100px) { .page.profile.month { columns: auto; } }

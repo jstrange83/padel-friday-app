@@ -137,6 +137,11 @@ export const FAQ = [
   },
   {
     cat: 'Rangliste og point', group: true,
+    q: 'Hvad er Din måned i padel?',
+    a: `<p>Under <b>Min padel → 📆 Din måned i padel</b> ser du månedens kampe, sejre, point og spilledage, og dine højdepunkter: største sejr, flest point i én kamp, månedens makker og æg. I den første uge af en måned vises sidste måned. Pilene øverst skifter måned, og <b>Del din måned</b> deler en kort opsummering.</p>`,
+  },
+  {
+    cat: 'Rangliste og point', group: true,
     q: 'Hvad er badges?',
     a: `<p>Under <b>Min padel → 🏅 Badges</b> samler du badges for det, du har opnået i gruppen: første kamp og første sejr, 10, 25, 50 og 100 kampe, 3 og 5 sejre i træk, æg-giver, 10 spilledage, 10 forskellige makkere, 20 forskellige modstandere, 1100 og 1200 point og nr. 1 på ranglisten. Låste badges er grå med en lås og viser, hvor langt du mangler.</p>`,
   },

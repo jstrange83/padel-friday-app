@@ -426,6 +426,18 @@ try {
   await page.waitForSelector('.bdg');
   ok(await page.locator('.bdg.ok').count() >= 2 && await page.locator('.bdg:not(.ok)').count() >= 1 && (await page.locator('details.badges summary').innerText()).match(/\d+ af \d+/), 'Min padel viser badges: opnåede og låste med hvad der mangler');
   await shot('badges');
+  // Din måned i padel
+  await page.click('a.monthlink');
+  await page.waitForSelector('.page.month .mnav');
+  await page.waitForSelector('.mhero, .page.month .card p');
+  ok((await page.locator('.page.month h1').innerText()).includes('i padel'), 'Din måned i padel åbner fra Min padel');
+  if (!(await page.locator('.mhero').count())) { await page.click('#mPrev'); await page.waitForSelector('.page.month .mnav'); await wait(400); }
+  await page.waitForSelector('.mhero');
+  ok(await page.locator('.mhl .card').count() >= 2 && await page.locator('#mShare').count() === 1, 'måneden viser tal, højdepunkter og kan deles');
+  await shot('maaned');
+  await noOverflow('din måned');
+  await page.click('#nav a:has-text("Min padel")');
+  await page.waitForSelector('.mtiles');
   await wait(1100);
   await shot('min-padel');
   await noOverflow('min padel');
@@ -1354,7 +1366,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Vinderchance og badges') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Vinderchance, badges og din måned') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

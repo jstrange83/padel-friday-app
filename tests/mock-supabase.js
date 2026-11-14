@@ -206,6 +206,7 @@ const RPC = {
   padel_set_news_seen: ({ p_id }) => { if (me()) me().news_seen = p_id; },
   padel_set_theme: ({ p_theme }) => { me().theme = p_theme; },
   padel_vapid_public: () => 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U',
+  padel_save_push_v2: ({ p_endpoint, p_p256dh, p_auth, p_mobile }) => { db.padel_push_subs.push({ endpoint: p_endpoint, user_id: uid(), p256dh: p_p256dh, auth: p_auth, enabled: true, mobile: !!p_mobile }); },
   padel_save_push: ({ p_endpoint, p_p256dh, p_auth }) => { db.padel_push_subs.push({ endpoint: p_endpoint, user_id: uid(), p256dh: p_p256dh, auth: p_auth, enabled: true }); },
   padel_disable_push: ({ p_endpoint }) => { db.padel_push_subs.filter((x) => x.endpoint === p_endpoint).forEach((x) => (x.enabled = false)); },
   padel_has_push: () => db.padel_push_subs.some((x) => x.user_id === uid() && x.enabled),

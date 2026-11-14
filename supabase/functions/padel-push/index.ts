@@ -102,8 +102,11 @@ Deno.serve(async (req) => {
   if (req.headers.get("x-hook-secret") !== c.hook) return new Response("Forbidden", { status: 403 });
   if (body?.init) return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
   if (!body || !Array.isArray(body.users) || !body.users.length) return new Response("Bad request", { status: 400 });
-  const { data: subs, error } = await sb.from("padel_push_subs").select("endpoint,p256dh,auth").eq("enabled", true).in("user_id", body.users.slice(0, 200));
+  const { data: all, error } = await sb.from("padel_push_subs").select("endpoint,p256dh,auth,user_id,mobile").eq("enabled", true).in("user_id", body.users.slice(0, 200));
   if (error) { console.error(error); return new Response("db", { status: 500 }); }
+  // Ingen dobbelte: har en spiller appen (Android/iPhone), springes notifikationer i telefonens browser over. Computerens browser får stadig besked.
+  const hasApp = new Set((all ?? []).filter((s) => /^(fcm|apns):/.test(s.endpoint)).map((s) => s.user_id));
+  const subs = (all ?? []).filter((s) => /^(fcm|apns):/.test(s.endpoint) || !(hasApp.has(s.user_id) && s.mobile === true));
   const m: Msg = { title: String(body.title ?? "Padelklubben").slice(0, 120), body: String(body.body ?? "").slice(0, 240), url: String(body.url ?? "/"), tag: body.tag ? String(body.tag) : undefined };
   const payload = JSON.stringify(m);
   let sent = 0, skipped = 0; const gone: string[] = [];

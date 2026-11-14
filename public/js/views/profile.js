@@ -4,7 +4,7 @@ import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
 import { showQR } from '../qr.js';
-import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated, nameOf, first, fmtDate } from '../core.js';
+import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated, nameOf, first, fmtDate, share } from '../core.js';
 import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn, setEditMode } from '../editmode.js';
 import { msgRowLabel, unreadThreads } from './messages.js';
@@ -146,12 +146,77 @@ export async function renderMyPadel() {
     <div class="card goal"><div class="ghead"><b>🎯 Næste mål: ${goal} point</b><small>${goal - elo} point endnu · højeste ${best}</small></div><div class="bar"><i style="--w:${prog}%"></i></div></div>
     ${bestMate || nemesis ? `<div class="duos">${person(bestMate, '🤝 Bedste makker', 'mate')}${person(nemesis, '⚡ Nemesis', 'nem')}</div>` : ''}
     ${me?.eggs ? `<div class="card eggs">🥚 Du har givet <b>${me.eggs}</b> ${me.eggs === 1 ? 'æg' : 'æg'} (6–0)</div>` : ''}
+    <a class="card monthlink" href="#/maaned"><span>📆</span><div class="grow"><b>Din ${monthName(defaultMonth())} i padel</b><small>Månedens højdepunkter, som du kan dele</small></div><span class="muted">›</span></a>
     ${badgesHtml(L, me, elo, rank, wins)}
     ${L.length ? `<h3>Seneste kampe</h3><div class="list">${L.slice().reverse().slice(0, 3).map((x) => `<div class="row"><div class="grow"><b>${x.sc}–${x.th}</b> med ${esc(first(x.mate))} <small>mod ${esc(first(x.opps[0]))} & ${esc(first(x.opps[1]))} · ${fmtDate(x.date, { day: 'numeric', month: 'short' })}</small></div><div class="delta ${x.d > 0 ? 'up' : x.d < 0 ? 'dn' : ''}">${x.d > 0 ? '+' : ''}${x.d}</div></div>`).join('')}</div>` : '<div class="card"><p class="muted">Når du har spillet din første kamp, kommer dine tal her. 🎾</p></div>'}
     <a class="btn allstats" href="#/spiller/${p.id}">📊 Al statistik og grafer ›</a>`;
   countUp(app);
   const bd = app.querySelector('details.badges'); if (bd) bd.ontoggle = () => (S.badgesOpen = bd.open);
   requestAnimationFrame(() => app.querySelector('.goal .bar')?.classList.add('go'));
+}
+
+// ---------- Din måned i padel ----------
+// I starten af en måned (dag 1–7) vises sidste måned, ellers den igangværende
+const defaultMonth = () => { const d = new Date(); return d.getDate() <= 7 ? new Date(d.getFullYear(), d.getMonth() - 1, 1) : new Date(d.getFullYear(), d.getMonth(), 1); };
+const monthName = (d) => d.toLocaleDateString('da-DK', { month: 'long' });
+
+export async function renderMonth() {
+  page = 'month';
+  const p = S.me, g = S.groupId;
+  const base = defaultMonth(), off = S.monthOff || 0;
+  const m0 = new Date(base.getFullYear(), base.getMonth() + off, 1), m1 = new Date(m0.getFullYear(), m0.getMonth() + 1, 1);
+  const title = `Din ${monthName(m0)}${m0.getFullYear() !== new Date().getFullYear() ? ` ${m0.getFullYear()}` : ''} i padel`;
+  app.innerHTML = `<div class="page profile month"><button class="back" onclick="location.hash='#/profil'">‹ Min padel</button><h1>📆 ${esc(title)}</h1><p class="muted">Henter …</p></div>`;
+  let ms = [], ch = [];
+  try {
+    [ms, ch] = await Promise.all([
+      q(sb.from('padel_matches').select('*, padel_events(starts_at,group_id)').or(`a_left.eq.${p.id},a_right.eq.${p.id},b_left.eq.${p.id},b_right.eq.${p.id}`).eq('status', 'bekraeftet').order('created_at', { ascending: true })),
+      q(sb.from('padel_elo_changes').select('match_id,delta,elo_before').eq('player_id', p.id).eq('active', true)),
+    ]);
+  } catch {}
+  if (page !== 'month') return;
+  const chg = Object.fromEntries(ch.map((c) => [c.match_id, c]));
+  const L = ms.filter((m) => m.padel_events?.group_id === g).map((m) => {
+    const onA = [m.a_left, m.a_right].includes(p.id), c = chg[m.id];
+    return { date: new Date(m.padel_events.starts_at), sc: onA ? m.score_a : m.score_b, th: onA ? m.score_b : m.score_a,
+      mate: onA ? (m.a_left === p.id ? m.a_right : m.a_left) : (m.b_left === p.id ? m.b_right : m.b_left), opps: onA ? [m.b_left, m.b_right] : [m.a_left, m.a_right],
+      d: c?.delta ?? 0, after: c ? (c.elo_before ?? 1000) + (c.delta ?? 0) : null };
+  }).filter((x) => x.date >= m0 && x.date < m1);
+  const wins = L.filter((x) => x.sc > x.th), pts = L.reduce((a, x) => a + x.d, 0);
+  const days = new Set(L.map((x) => x.date.toDateString())).size;
+  const eggs = L.filter((x) => x.sc >= 6 && x.th === 0).length;
+  const bigWin = wins.slice().sort((a, b) => (b.sc - b.th) - (a.sc - a.th))[0];
+  const bestMatch = L.slice().sort((a, b) => b.d - a.d)[0];
+  const mt = {}; for (const x of L) { const r = (mt[x.mate] ||= { n: 0, w: 0, d: 0 }); r.n++; r.d += x.d; if (x.sc > x.th) r.w++; }
+  const mate = Object.entries(mt).sort((a, b) => b[1].w - a[1].w || b[1].d - a[1].d)[0];
+  const hist = L.filter((x) => x.after != null).map((x) => x.after);
+  const vs = (x) => `med ${esc(first(x.mate))} mod ${esc(first(x.opps[0]))} & ${esc(first(x.opps[1]))}`;
+  const canNext = off < 0 || (off === 0 && base.getMonth() !== new Date().getMonth());
+  const shareText = L.length ? `${title}: ${L.length} kampe, ${wins.length} sejre${pts ? `, ${pts > 0 ? '+' : ''}${pts} point` : ''}${eggs ? `, ${eggs} æg 🥚` : ''}. 🎾` : '';
+  app.innerHTML = `<div class="page profile month">
+    <button class="back" onclick="location.hash='#/profil'">‹ Min padel</button>
+    <div class="mnav"><button class="icon" id="mPrev" aria-label="Forrige måned">‹</button><h1>📆 ${esc(title)}</h1><button class="icon" id="mNext" aria-label="Næste måned" ${canNext ? '' : 'disabled'}>›</button></div>
+    <p class="muted">${esc(group()?.name || '')}</p>
+    ${L.length ? `<div class="card mhero"><div class="mbig"><b data-count="${L.length}">${L.length}</b><span>${L.length === 1 ? 'kamp' : 'kampe'}</span></div>
+      <div class="mbig"><b data-count="${wins.length}">${wins.length}</b><span>${wins.length === 1 ? 'sejr' : 'sejre'}</span></div>
+      <div class="mbig"><b class="${pts > 0 ? 'up' : pts < 0 ? 'dn' : ''}" data-count="${pts}" data-pre="${pts > 0 ? '+' : ''}">${pts > 0 ? '+' : ''}${pts}</b><span>point</span></div>
+      <div class="mbig"><b data-count="${days}">${days}</b><span>${days === 1 ? 'spilledag' : 'spilledage'}</span></div>
+      ${hist.length > 1 ? `<div class="mspark">${spark(hist)}</div>` : ''}</div>
+    <h3>Højdepunkter</h3>
+    <div class="mhl">
+      ${bigWin ? `<div class="card"><small>💪 Største sejr</small><b>${bigWin.sc}–${bigWin.th}</b><span>${vs(bigWin)} · ${fmtDate(bigWin.date, { day: 'numeric', month: 'short' })}</span></div>` : ''}
+      ${bestMatch && bestMatch.d > 0 ? `<div class="card"><small>📈 Flest point i én kamp</small><b class="up">+${bestMatch.d}</b><span>${vs(bestMatch)}</span></div>` : ''}
+      ${mate ? `<div class="card"><small>🤝 Månedens makker</small><b>${esc(nameOf(mate[0]))}</b><span>${mate[1].n} ${mate[1].n === 1 ? 'kamp' : 'kampe'} sammen · ${mate[1].w} ${mate[1].w === 1 ? 'sejr' : 'sejre'}</span></div>` : ''}
+      ${eggs ? `<div class="card"><small>🥚 Æg givet</small><b>${eggs}</b><span>${eggs === 1 ? 'kamp' : 'kampe'} vundet 6–0</span></div>` : ''}
+      <div class="card"><small>🏆 Sejrsprocent</small><b>${Math.round((wins.length / L.length) * 100)}%</b><span>${L.length - wins.length} ${L.length - wins.length === 1 ? 'nederlag' : 'nederlag'}</span></div>
+    </div>
+    <button class="btn primary" id="mShare">📤 Del din måned</button>`
+    : `<div class="card"><p>Ingen kampe i ${monthName(m0)}. ${off === 0 ? 'Meld dig til næste spilledag, så kommer dine højdepunkter her. 🎾' : ''}</p></div>`}
+  </div>`;
+  countUp(app);
+  document.getElementById('mPrev').onclick = () => { S.monthOff = off - 1; renderMonth(); };
+  document.getElementById('mNext').onclick = () => { if (canNext) { S.monthOff = off + 1; renderMonth(); } };
+  document.getElementById('mShare')?.addEventListener('click', () => share(location.origin, shareText));
 }
 
 // Badges og milepæle: regnes ud fra kampene i gruppen. Låste badges viser, hvad man mangler.
