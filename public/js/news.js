@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-14', date: '14. november 2026', groups: true, title: 'Vinderchance på kampene',
+    items: ['📊 Før en kamp er spillet, viser appen nu holdenes <b>vinderchance</b> i procent, ud fra spillernes point. Under <b>Din næste kamp</b> kan du se jeres egen chance.'],
+  },
+  {
     id: '2026-11-13h', date: '13. november 2026', admin: true, groups: true, title: 'TV-skærmen: sponsorer og mere at se',
     items: ['🤝 Centre kan lægge <b>sponsorer</b> ind med navn og logo under <b>Admin → Indstillinger</b>. De vises nederst på TV-skærmen.', '📺 Mellem spilledagene viser TV\'et nu, hvem der er tilmeldt næste gang, ledige pladser og podiet fra sidste spilledag.', '🔳 QR-koden på TV\'et fører nu direkte til spilledagen, så man kan se kampene og melde resultater.', '🛠 En spilledag, der stadig er i gang fra dagen før, vises nu også på TV\'et.'],
   },

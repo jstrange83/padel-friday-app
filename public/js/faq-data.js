@@ -136,6 +136,11 @@ export const FAQ = [
 <p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {
+    cat: 'Resultater', group: true,
+    q: 'Hvordan regnes vinderchancen ud?',
+    a: `<p>Før en kamp er spillet, står der en vinderchance i procent. Den regnes ud fra gennemsnittet af de to spilleres point på hvert hold, på samme måde som ranglisten regner forventet resultat. Er holdene lige gode, er chancen 50% til hver. Jo flere point et hold har mere end det andet, jo større chance. Slår man et hold med højere vinderchance, giver det også flere point.</p>`,
+  },
+  {
     cat: 'Roller og adgang', group: true,
     q: 'Kan jeg oprette flere spilledage på én gang?',
     a: `<p>Ja. Tryk <b>Opret spilledag</b>, vælg den første dag og tid, og vælg under <b>Gentag</b>, hvor mange uger i træk. Spiller I på flere forskellige dage, steder eller med forskellige spiltyper, så tryk <b>＋ En dag mere</b>. Så lægges dagen ned som et lille kort, og du kan lave den næste med sine egne indstillinger. Kortene kan rettes eller fjernes, og knappen viser, hvor mange spilledage der bliver oprettet i alt.</p>`,

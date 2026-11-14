@@ -173,6 +173,9 @@ try {
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
   ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
+  ok(/pause/i.test(mc1) || /Vinderchance/i.test(mc1), 'Din næste kamp viser vinderchancen');
+  ok(await page.locator('.match .wchance').count() > 0, 'kampene viser vinderchance før de er spillet');
+  ok(await page.evaluate(() => [...document.querySelectorAll('.match .wclbl')].every((el) => { const n = el.innerText.match(/(\d+)%/g).map((x) => parseInt(x)); return n.length === 2 && n[0] + n[1] === 100; })), 'vinderchancerne giver 100% tilsammen');
   if (await page.evaluate(() => !!(window.SpeechRecognition || window.webkitSpeechRecognition)) && (await page.locator('.mine-card').innerText()).includes('Indtast resultat'))
     ok(await page.locator('.mine-card [data-act=voice]').count() === 1, 'Sig resultat i Din aften');
   await shot('dagsplan');
@@ -1334,7 +1337,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('TV-skærmen: sponsorer') && nm.includes('Flere spilledage, cast til TV'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Vinderchance på kampene') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

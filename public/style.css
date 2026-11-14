@@ -1354,3 +1354,11 @@ html.inapp body { overscroll-behavior-y: contain; }
 .sponsors .sprow img { width: 64px; height: 36px; object-fit: contain; background: #fff; border-radius: 6px; padding: 2px 4px; }
 .sponsors .sprow .nologo { width: 64px; text-align: center; font-size: 22px; }
 .sponsors form { margin-top: 10px; }
+
+/* Vinderchance før kampen */
+.wchance { margin: 6px 0 4px; }
+.wcbar { height: 6px; border-radius: 99px; background: color-mix(in srgb, var(--muted) 35%, transparent); overflow: hidden; }
+.wcbar .wa { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.wclbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); margin-top: 3px; }
+.wclbl b { color: var(--text); font-variant-numeric: tabular-nums; }
+.wclbl small { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }

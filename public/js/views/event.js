@@ -271,6 +271,7 @@ function myNight(c, st) {
   return card(now && !c.free ? 'Din kamp nu' : 'Din næste kamp',
     `<div class="pills">${pill(`Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''}`)}${pill(esc(courtById(m.court_id)?.name || ''))}${pill(time)}</div>
     ${teams}
+    ${m.status === 'planlagt' ? (() => { const pa = winChance(m, c.ev.group_id); return chanceBar(onA ? pa : 100 - pa, 'I ', ' dem'); })() : ''}
     ${todo.startsWith('<button') ? `<div class="mact">${todo}</div>` : todo}${canEnter ? enterForm(c, m) : ''}${signRow}`, now ? 'now' : '');
 }
 
@@ -368,6 +369,15 @@ function courtHtml(m, me, score) {
   </div>`;
 }
 
+// Vinderchance ud fra holdenes point (gennemsnit af de to spillere), samme formel som ranglisten bruger
+function winChance(m, g) {
+  const ra = (groupElo(m.a_left, g) + groupElo(m.a_right, g)) / 2, rb = (groupElo(m.b_left, g) + groupElo(m.b_right, g)) / 2;
+  return Math.round(100 / (1 + 10 ** ((rb - ra) / 400)));
+}
+const chanceBar = (pa, labelA = '', labelB = '') => `<div class="wchance" title="Vinderchance ud fra holdenes point">
+  <div class="wcbar"><span class="wa" style="width:${pa}%"></span></div>
+  <div class="wclbl"><span>${labelA}<b>${pa}%</b></span><small>Vinderchance</small><span><b>${100 - pa}%</b>${labelB}</span></div></div>`;
+
 function matchCard(c, m) {
   const { ev, me, run, delta, isAm, isSet, unit } = c;
   const onA = [m.a_left, m.a_right].includes(me), onB = [m.b_left, m.b_right].includes(me);
@@ -404,6 +414,7 @@ function matchCard(c, m) {
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${courtHtml(m, me, m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
+    ${m.status === 'planlagt' ? chanceBar(winChance(m, ev.group_id)) : ''}
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}
