@@ -1039,6 +1039,9 @@ details.people { display: block; }
 html.inapp body { overscroll-behavior-y: contain; }
 .ptr { position: fixed; top: 0; left: 50%; transform: translate(-50%, 0); margin-top: -48px; z-index: 9999; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: var(--card2, #12324f); color: var(--text, #fff); font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .15s; }
 .ptr.show { opacity: 1; }
+.swb { position: fixed; top: 50%; left: -44px; width: 40px; height: 40px; border-radius: 50%; transform: translate(0, -50%); z-index: 9999; display: flex; align-items: center; justify-content: center; font-size: 28px; line-height: 1; padding-bottom: 3px; box-sizing: border-box; background: var(--card2, #12324f); color: var(--text, #fff); box-shadow: 0 4px 16px rgba(0,0,0,.35); opacity: 0; pointer-events: none; transition: opacity .15s, background .15s; }
+.swb.show { opacity: .7; }
+.swb.ready { opacity: 1; background: var(--accent, #d4f53c); color: var(--accent-ink, #0c1b2a); }
 .ptr span { display: inline-block; font-size: 16px; transition: transform .2s; }
 .ptr.ready span { transform: rotate(180deg); color: var(--accent, #d4f53c); }
 .ptr.spin span { animation: ptrspin .8s linear infinite; }

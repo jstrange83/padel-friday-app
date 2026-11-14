@@ -200,6 +200,11 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
+    q: 'Hvordan går jeg tilbage til den forrige side?',
+    a: `<p>Tryk <b>‹ Tilbage</b> øverst, eller <b>swipe mod højre</b> hen over skærmen. Når den lille pil i venstre side lyser op, kan du slippe. Det virker ikke inde i tekstfelter, i ting man selv kan rulle sidelæns (fx faner og tabeller), eller når en boks er åben.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
     q: 'Hvordan får jeg appen på hjemmeskærmen?',
     a: `<p><b>iPhone:</b> åbn appen i Safari, tryk på del‑ikonet og vælg "Føj til hjemmeskærm".</p><p><b>Android:</b> åbn appen i Chrome, tryk på de tre prikker og vælg "Føj til startskærm".</p>`,
   },

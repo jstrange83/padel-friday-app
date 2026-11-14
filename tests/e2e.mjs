@@ -1366,7 +1366,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Vinderchance, badges og din måned') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Swipe for at gå tilbage') && nm.includes('Vinderchance, badges og din måned'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -2356,6 +2356,30 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const made = await page.evaluate((b) => window.__mock.db().padel_events.slice(b).map((e) => new Date(e.starts_at)).map((d) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`).sort(), evBefore);
   ok(made.join(',') === ['12/3 17:30', '2/3 19:00', '5/3 17:30', '9/3 19:00'].sort().join(','), 'spilledagene får hver deres dato og tid: ' + made.join(', '));
   ok(await page.evaluate((b) => { const e = window.__mock.db().padel_events.slice(b); return e.filter((x) => x.format === 'americano').length === 2 && e.filter((x) => x.format !== 'americano').length === 2; }, evBefore), 'hver dag kan have sin egen spiltype');
+
+  // Swipe mod højre går tilbage til forrige side (i appen); lodret swipe gør ingenting
+  await page.goto('http://localhost:8765/#/fredage');
+  await page.waitForSelector('a.ev');
+  await page.evaluate(() => { location.hash = '#/faq'; });
+  await page.waitForSelector('.faq, h1');
+  await wait(300);
+  const swipe = (dx, dy) => page.evaluate(async ([dx, dy]) => {
+    if (!window.__swb) { (await import('/js/refresh.js')).setupSwipeBack(); window.__swb = 1; }
+    const el = document.querySelector('#app h1') || document.body;
+    const t = (x, y) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y });
+    const fire = (type, x, y) => el.dispatchEvent(new TouchEvent(type, { bubbles: true, touches: type === 'touchend' ? [] : [t(x, y)], changedTouches: [t(x, y)] }));
+    fire('touchstart', 60, 400);
+    for (let i = 1; i <= 6; i++) fire('touchmove', 60 + (dx * i) / 6, 400 + (dy * i) / 6);
+    const shown = document.querySelector('.swb').classList.contains('ready');
+    fire('touchend', 60 + dx, 400 + dy);
+    return shown;
+  }, [dx, dy]);
+  await swipe(10, 200);
+  await wait(400);
+  ok(page.url().includes('#/faq'), 'lodret swipe går ikke tilbage');
+  ok(await swipe(160, 10), 'pilen vises, når man swiper mod højre');
+  await wait(600);
+  ok(page.url().includes('#/fredage'), 'swipe mod højre går tilbage til forrige side: ' + page.url());
 
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');

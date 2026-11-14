@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-14b', date: '14. november 2026', title: 'Swipe for at gå tilbage',
+    items: ['👉 I appen kan du nu <b>swipe mod højre</b> for at komme tilbage til den forrige side. En lille pil i venstre side viser, når du kan slippe.'],
+  },
+  {
     id: '2026-11-14', date: '14. november 2026', groups: true, title: 'Vinderchance, badges og din måned',
     items: ['📆 <b>Din måned i padel</b>: På Min padel kan du se månedens tal og højdepunkter (største sejr, flest point i én kamp, månedens makker) og dele dem med et tryk.', '🏅 På <b>Min padel</b> kan du nu samle <b>badges</b>: første sejr, 10, 25, 50 og 100 kampe, sejre i træk, æg-giver, fast inventar, nye makkere og modstandere, point-milepæle og nr. 1 på ranglisten. Låste badges viser, hvor langt du mangler.', '📊 Før en kamp er spillet, viser appen nu holdenes <b>vinderchance</b> i procent, ud fra spillernes point. Under <b>Din næste kamp</b> kan du se jeres egen chance.', '🔔 Har du både appen og notifikationer i telefonens browser, får du nu kun beskeden én gang (i appen). Computerens browser får den stadig.'],
   },
