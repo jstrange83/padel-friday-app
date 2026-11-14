@@ -1373,3 +1373,34 @@ html.inapp body { overscroll-behavior-y: contain; }
 .bdg b { font-size: 12.5px; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; hyphens: auto; }
 .bdg small { font-size: 11px; color: var(--muted); }
 .bdg .bprog { position: absolute; left: 0; bottom: 0; height: 3px; width: var(--w); background: var(--accent); }
+
+/* Center: overblik til receptionen */
+.ckpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 6px 0 12px; }
+.ckpis > div { background: var(--card); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.ckpis b { font-size: 30px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+.ckpis span { font-size: 13px; color: var(--text); line-height: 1.3; } .ckpis small { color: var(--muted); }
+.cnow { display: grid; gap: 10px; }
+.cnow .card { display: flex; flex-direction: column; gap: 4px; margin: 0; color: var(--text); }
+.cnow .card b { font-size: 18px; } .cnow .card small { color: var(--muted); }
+.clive .badge { align-self: flex-start; } .clive .go { color: var(--accent); font-weight: 700; margin-top: 4px; }
+.clive.idle, .cnext.idle { opacity: .8; }
+.cfill { height: 8px; border-radius: 99px; background: var(--card2); overflow: hidden; margin: 6px 0 2px; }
+.cfill i { display: block; height: 100%; background: var(--accent); }
+.cweeks small { display: block; margin-bottom: 6px; }
+.cchart { width: 100%; height: auto; display: block; }
+.cchart .cbar { fill: var(--accent); opacity: .85; } .cchart .cline { stroke: var(--text); stroke-width: 2; } .cchart .cdot { fill: var(--text); }
+.cchart .cax { fill: var(--muted); font-size: 11px; } .cchart .cbase { stroke: var(--line); }
+.clegend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+.clegend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.clegend .lb { background: var(--accent); } .clegend .ll { height: 2px; background: var(--text); }
+.cphead { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 10px; }
+.cphead input { flex: 1 1 160px; min-width: 0; }
+.cpact { display: flex; gap: 8px; flex: 1 1 260px; min-width: 0; } .cpact .btn { flex: 1 1 0; min-width: 0; width: auto; white-space: nowrap; }
+.ctable { overflow-x: auto; }
+.ctable table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.ctable th, .ctable td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.ctable th .link { color: var(--muted); font-size: 12px; text-transform: uppercase; } .ctable th .link.on { color: var(--accent); }
+.ctable th { font-size: 12px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+.ctable .r { text-align: right; } .ctable a { color: var(--text); font-weight: 600; }
+.ctable .up { color: var(--up); } .ctable .dn { color: var(--dn); }
+@media (min-width: 900px) { .cnow { grid-template-columns: 1fr 1fr; } .page.admin .abody.tab-center { columns: auto; } }

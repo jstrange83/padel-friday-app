@@ -8,6 +8,7 @@ import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
 import { rightsTab, bindRights, loadGroupRights, rightsCount } from './rights.js';
 import { loadNewsletters, newsletterTab, bindNewsletter } from './newsletter.js';
+import { loadCenterDash, centerDashTab, bindCenterDash } from './centerdash.js';
 import { isRealSuper, setEditMode } from '../editmode.js';
 import { loadClub, loadClubPending, clubKidsTab, bindClubKids, clubTeamsTab, bindClubTeams, clubSettingsCard, bindClubSettings, clubInvite, clubFeesTab, bindClubFees, clubStaffCard, bindClubStaff, isTreasurer, clubAttendanceTab, bindClubAttendance, loadAttendance, myRight, seesTraining, hasAdults, audience } from './club.js';
 
@@ -18,6 +19,7 @@ function adminSections() {
   const nPlayers = S.members.filter((m) => m.group_id === S.groupId && m.status === 'aktiv').length;
   const nr = rightsCount();
   return [
+    !club && S.groupId && group()?.is_center && (isAdmin() || isSuper()) ? ['center', '📊', 'Overblik', 'Centrets tal, spillere og rangliste'] : null,
     club && (canRun() || myRight('godkende')) ? ['boern', hasAdults() ? '🎾' : '👧', hasAdults() ? 'Spillere' : 'Børn', pend ? `${pend} venter på svar` : 'Godkend og sæt på hold', pend] : null,
     club && canRun() ? ['hold', '🗓', 'Hold og tider', 'Hold, træningstider og trænere'] : null,
     club && seesTraining() ? ['fremmode', '📊', 'Fremmøde', 'Hvem kom til træning'] : null,
@@ -42,10 +44,12 @@ export async function viewAdmin() {
   const tab = S.adminTab;
   if (tab === 'forslag') { try { await loadSuggestions(); } catch { S.suggestions = []; } }
   if (tab === 'nyhedsbrev' && (S.nlFor !== S.groupId || !S.nlList)) { S.nlDraft = null; await loadNewsletters(); }
+  if (tab === 'center' && (S.cdashFor !== S.groupId || !S.cdash || !S.cdKeep)) { await loadCenterDash(); }
+  S.cdKeep = false;
   if (club && ['boern', 'hold', 'kontingent', 'spillere', 'indstillinger'].includes(tab)) { await loadClub(S.groupId); await loadClubPending(); }
   if (club && tab === 'fremmode') await loadAttendance(S.attWeeks || 8);
   if (club && tab === 'indstillinger' && isAdmin() && S.clubInvitesG !== S.groupId) { S.clubInvitesG = S.groupId; try { S.clubInvites = await q(sb.rpc('padel_club_open_invites_v2', { g: S.groupId })); } catch { S.clubInvites = []; } }
-  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab, nyhedsbrev: newsletterTab }[tab];
+  const body = { spillere: playersTab, grupper: groupsTab, baner: courtsTab, forslag: suggestTab, boern: clubKidsTab, hold: clubTeamsTab, kontingent: clubFeesTab, fremmode: clubAttendanceTab, rettigheder: rightsTab, indstillinger: settingsTab, nyhedsbrev: newsletterTab, center: centerDashTab }[tab];
   const sec = secs.find(([k]) => k === tab);
   app.innerHTML = tab ? `
   <div class="page admin">
@@ -74,6 +78,7 @@ export async function viewAdmin() {
   if (tab === 'indstillinger' && club) { bindClubSettings(clubRefresh); bindClubStaff(clubRefresh); }
   if (tab === 'rettigheder') bindRights(viewAdmin);
   if (tab === 'nyhedsbrev') bindNewsletter(() => { viewAdmin(); });
+  if (tab === 'center') bindCenterDash(() => { S.cdKeep = true; viewAdmin(); });
   app.querySelectorAll('[data-group]').forEach((b) => (b.onclick = () => { S.gmemOpen = false; setGroup(b.dataset.group); viewAdmin(); }));
   app.querySelectorAll('[data-pgroup]').forEach((b) => (b.onclick = () => { S.adminAll = false; setGroup(b.dataset.pgroup); viewAdmin(); }));
   app.querySelector('[data-allp]')?.addEventListener('click', () => { S.adminAll = true; viewAdmin(); });

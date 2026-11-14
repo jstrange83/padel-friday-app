@@ -528,6 +528,19 @@ try {
   await page.click('#sponsorAdd button');
   await page.waitForSelector('.sprow');
   ok(await page.evaluate(() => { const s = window.__mock.db().padel_groups.find((x) => x.name === 'Lørdagspadel').sponsors; return s?.length === 1 && s[0].name === 'Gilleleje Bageri' && !!s[0].logo; }), 'centret kan tilføje en sponsor med logo');
+  // Overblik til receptionen: nøgletal, næste dag, kampe pr. uge og spillerlisten med CSV
+  await page.click('[data-tab="center"]');
+  await page.waitForSelector('.ckpis');
+  ok(await page.locator('.ckpis > div').count() === 5 && await page.locator('.cchart rect.cbar').count() === 12 && await page.locator('.ctable tbody tr').count() > 0, 'centrets overblik viser nøgletal, kampe pr. uge og spillerne');
+  await page.click('[data-cdsort="name"]');
+  await page.waitForSelector('[data-cdsort="name"].on');
+  ok(true, 'spillerlisten kan sorteres');
+  const [cdl] = await Promise.all([page.waitForEvent('download'), page.click('#cdCsv')]);
+  ok(/\.csv$/.test(cdl.suggestedFilename()), 'spillerlisten kan hentes som CSV: ' + cdl.suggestedFilename());
+  await shot('center-overblik');
+  await noOverflow('center overblik');
+  await page.click('[data-tab="indstillinger"]');
+  await page.waitForSelector('#centerLook');
   await shot('center-indstillinger');
   await noOverflow('center indstillinger');
   await page.click('[data-tab="grupper"]');

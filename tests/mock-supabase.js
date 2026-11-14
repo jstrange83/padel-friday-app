@@ -826,6 +826,21 @@ Object.assign(RPC, {
   // Centre med egen officiel rangliste
   padel_set_plus_v2: ({ g, p_on, p_until }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); Object.assign(db.padel_groups.find((x) => x.id === g), { plus: !!p_on, plus_until: p_on ? p_until || null : null }); },
   padel_set_center_mode_v2: ({ g, p_on }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); const gr = db.padel_groups.find((x) => x.id === g); if (p_on) gr.ranking_mode = 'gruppe'; else if (gr.is_center) gr.ranking_mode = 'alle'; gr.is_center = !!p_on; },
+  padel_center_dash_v2: ({ g }) => {
+    if (!isAdm(g)) throw new Error('Kun gruppens admin');
+    const gr = db.padel_groups.find((x) => x.id === g);
+    const evs = db.padel_events.filter((e) => e.group_id === g && !e.cancelled_at);
+    const ms = db.padel_matches.filter((m) => m.status === 'bekraeftet' && evs.some((e) => e.id === m.event_id));
+    const pl = ms.flatMap((m) => [[m.a_left, m.score_a > m.score_b], [m.a_right, m.score_a > m.score_b], [m.b_left, m.score_b > m.score_a], [m.b_right, m.score_b > m.score_a]].map(([pid, won]) => ({ pid, won, at: evs.find((e) => e.id === m.event_id).starts_at })));
+    const mem = db.padel_group_members.filter((m) => m.group_id === g && m.status === 'aktiv');
+    const live = evs.find((e) => e.status === 'igang'), nxt = evs.filter((e) => e.status === 'planlagt' && e.starts_at > now()).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+    return { kpi: { active30: new Set(pl.map((x) => x.pid)).size, members: mem.length, matches_month: ms.length, days_month: evs.length, avg_signed: 6 },
+      live: live ? { id: live.id, round: live.current_round, playing: 1, done: ms.filter((m) => m.event_id === live.id).length, pending: 0 } : null,
+      next: nxt ? { id: nxt.id, starts_at: nxt.starts_at, spots: nxt.court_ids.length * 4, signed: db.padel_signups.filter((x) => x.event_id === nxt.id).length } : null,
+      weeks: Array.from({ length: 12 }, (_, i) => ({ w: new Date(Date.now() - (11 - i) * 7 * 864e5).toISOString(), matches: i === 11 ? ms.length : i % 3, players: i === 11 ? new Set(pl.map((x) => x.pid)).size : i % 4 })),
+      players: mem.map((m) => { const p = db.padel_profiles.find((x) => x.id === m.player_id); const mine = pl.filter((x) => x.pid === m.player_id);
+        return { id: p.id, name: p.name, elo: gr.is_center ? m.elo ?? 1000 : p.elo, matches: mine.length, wins: mine.filter((x) => x.won).length, last: mine.map((x) => x.at).sort().pop() || null, delta30: 0, attended: 2 }; }).sort((a, b) => b.elo - a.elo) };
+  },
   padel_set_sponsors_v2: ({ g, p_sponsors }) => { if (!isAdm(g)) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).sponsors = (p_sponsors || []).filter((x) => x.name).slice(0, 12); },
   padel_set_center_look_v2: ({ g, p_color, p_message }) => { if (!isAdm(g)) throw new Error('Kun centrets admin'); Object.assign(db.padel_groups.find((x) => x.id === g), { brand_color: p_color || null, tv_message: p_message || null }); },
   padel_tv_look_v2: ({ p_token }) => { const t = (db.padel_tv_links || []).find((x) => x.token === p_token); const gr = t && db.padel_groups.find((x) => x.id === t.group_id); return gr ? { color: gr.brand_color || null, message: gr.tv_message || null, center: !!gr.is_center, sponsors: gr.sponsors || [] } : null; },
