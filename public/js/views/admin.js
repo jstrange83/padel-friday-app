@@ -271,7 +271,7 @@ function courtsTab() {
         <button class="icon sm" data-cmove="${x.id}" data-dir="1" ${i === cs.length - 1 ? 'disabled' : ''} aria-label="Flyt ${esc(x.name)} ned">↓</button>
         <button class="icon sm" data-rencourt="${x.id}" aria-label="Omdøb ${esc(x.name)}">✏️</button>
         <button class="icon sm" data-delcourt="${x.id}" aria-label="Slet ${esc(x.name)}">🗑</button></div>`).join('')}
-      <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Tilføj bane</button><button class="btn sm ghost" data-rencenter="${c.id}">Omdøb center</button></div>
+      <div class="mact"><button class="btn sm" data-addcourt="${c.id}">+ Bane</button><button class="btn sm ghost" data-rencenter="${c.id}">Omdøb</button><button class="btn sm ghost" data-addrcenter="${c.id}">Adresse</button></div>
     </details>`;
   }).join('')}
   <button class="btn" id="addCenter">+ Nyt center</button>`;
@@ -526,6 +526,11 @@ function bind() {
   on('[data-rencenter]', async (b) => {
     const c = centerById(b.dataset.rencenter), n = prompt('Nyt navn', c.name);
     if (n?.trim()) { await q(sb.from('padel_centers').update({ name: n.trim() }).eq('id', c.id)); refresh(); }
+  });
+  // Adresse bruges til "Vis vej" på spilledagen
+  on('[data-addrcenter]', async (b) => {
+    const c = centerById(b.dataset.addrcenter), n = prompt(`Adresse på ${c.name} (bruges til "Vis vej" på spilledagen)`, c.address || '');
+    if (n !== null) { await q(sb.from('padel_centers').update({ address: n.trim() || null }).eq('id', c.id)); toast(n.trim() ? 'Adressen er gemt' : 'Adressen er fjernet'); refresh(); }
   });
   on('[data-cmove]', async (b) => {
     const c = courtById(b.dataset.cmove);

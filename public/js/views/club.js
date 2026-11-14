@@ -1273,16 +1273,17 @@ export async function showCalendar(renew = false) {
   const wrap = document.createElement('div');
   wrap.id = 'calModal'; wrap.className = 'modal';
   wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="calTitle">
-    <div class="fgicon">📅</div><h2 id="calTitle">Træninger i din kalender</h2>
-    <p class="muted">Træningerne kommer automatisk i telefonens kalender og bliver opdateret, hvis tider ændres eller en træning aflyses.</p>
+    <div class="fgicon">📅</div><h2 id="calTitle">Padel i din kalender</h2>
+    <p class="muted">Dine træninger og de spilledage, du er tilmeldt, kommer automatisk i telefonens kalender. De bliver opdateret, hvis tider ændres, eller noget bliver aflyst. Det skal kun sættes op én gang.</p>
     <div class="calbtns"><a class="btn primary" href="${webcal}">📱 iPhone / Outlook</a><a class="btn" href="${google}" target="_blank" rel="noopener">Google Kalender</a></div>
-    <p class="muted small">Android: brug Google Kalender. Virker en knap ikke, så <button class="link sm" id="calCopy">kopiér linket</button> og tilføj det som kalender-abonnement.</p>
+    <p class="muted small">Android: brug Google Kalender. Kalenderen henter selv ændringer, men det kan tage et par timer. Virker en knap ikke, så <button class="link sm" id="calCopy">kopiér linket</button> og tilføj det som kalender-abonnement.</p>
     <p class="muted small">Linket er personligt. Har du delt det ved en fejl, kan du <button class="link sm" id="calNew">lave et nyt</button> (det gamle holder op med at virke).</p>
     <div class="mact"><button class="btn ghost" id="calClose">Luk</button></div></div>`;
   document.body.appendChild(wrap);
   const close = () => wrap.remove();
   wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
   wrap.querySelector('#calClose').onclick = close;
+  wrap.querySelectorAll('.calbtns a').forEach((a) => a.addEventListener('click', () => { try { localStorage.setItem('fp-cal', '1'); } catch { /* ok */ } }));
   wrap.querySelector('#calCopy').onclick = async () => { try { await navigator.clipboard.writeText(https); toast('Linket er kopieret'); } catch { prompt('Kopiér linket', https); } };
   wrap.querySelector('#calNew').onclick = () => { if (confirm('Lav et nyt link? Det gamle holder op med at virke, så du skal tilføje kalenderen igen.')) { close(); showCalendar(true); } };
 }

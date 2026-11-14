@@ -199,6 +199,36 @@ export const FAQ = [
     a: `<p>I appen (og når appen er lagt på hjemmeskærmen) er der ingen genindlæs-knap. <b>Træk siden ned fra toppen</b>, til der står <b>Slip for at opdatere</b>, og slip. Har appen ligget i baggrunden i over en halv time, henter den selv den nyeste version, når du åbner den igen.</p>`,
   },
   {
+    cat: 'Tilmelding og konto', group: true,
+    q: 'Kan jeg få spilledagene i min kalender?',
+    a: `<p>Ja. Tryk <b>📅 Få dine spilledage i kalenderen</b> på en spilledag, du er tilmeldt, eller <b>📅 Padel i min kalender</b> under Min padel. Vælg iPhone/Outlook eller Google Kalender. Det skal kun sættes op én gang. Derefter kommer alle de spilledage, du tilmelder dig, selv i kalenderen, og de bliver opdateret, hvis tiden ændres, eller dagen aflyses. Står du på venteliste, står det i kalenderen. Google Kalender kan være et par timer om at hente ændringer.</p>`,
+  },
+  {
+    cat: 'Resultater', group: true,
+    q: 'Hvad hvis der ikke er net i hallen?',
+    a: `<p>Indtast resultatet som normalt. Er der ingen forbindelse, gemmes det på telefonen, og der står <b>⏳ … sendes, når der er net</b> på kampen. Så snart telefonen har net igen, sendes resultatet af sig selv. Luk ikke appen ned og slet den ikke imens.</p>`,
+  },
+  {
+    cat: 'Resultater', group: true,
+    q: 'Hvordan indtaster jeg et resultat hurtigst?',
+    a: `<p>Spiller I sæt, trykker du bare på tallene 0 til 7 under hvert hold. Spiller I til et fast antal point (fx americano til 24), skriver du jeres egne point, så regner appen modstandernes ud. Du kan altid rette tallet, før du trykker <b>Gem resultat</b>.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto', group: true,
+    q: 'Hvordan finder jeg vej til centret?',
+    a: `<p>Tryk på centrets navn (📍) øverst på spilledagen. Så åbner kortet med vejvisning: Apple Kort på iPhone, ellers Google Maps. Den præcise adresse lægges ind af superadmin under <b>Admin → Centre og baner → Adresse</b>.</p>`,
+  },
+  {
+    cat: 'Roller og adgang', group: true,
+    q: 'Vi mangler én spiller. Kan appen hjælpe?',
+    a: `<p>Ja. Står der fx <b>Mangler 1 spiller til næste bane</b>, kan admin og superbrugere trykke <b>📣 Mangler én: giv besked</b> på spilledagen. Så får alle i gruppen, der ikke er tilmeldt, en notifikation med et link til dagen. Der kan sendes højst én besked hver anden time pr. dag, så ingen bliver spammet.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Kan jeg gøre teksten større?',
+    a: `<p>Ja. Gå til <b>Min padel → Indstillinger → Udseende og tekststørrelse</b>, og vælg <b>Stor</b> eller <b>Størst</b>. Det gælder kun på den telefon, du sidder med.</p>`,
+  },
+  {
     cat: 'Tilmelding og konto',
     q: 'Hvordan går jeg tilbage til den forrige side?',
     a: `<p>Tryk <b>‹ Tilbage</b> øverst, eller <b>swipe mod højre</b> hen over skærmen. Når den lille pil i venstre side lyser op, kan du slippe. Det virker ikke inde i tekstfelter, i ting man selv kan rulle sidelæns (fx faner og tabeller), eller når en boks er åben.</p>`,
@@ -518,7 +548,7 @@ export const FAQ = [
   {
     cat: 'Juniorklub', club: true,
     q: 'Kan jeg få træningerne i min kalender?',
-    a: `<p>Ja. Tryk <b>📅 Få træningerne i din kalender</b> nederst under Træning (eller under Min padel). Vælg iPhone/Outlook eller Google Kalender. Så kommer træningerne i telefonens kalender og opdateres selv, hvis en tid ændres eller en træning aflyses.</p>
+    a: `<p>Ja. Tryk <b>📅 Få træningerne i din kalender</b> nederst under Træning (eller <b>📅 Padel i min kalender</b> under Min padel). Vælg iPhone/Outlook eller Google Kalender. Så kommer træningerne i telefonens kalender og opdateres selv, hvis en tid ændres eller en træning aflyses. Spilledage, du er tilmeldt, kommer med i samme kalender.</p>
 <p>Linket er personligt. Har du delt det ved en fejl, kan du lave et nyt samme sted.</p>`,
   },
   {

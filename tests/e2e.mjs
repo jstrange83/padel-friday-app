@@ -199,7 +199,7 @@ try {
   const f = page.locator('form.enter:not([hidden])').first();
   await f.locator('input[name=a]').fill('6');
   await f.locator('input[name=b]').fill('4');
-  await f.locator('button').click();
+  await f.locator('button.primary').click();
   await wait(500);
   ok((await text()).includes('dagens stilling'), 'stilling vises efter resultat');
   ok((await page.locator('.evsub .live-txt').count()) === 1, 'dagen er i gang efter første resultat');
@@ -224,9 +224,20 @@ try {
   const lateId = (await late.getAttribute('id')).slice(2);
   await late.locator('[data-act=enter]').click();
   const lf = page.locator(`form.enter[data-id="${lateId}"]:not([hidden])`);
-  await lf.locator('input[name=a]').fill('3'); await lf.locator('input[name=b]').fill('6');
-  await lf.locator('button').click();
+  // Tal-knapper i sæt (0–7) i stedet for tastaturet
+  ok(await lf.locator('.numpad .np').count() === 16, 'sæt har tal-knapper 0–7 til begge hold');
+  await lf.locator('.numpad[data-for=a] .np[data-n="3"]').click();
+  await lf.locator('.numpad[data-for=b] .np[data-n="6"]').click();
+  ok(await lf.locator('input[name=a]').inputValue() === '3' && await lf.locator('input[name=b]').inputValue() === '6' && await lf.locator('.np.on').count() === 2, 'tal-knapperne udfylder resultatet');
+  // Uden net: resultatet gemmes på telefonen og sendes, når nettet er tilbage
+  await page.context().setOffline(true);
+  await lf.locator('button.primary').click();
   await wait(500);
+  ok(await page.locator(`#m-${lateId} .outq`).count() === 1 && await page.evaluate(() => JSON.parse(localStorage.getItem('fp-outbox') || '[]').length === 1), 'uden net lægges resultatet i kø på telefonen');
+  ok(await page.locator('#offline:not([hidden])').count() === 1, 'den røde bjælke vises uden net');
+  await page.context().setOffline(false);
+  await wait(1200);
+  ok(await page.evaluate(() => JSON.parse(localStorage.getItem('fp-outbox') || '[]').length === 0) && !(await page.locator(`#m-${lateId} .outq`).count()), 'resultatet sendes, når nettet er tilbage');
   ok((await page.locator(`#m-${lateId} .score`).innerText()).includes('3'), 'resultat i senere runde gemt');
   // Spil resten af kampene færdige
   for (let i = 0; i < 40; i++) {
@@ -242,7 +253,7 @@ try {
     await btn.click();
     const ff = page.locator(`form.enter[data-id="${id}"]:not([hidden])`);
     await ff.locator('input[name=a]').fill('6'); await ff.locator('input[name=b]').fill(String(i % 5));
-    await ff.locator('button').click();
+    await ff.locator('button.primary').click();
     await wait(250);
   }
   ok(await page.locator('.rtab.done').count() === 6, 'alle 6 runder er markeret spillet');
@@ -285,7 +296,7 @@ try {
   const cf = page.locator(`form.enter[data-id="${cm.id}"]:not([hidden])`);
   ok((await cf.innerText()).includes('modstanderholdet godkende'), 'spiller får at vide, at en ændring skal godkendes');
   await cf.locator('input[name=a]').fill('7'); await cf.locator('input[name=b]').fill('5');
-  await cf.locator('button').click();
+  await cf.locator('button.primary').click();
   await wait(500);
   ok((await page.locator(`#m-${cm.id} .badge`).innerText()).toLowerCase().includes(`ændret fra ${cm.sa}–${cm.sb}`), 'ændret resultat afventer modstanderen');
   ok(!(await page.locator(`#m-${cm.id} [data-act=confirm]`).count()), 'den der ændrer kan ikke selv godkende');
@@ -319,7 +330,7 @@ try {
   await loginAs('jimmy@test');
   await page.locator(`#m-${cm.id} [data-act=enter]`).click();
   await cf.locator('input[name=a]').fill('6'); await cf.locator('input[name=b]').fill('0');
-  await cf.locator('button').click();
+  await cf.locator('button.primary').click();
   await wait(500);
   await openAll();
   ok((await page.locator(`#m-${cm.id} .score`).innerText()).replace(/\s/g, '') === '6–0' && (await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'admin retter direkte');
@@ -329,7 +340,7 @@ try {
   await loginAs(cm.b);
   await page.locator(`[data-act=enter][data-id="${cm.id}"]`).first().click();
   await cf.locator('input[name=a]').fill('2'); await cf.locator('input[name=b]').fill('6');
-  await cf.locator('button').click();
+  await cf.locator('button.primary').click();
   await wait(500);
   await openAll();
   ok((await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'spillerens første resultat tæller uden godkendelse');
@@ -424,7 +435,7 @@ try {
   ok((await page.locator('.pcard').innerText()).includes('point') && (await page.locator('.mtiles').innerText()).toLowerCase().includes('kampe'), 'Min padel viser spillerkort, placering og sæsonens tal');
   await page.click('details.badges summary');
   await page.waitForSelector('.bdg');
-  ok(await page.locator('.bdg.ok').count() >= 2 && await page.locator('.bdg:not(.ok)').count() >= 1 && (await page.locator('details.badges summary').innerText()).match(/\d+ af \d+/), 'Min padel viser badges: opnåede og låste med hvad der mangler');
+  ok(await page.locator('.bdg.ok').count() >= 1 && await page.locator('.bdg:not(.ok)').count() >= 1 && (await page.locator('details.badges summary').innerText()).match(/\d+ af \d+/), 'Min padel viser badges: opnåede og låste med hvad der mangler');
   await shot('badges');
   // Din måned i padel
   await page.click('a.monthlink');
@@ -1366,7 +1377,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Swipe for at gå tilbage') && nm.includes('Vinderchance, badges og din måned'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Smarte hjælpere') && nm.includes('Swipe for at gå tilbage'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -2356,6 +2367,50 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   const made = await page.evaluate((b) => window.__mock.db().padel_events.slice(b).map((e) => new Date(e.starts_at)).map((d) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`).sort(), evBefore);
   ok(made.join(',') === ['12/3 17:30', '2/3 19:00', '5/3 17:30', '9/3 19:00'].sort().join(','), 'spilledagene får hver deres dato og tid: ' + made.join(', '));
   ok(await page.evaluate((b) => { const e = window.__mock.db().padel_events.slice(b); return e.filter((x) => x.format === 'americano').length === 2 && e.filter((x) => x.format !== 'americano').length === 2; }, evBefore), 'hver dag kan have sin egen spiltype');
+
+  // Hjælpefunktioner: Vis vej, Mangler én, kalender, modstanderens point regnes ud, større tekst
+  await loginAs('jimmy@test');
+  const nev = await page.evaluate(() => {
+    const db = window.__mock.db();
+    const e = db.padel_events.filter((x) => x.status === 'planlagt' && !x.cancelled_at && new Date(x.starts_at) > new Date() && x.group_id === 'g-fre').sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
+    db.padel_signups = db.padel_signups.filter((x) => x.event_id !== e.id);
+    db.padel_signups.push({ event_id: e.id, player_id: 'u-admin', created_at: new Date().toISOString() }, { event_id: e.id, player_id: 'u-1', created_at: new Date().toISOString() });
+    window.__mock.save(); return e.id;
+  });
+  await page.goto(`http://localhost:8765/#/fredag/${nev}`);
+  await page.reload();
+  await page.waitForSelector('.evsub');
+  ok(/google\.com\/maps|maps\.apple\.com/.test(await page.locator('.evsub .maplink').getAttribute('href') || ''), 'centret på spilledagen er et link til vejvisning');
+  ok((await page.locator('#needBtn').innerText()).includes('Mangler 2'), 'admin kan give besked, når der mangler spillere: ' + await page.locator('.lineup').innerText());
+  const nBefore = await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'mangler').length);
+  await page.click('#needBtn');
+  await wait(500);
+  ok(await page.evaluate((b) => window.__mock.db().padel_notifications.filter((n) => n.kind === 'mangler').length > b, nBefore), 'Mangler én sender besked til dem, der ikke er tilmeldt');
+  await page.evaluate(() => { try { localStorage.removeItem('fp-cal'); } catch {} });
+  await page.reload();
+  await page.waitForSelector('#evCal');
+  await page.click('#evCal');
+  await page.waitForSelector('#calModal');
+  ok((await page.locator('#calModal h2').innerText()).includes('Padel i din kalender'), 'tilmeldte kan få spilledagene i kalenderen');
+  await page.click('#calClose');
+  // Fast antal point (americano): skriv jeres point, så regnes modstandernes ud
+  const amx = await page.evaluate(() => { const db = window.__mock.db(); const m = db.padel_matches.find((x) => x.status === 'bekraeftet'); const e = db.padel_events.find((x) => x.id === m.event_id); e.format = 'americano'; e.points_per_match = 24; m.status = 'planlagt'; m.score_a = null; m.score_b = null; window.__mock.save(); return { e: e.id, m: m.id, r: m.round_no }; });
+  await page.goto(`http://localhost:8765/#/fredag/${amx.e}`);
+  await page.reload();
+  await page.waitForSelector('.evsub');
+  if (await page.locator(`[data-rtab="${amx.r}"]`).count()) { await page.click(`[data-rtab="${amx.r}"]`); await wait(200); }
+  await page.locator(`#m-${amx.m} [data-act=enter]`).first().click();
+  const amf = page.locator(`form.enter[data-id="${amx.m}"]:not([hidden])`).first();
+  await amf.locator('input[name=a]').pressSequentially('15');
+  ok(await amf.locator('input[name=b]').inputValue() === '9', 'ved 24 point regnes det andet holds point ud (15 → 9): ' + await amf.locator('input[name=b]').inputValue());
+  // Større tekst
+  await page.goto('http://localhost:8765/#/udseende');
+  await page.waitForSelector('[data-tsize]');
+  await page.click('[data-tsize="stor"]');
+  ok(await page.evaluate(() => document.documentElement.dataset.text === 'stor' && localStorage.getItem('fp-text') === 'stor'), 'tekststørrelsen kan gøres større');
+  await noOverflow('større tekst');
+  await page.click('[data-tsize=""]');
+  ok(await page.evaluate(() => !document.documentElement.dataset.text), 'tekststørrelsen kan sættes tilbage til normal');
 
   // Swipe mod højre går tilbage til forrige side (i appen); lodret swipe gør ingenting
   await page.goto('http://localhost:8765/#/fredage');

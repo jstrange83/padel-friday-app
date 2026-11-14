@@ -1423,3 +1423,20 @@ html.inapp body { overscroll-behavior-y: contain; }
 .page.month #mShare { margin-top: 16px; }
 @media (min-width: 700px) { .mhero { grid-template-columns: repeat(4, 1fr); } }
 @media (min-width: 1100px) { .page.profile.month { columns: auto; } }
+
+/* Hjælpefunktioner: større tekst, tal-knapper, resultater uden net, vis vej, mangler én, kalender */
+html[data-text="stor"] body { zoom: 1.12; }
+html[data-text="storst"] body { zoom: 1.25; }
+.tsizes { display: flex; gap: 8px; }
+.tsz { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--text); font: inherit; font-size: 14px; cursor: pointer; }
+.tsz.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.tsa { font-weight: 800; line-height: 1; }
+.tsa-normal { font-size: 18px; } .tsa-stor { font-size: 22px; } .tsa-storst { font-size: 26px; }
+.numpad { display: flex; gap: 5px; margin: 6px 0 12px; }
+.numpad .np { flex: 1 1 0; min-width: 0; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: inherit; font-size: 18px; font-weight: 700; cursor: pointer; padding: 0; }
+.numpad .np.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+form.enter input.auto { color: var(--accent); }
+.outq { margin: 8px 0 0; padding: 8px 10px; border-radius: 10px; background: rgba(245, 180, 0, .14); color: var(--text); font-size: 14px; }
+.maplink { color: inherit; text-decoration: underline; text-decoration-color: var(--muted); text-underline-offset: 3px; white-space: nowrap; }
+.needrow { margin-top: 10px; }
+.calhint { margin: 8px 0 0; }

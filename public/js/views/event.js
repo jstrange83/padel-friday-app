@@ -2,7 +2,7 @@
 import {
   sb, S, app, hooks, isSuper, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
-  haptic, canPlan,
+  haptic, canPlan, mapsUrl,
 } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
@@ -10,6 +10,7 @@ import { SR, listenScore, beep } from '../voice.js';
 import { giveFormBody, bindGive, signoffFine, fineWarn, kr } from './fines.js';
 import { editBtn } from '../editmode.js';
 import { castTv } from '../cast.js';
+import { reportResult, pendingFor } from '../outbox.js';
 
 // ---------- Indlæsning og live opdatering ----------
 async function loadEvent(id) {
@@ -150,7 +151,7 @@ function header(c) {
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
       ${admin ? `<div class="tools">${isSuper() ? '<button class="icon" id="tvEvent" aria-label="TV-skærm" title="Vis dagen på et TV i centret (kun superadmin)">📺</button>' : ''}${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
     <h1 class="cap evtitle">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
-    <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${esc(center?.name || '')}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
+    <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${center ? `<a class="maplink" href="${esc(mapsUrl(center))}" target="_blank" rel="noopener" title="Vis vej til ${esc(center.name)}">📍 ${esc(center.name)}</a>` : ''}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
     ${quickSettings(c, '')}`;
 }
 
@@ -208,6 +209,10 @@ function priceCard(c) {
   </div>`;
 }
 
+// Lille genvej til kalender-abonnementet, indtil man har sat det op
+const calDone = () => { try { return localStorage.getItem('fp-cal') === '1'; } catch { return false; } };
+const calHint = () => (S.viewAs || calDone() ? '' : '<p class="small calhint"><button type="button" class="link sm" id="evCal">📅 Få dine spilledage i kalenderen</button></p>');
+
 function myNight(c, st) {
   const { ev, me, signed, L, rounds, inRound, roundStart, totalRounds } = c;
   const iAmIn = signed.includes(me);
@@ -236,7 +241,7 @@ function myNight(c, st) {
 
   const myDone = (n) => rounds[n]?.some((x) => x.status === 'bekraeftet' && [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const nos = Object.keys(rounds).map(Number).sort((a, b) => a - b);
-  if (!nos.length) return card('Din tilmelding', `<p>✅ Du er med <span class="muted">· nr. ${signed.indexOf(me) + 1} af ${signed.length}</span></p>${signRow}`);
+  if (!nos.length) return card('Din tilmelding', `<p>✅ Du er med <span class="muted">· nr. ${signed.indexOf(me) + 1} af ${signed.length}</span></p>${signRow}${calHint()}`);
   let r, now;
   if (c.free) {
     // Første runde, hvor jeg mangler at spille (eller holder pause i en runde der ikke er færdig)
@@ -414,6 +419,7 @@ function matchCard(c, m) {
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
     ${courtHtml(m, me, m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
+    ${pendingFor(m.id) ? `<div class="outq">⏳ ${pendingFor(m.id).a}–${pendingFor(m.id).b} er gemt på telefonen og sendes, når der er net</div>` : ''}
     ${m.status === 'planlagt' ? chanceBar(winChance(m, ev.group_id)) : ''}
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
@@ -424,11 +430,13 @@ function matchCard(c, m) {
 // Felter til resultat. Viser hvilket hold der er hvilket, så man ikke bytter om på tallene.
 function enterForm(c, m, note = '') {
   const { ev, isAm, isSet, unit } = c;
-  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt)` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
+  const hint = isAm ? `Point til hvert hold (spil til ${ev.points_per_match} i alt). Skriv jeres egne point, så regnes modstandernes ud.` : isSet ? 'Antal partier i sættet, fx 6‑4 eller 7‑6 (højst 7)' : `Antal ${unit}`;
   const max = ev.format === 'saet' || ev.format === 'klassisk' ? 7 : 99;
   const tn = (l, r) => [l, r].includes(c.me) ? `Dig & ${esc(first(l === c.me ? r : l))}` : `${esc(first(l))} & ${esc(first(r))}`;
-  const rowA = `<div class="erow"><span class="et">${tn(m.a_left, m.a_right)}</span><input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score ${tn(m.a_left, m.a_right)}"></div>`;
-  const rowB = `<div class="erow"><span class="et">${tn(m.b_left, m.b_right)}</span><input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score ${tn(m.b_left, m.b_right)}"></div>`;
+  // Sæt: store tal-knapper 0–7, så man ikke skal bruge tastaturet
+  const pad = (k, v) => (max === 7 ? `<div class="numpad" data-for="${k}">${[0, 1, 2, 3, 4, 5, 6, 7].map((n) => `<button type="button" class="np ${v === n ? 'on' : ''}" data-n="${n}">${n}</button>`).join('')}</div>` : '');
+  const rowA = `<div class="erow"><span class="et">${tn(m.a_left, m.a_right)}</span><input type="number" name="a" min="0" max="${max}" inputmode="numeric" value="${m.score_a ?? ''}" required aria-label="Score ${tn(m.a_left, m.a_right)}"></div>${pad('a', m.score_a)}`;
+  const rowB = `<div class="erow"><span class="et">${tn(m.b_left, m.b_right)}</span><input type="number" name="b" min="0" max="${max}" inputmode="numeric" value="${m.score_b ?? ''}" required aria-label="Score ${tn(m.b_left, m.b_right)}"></div>${pad('b', m.score_b)}`;
   // Eget hold står øverst, så man skriver sit eget resultat først
   const meOnB = [m.b_left, m.b_right].includes(c.me);
   return `<form class="enter" hidden data-id="${m.id}">
@@ -493,6 +501,11 @@ function standingsSection(c, st) {
   return table + ranked;
 }
 
+// "Mangler én": admin kan med ét tryk give besked til gruppens spillere, der ikke er tilmeldt
+const needOf = (c) => (c.ev.status === 'planlagt' && !c.ev.cancelled_at && !c.L.full && c.L.waiting.length ? 4 - c.L.waiting.length : 0);
+const needBtn = (c) => (c.run && needOf(c) && new Date(c.ev.starts_at).getTime() > Date.now() - 30 * 60000
+  ? `<div class="needrow"><button type="button" class="btn sm" id="needBtn">📣 Mangler ${needOf(c) === 1 ? 'én' : needOf(c)}: giv besked</button></div>` : '');
+
 function signupsSection(c) {
   const { ev, me, signed, L, courts, run, log } = c;
   const person = (ids, wait, offset = 0) => `<div class="people">${ids.map((pid, i) => {
@@ -502,7 +515,7 @@ function signupsSection(c) {
   }).join('')}</div>`;
   const head = `<h3>Tilmeldte (${signed.length})</h3>`;
   return `${c.started ? `<details class="card signbox"><summary>${head}<span class="muted">›</span></summary>` : head}
-    <div class="card lineup ${L.courts ? 'ok' : ''}">🎾 ${lineupText(L, courts.length)}</div>
+    <div class="card lineup ${L.courts ? 'ok' : ''}">🎾 ${lineupText(L, courts.length)}${needBtn(c)}</div>
     ${signed.length ? person(L.courts ? L.playing : signed, false) : '<p class="muted">Ingen endnu.</p>'}
     ${L.courts && L.waiting.length ? `<h3>Venteliste (${L.waiting.length})</h3>${person(L.waiting, true, L.playing.length)}` : ''}
     ${run && ev.status !== 'afsluttet' ? `<div class="addp"><input type="search" id="addSearch" placeholder="➕ Tilmeld en spiller: søg på navn…" autocomplete="off">
@@ -607,6 +620,14 @@ function bind(c) {
   }
 
   // Tilmelding
+  // I Android/iPhone-appen åbnes kortet bedst via selve adressen (appen sender den videre til Kort/Maps)
+  app.querySelector('.maplink')?.addEventListener('click', (e) => { if (window.Capacitor?.isNativePlatform?.()) { e.preventDefault(); location.href = e.currentTarget.href; } });
+  act($('needBtn'), async () => {
+    const n = needOf(c);
+    if (!confirm(`Send en notifikation til gruppens spillere, der ikke er tilmeldt, om at I mangler ${n === 1 ? 'én' : n}?`)) return;
+    try { const k = await q(sb.rpc('padel_event_need_v2', { e: ev.id, p_need: n })); toast(k ? `Besked sendt til ${k} ${k === 1 ? 'spiller' : 'spillere'}` : 'Alle i gruppen er allerede tilmeldt'); } catch { /* vist */ }
+  });
+  $('evCal')?.addEventListener('click', async () => { const { showCalendar } = await import('./club.js'); showCalendar(); });
   act($('signon'), async () => { await q(sb.from('padel_signups').insert({ event_id: ev.id, player_id: me })); toast('Du er tilmeldt'); await reload(); });
   act($('signoff'), async () => {
     const t = await signoffFine(ev.id, me);
@@ -846,6 +867,26 @@ function bind(c) {
     try { await q(sb.rpc(rpc, { p_match: id })); await reload(); } catch { busy(b, false); }
   }));
 
+  // Hurtig indtastning: tal-knapper i sæt, og ved fast antal point regnes det andet hold ud
+  app.querySelectorAll('form.enter').forEach((f) => {
+    f.querySelectorAll('.numpad').forEach((np) => np.addEventListener('click', (e) => {
+      const b = e.target.closest('.np'); if (!b) return;
+      f[np.dataset.for].value = b.dataset.n;
+      np.querySelectorAll('.np').forEach((x) => x.classList.toggle('on', x === b));
+      haptic('light');
+    }));
+    if (isAm && ev.points_per_match) {
+      const tot = ev.points_per_match;
+      ['a', 'b'].forEach((k) => {
+        const o = k === 'a' ? 'b' : 'a';
+        f[k].addEventListener('input', () => {
+          f[k].dataset.typed = '1';
+          const v = f[k].value === '' ? NaN : +f[k].value;
+          if (!f[o].dataset.typed && Number.isFinite(v) && v >= 0 && v <= tot) { f[o].value = tot - v; f[o].classList.add('auto'); }
+        });
+      });
+    }
+  });
   app.querySelectorAll('form.enter').forEach((f) => (f.onsubmit = async (e) => {
     e.preventDefault();
     const a = +f.a.value, bb = +f.b.value;
@@ -859,7 +900,7 @@ function bind(c) {
     busy(btn, true);
     try {
       const old = matches.find((x) => x.id === f.dataset.id);
-      await q(sb.rpc('padel_report_result', { p_match: f.dataset.id, p_a: a, p_b: bb }));
+      if (await reportResult(f.dataset.id, a, bb) === 'queued') { haptic('success'); return render(c.raw); }
       if (run || old.status === 'planlagt') haptic('success');
       toast(run || old.status === 'planlagt' ? 'Resultatet er gemt' : 'Rettelsen er sendt. En fra modstanderholdet skal godkende');
       await reload();

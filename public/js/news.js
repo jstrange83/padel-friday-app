@@ -5,6 +5,17 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-14c', date: '14. november 2026', groups: true, title: 'Smarte hjælpere i appen',
+    items: [
+      '📅 <b>Spilledage i kalenderen</b>: Tryk <b>Få dine spilledage i kalenderen</b> på en dag, du er tilmeldt (eller under Min padel). Så kommer dine spilledage og træninger selv i telefonens kalender og bliver opdateret, hvis noget ændres eller aflyses.',
+      '📡 <b>Resultater uden net</b>: Er der ingen dækning i hallen, gemmes resultatet på telefonen og sendes af sig selv, når der er net igen.',
+      '🔢 <b>Hurtigere resultater</b>: I sæt trykker du bare på tallene. Spiller I til et fast antal point, skriver du jeres point, så regner appen modstandernes ud.',
+      '📍 <b>Vis vej</b>: Tryk på centrets navn på spilledagen for at få vejvisning.',
+      '📣 <b>Mangler én?</b> Admin kan med ét tryk give besked til dem i gruppen, der ikke er tilmeldt.',
+      '🔠 <b>Større tekst</b>: Under Min padel → Indstillinger → Udseende kan du gøre teksten større.',
+    ],
+  },
+  {
     id: '2026-11-14b', date: '14. november 2026', title: 'Swipe for at gå tilbage',
     items: ['👉 I appen kan du nu <b>swipe mod højre</b> for at komme tilbage til den forrige side. En lille pil i venstre side viser, når du kan slippe.'],
   },

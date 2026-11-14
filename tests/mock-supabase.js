@@ -1011,6 +1011,13 @@ Object.assign(RPC, {
   padel_event_set_booker: ({ e, p_user }) => { const ev = db.padel_events.find((x) => x.id === e); if (!canRun(ev.group_id)) throw new Error('Det har du ikke adgang til'); ev.booked_by = p_user; },
   padel_set_ball_fee: ({ g, p_fee }) => { if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).ball_fee = p_fee || null; },
   padel_set_court_price: ({ p_court, p_price }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); db.padel_courts.find((c) => c.id === p_court).price = p_price || null; },
+  padel_event_need_v2: ({ e, p_need }) => {
+    const ev = db.padel_events.find((x) => x.id === e);
+    const signed = db.padel_signups.filter((x) => x.event_id === e).map((x) => x.player_id);
+    const us = db.padel_group_members.filter((m) => m.group_id === ev.group_id && m.status === 'aktiv' && !signed.includes(m.player_id) && m.player_id !== me().id).map((m) => m.player_id);
+    notify(us, 'mangler', `🎾 Vi mangler ${p_need === 1 ? 'én' : p_need} til padel`, 'Er du frisk? Tryk for at tilmelde dig.', '/#/fredag/' + e);
+    return us.length;
+  },
   padel_event_plan_notify: ({ e, p_redo }) => {
     const ev = db.padel_events.find((x) => x.id === e);
     const us = db.padel_signups.filter((x) => x.event_id === e).map((x) => x.player_id);

@@ -27,6 +27,14 @@ export function applyTheme(key) {
   try { localStorage.setItem('fp-theme', t[0]); } catch {}
 }
 
+// Tekststørrelse: gemmes på enheden (det er telefonen og øjnene, der bestemmer)
+const TEXT_SIZES = [['', 'Normal'], ['stor', 'Stor'], ['storst', 'Størst']];
+export const textSize = () => { try { return localStorage.getItem('fp-text') || ''; } catch { return ''; } };
+export function setTextSize(k) {
+  try { if (k) localStorage.setItem('fp-text', k); else localStorage.removeItem('fp-text'); } catch { /* ok */ }
+  if (k) document.documentElement.dataset.text = k; else delete document.documentElement.dataset.text;
+}
+
 export function viewTheme() {
   const cur = S.realMe?.theme || '';
   app.innerHTML = `
@@ -39,7 +47,11 @@ export function viewTheme() {
         <div class="tprev" style="background:${bg}"><i style="background:${card}"></i><i style="background:${card};width:70%"></i><b style="background:${acc}"></b></div>
         <span>${esc(name)}${k === cur ? ' ✓' : ''}</span>
       </button>`).join('')}</div>`).join('')}
+    <h3>Tekststørrelse</h3>
+    <p class="muted small">Gør al tekst og alle knapper større på denne telefon.</p>
+    <div class="tsizes">${TEXT_SIZES.map(([k, name]) => `<button type="button" class="tsz ${k === textSize() ? 'on' : ''}" data-tsize="${k}" aria-pressed="${k === textSize()}"><span class="tsa tsa-${k || 'normal'}">Aa</span>${name}</button>`).join('')}</div>
   </div>`;
+  app.querySelectorAll('[data-tsize]').forEach((b) => (b.onclick = () => { setTextSize(b.dataset.tsize); viewTheme(); toast('Tekststørrelsen er gemt på denne telefon'); }));
   app.querySelectorAll('[data-theme-key]').forEach((b) => (b.onclick = async () => {
     const k = b.dataset.themeKey;
     applyTheme(k);

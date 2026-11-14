@@ -75,7 +75,7 @@ export async function renderMyPadel() {
   const links = `<div class="list links">
       ${viewing ? '' : `<a class="row" href="#/samtaler" id="msgRow"><span class="grow">💬 ${msgRowLabel()}</span><span class="muted">›</span></a>`}
       <a class="row" href="#/beskeder" id="notRow"><span class="grow">🔔 Beskeder og notifikationer</span>${S.unread && !viewing ? `<span class="badge new">${S.unread} nye</span>` : '<span class="muted">›</span>'}</a>
-      ${club && !viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Træninger i min kalender</span><span class="muted">›</span></a>' : ''}
+      ${!viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Padel i min kalender</span><span class="muted">›</span></a>' : ''}
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/nyt"><span class="grow">🆕 Nyt og på vej</span><span class="muted">›</span></a>
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
@@ -285,7 +285,7 @@ export function renderSettings() {
     <h3>Appen</h3>
     <div class="list links">
       <a class="row" href="#/beskeder"><span class="grow">🔔 Notifikationer og mails</span><span class="muted">›</span></a>
-      ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende</span><span class="muted">›</span></a>'}
+      ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende og tekststørrelse</span><span class="muted">›</span></a>'}
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="testAppRow"><span class="grow">🤖 Test-app til Android (QR)</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>

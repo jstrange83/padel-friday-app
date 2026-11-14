@@ -144,7 +144,7 @@ export function toast(msg, bad = false) {
   t._h = setTimeout(() => (t.className = ''), 3200);
 }
 
-function niceError(e) {
+export function niceError(e) {
   const m = e?.message || String(e);
   if (/Invalid login credentials/i.test(m)) return 'Forkert e-mail eller adgangskode';
   if (/Email not confirmed/i.test(m)) return 'Bekræft din e-mail først (tjek din indbakke)';
@@ -219,3 +219,12 @@ export const phoneLinks = (pid) => {
   const ph = phoneOf(pid);
   return ph ? `<span class="phone">📱 ${fmtPhone(ph)}</span><a class="btn sm" href="tel:${ph}">📞 Ring</a><a class="btn sm" href="sms:${ph}">💬 SMS</a>` : '<span class="muted small">Intet telefonnummer</span>';
 };
+
+// "Vis vej": Apple Kort på iPhone/iPad, ellers Google Maps. Uden adresse søges der på centrets navn.
+export function mapsUrl(center) {
+  if (!center) return null;
+  const qy = center.address?.trim() || (/padel/i.test(center.name) ? center.name : `${center.name} padel`);
+  return /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent) && 'ontouchend' in document
+    ? `https://maps.apple.com/?q=${encodeURIComponent(qy)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(qy)}`;
+}

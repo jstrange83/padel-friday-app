@@ -22,6 +22,7 @@ import { readViewAs, renderViewAsBar } from './viewas.js';
 import { shouldShowInstall, renderInstall } from './install.js';
 import { renderEditBar } from './editmode.js';
 import { setupRefresh } from './refresh.js';
+import { setupOutbox, flushOutbox } from './outbox.js';
 
 async function loadBase() {
   const [profiles, centers, courts, groups, groupCenters, members, settings, contacts] = await Promise.all([
@@ -183,7 +184,7 @@ function watchOnline() {
   if (!bar) return;
   const set = () => { bar.hidden = navigator.onLine; };
   addEventListener('offline', set);
-  addEventListener('online', () => { const was = !bar.hidden; set(); if (was && S.realMe) route(); });
+  addEventListener('online', async () => { const was = !bar.hidden; set(); if (was && S.realMe) { await flushOutbox(); route(); } });
   set();
 }
 watchOnline();
@@ -320,3 +321,4 @@ window.addEventListener('hashchange', () => {
 
 // Træk ned for at opdatere + hent nyeste version efter pause (kun i appen)
 setupRefresh();
+setupOutbox();
