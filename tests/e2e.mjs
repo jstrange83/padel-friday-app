@@ -1396,7 +1396,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(!(await page.locator('#newsModal').innerText()).includes('Grafer på fremmøde og kontingent'), 'spillere ser ikke admin-nyheder');
   await page.click('#newsOk');
   await page.goto('http://localhost:8765/#/nyt');
-  await page.waitForSelector('[data-newslink]');
+  await page.waitForSelector('.news-entry');
+  const nShown = await page.locator('.roadmap .card > .news-entry').count(), nAll = await page.locator('.news-entry').count();
+  ok(nShown <= 8 && (nAll <= 8 || await page.locator('details.oldnews .news-entry').count() === nAll - nShown), `kun de 8 nyeste nyheder vises, ældre er foldet sammen (${nShown} af ${nAll})`);
+  if (await page.locator('details.oldnews').count()) await page.click('details.oldnews summary');
   await page.locator('[data-newslink]').first().click();
   await page.waitForSelector('[data-theme-key]');
   ok(!(await page.locator('#newsModal').count()) && page.url().includes('#/udseende'), 'knappen "Vælg farver" i nyheden fører til Udseende');

@@ -1,7 +1,7 @@
 // "Nyt og på vej" (Profil): ✅ Bygget (nyhederne), 🔨 I gang og 💡 På tegnebrættet.
 // Listen ligger i databasen (padel_roadmap_v2). Alle kan give 👍; superadmin retter, flytter og tilføjer punkter.
 import { sb, S, esc, toast, q, busy, isSuper, haptic } from './core.js';
-import { forMe, entry, markNewsSeen } from './news.js';
+import { newsListHtml, markNewsSeen } from './news.js';
 
 export const RM_STATUS = { igang: '🔨 I gang', plan: '💡 På tegnebrættet', bygget: '✅ Bygget' };
 const AUD = { alle: 'Alle', admin: 'Kun admins og trænere', klub: 'Kun klubber', gruppe: 'Kun spillegrupper' };
@@ -39,7 +39,7 @@ export async function viewRoadmap(app) {
   const tabs = [['bygget', '✅ Bygget'], ['igang', `🔨 I gang${n('igang') ? ` (${n('igang')})` : ''}`], ['plan', `💡 På vej${n('plan') ? ` (${n('plan')})` : ''}`]];
   const body = S.rmTab === 'bygget'
     ? `${isSuper() && list.length ? `<details class="card"><summary class="muted small">Færdige punkter fra listen (${list.length})</summary>${list.map(card).join('')}</details>` : ''}
-       ${forMe().map((x) => `<div class="card">${entry(x)}</div>`).join('') || '<p class="muted">Ingen nyheder endnu.</p>'}`
+       ${newsListHtml()}`
     : `<p class="muted small">${S.rmTab === 'igang' ? 'Det arbejder vi på lige nu.' : 'Idéer og ønsker til appen. Tryk 👍 ved det, du gerne vil have, så ved vi, hvad der er vigtigst. Har du selv en idé, så skriv i <a href="#/forslag">Forslagskassen</a>.'}</p>
        ${list.map(card).join('') || `<p class="muted">${S.rmTab === 'igang' ? 'Intet lige nu.' : 'Ingen punkter endnu.'}</p>`}`;
   app.innerHTML = `<div class="page roadmap">

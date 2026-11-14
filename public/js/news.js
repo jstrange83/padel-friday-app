@@ -198,12 +198,19 @@ export function maybeShowNews() {
   return true;
 }
 
+// Listen med nyheder: de 8 nyeste vises, ældre ligger foldet sammen nederst
+export function newsListHtml() {
+  const list = forMe(), keep = 8, old = list.slice(keep);
+  return (list.slice(0, keep).map((n) => `<div class="card">${entry(n)}</div>`).join('') || '<p class="muted">Ingen nyheder endnu.</p>')
+    + (old.length ? `<details class="card oldnews"><summary>Ældre nyheder (${old.length})</summary>${old.map((n) => `<div class="oldn">${entry(n)}</div>`).join('')}</details>` : '');
+}
+
 // Siden med alle nyheder (Min padel → Nyt i appen)
 export function viewNews(app) {
   app.innerHTML = `<div class="page">
     <button class="back" onclick="location.hash='#/profil'">‹ Min padel</button>
     <h1>🆕 Nyt i appen</h1>
-    ${forMe().map((n) => `<div class="card">${entry(n)}</div>`).join('') || '<p class="muted">Ingen nyheder endnu.</p>'}
+    ${newsListHtml()}
   </div>`;
   markNewsSeen();
 }
