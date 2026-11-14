@@ -1,4 +1,4 @@
-// Padel: sender et nyhedsbrev fra en gruppe eller klub i et pænt design. Kaldes kun af databasen (padel_newsletter_send_v2) med den hemmelige nøgle.
+// Padel: sender et nyhedsbrev fra en gruppe eller klub i et pænt design (via Resend fra eget domæne, hvis det er sat op, ellers Gmail). Kaldes kun af databasen (padel_newsletter_send_v2) med den hemmelige nøgle.
 // Krop: { group, color, reply_to, test, title, intro, sections: [{ heading, text, button_text, button_url }], by, recipients: [{ to, unsub }] }
 import nodemailer from "npm:nodemailer@6.9.16";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -60,6 +60,33 @@ function render(b: Record<string, unknown>, unsub: string | null) {
   </td></tr>
 </table></td></tr></table></body></html>`;
 }
+type Mail = { fromName: string; to: string; replyTo?: string; subject: string; text: string; html: string; headers?: Record<string, string> };
+// Én afsender for alle: Resend (eget domæne) hvis sat op, ellers Gmail
+function mailer() {
+  const key = Deno.env.get("RESEND_API_KEY")?.trim(), fromAddr = Deno.env.get("MAIL_FROM")?.trim();
+  if (key && okMail(fromAddr)) {
+    return {
+      kind: "resend",
+      async send(m: Mail) {
+        const r = await fetch("https://api.resend.com/emails", {
+          method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: `${m.fromName} <${fromAddr}>`, to: [m.to], reply_to: m.replyTo, subject: m.subject, text: m.text, html: m.html, headers: m.headers }),
+        });
+        if (!r.ok) throw new Error(`${r.status} ${(await r.text()).slice(0, 150)}`);
+      },
+      close() {},
+    };
+  }
+  const user = Deno.env.get("GMAIL_USER")?.trim(), pass = Deno.env.get("GMAIL_APP_PASSWORD")?.replace(/\s+/g, "");
+  if (!user || !pass) return null;
+  const tr = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, pool: true, maxConnections: 1, auth: { user, pass } });
+  return {
+    kind: "gmail",
+    async send(m: Mail) { await tr.sendMail({ from: { name: m.fromName, address: user }, to: m.to, replyTo: m.replyTo, subject: m.subject, text: m.text, html: m.html, headers: m.headers }); },
+    close() { tr.close(); },
+  };
+}
+
 const plain = (b: Record<string, unknown>, unsub: string | null) => [String(b.title), "", String(b.intro || ""), ...((b.sections as Sec[]) || []).flatMap((s) => ["", s.heading || "", s.text || "", s.button_text && okUrl(s.button_url) ? `${s.button_text}: ${s.button_url}` : ""]),
   "", `Åbn Padelklubben: ${APP}`, unsub ? `Afmeld: ${APP}${unsub}` : ""].filter((x, i, a) => x !== "" || a[i - 1] !== "").join("\n");
 
@@ -68,28 +95,27 @@ Deno.serve(async (req) => {
     if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
     if (!hook) { const { data, error } = await sb.rpc("padel_push_config"); if (error || !data?.hook) return json({ error: "config" }, 500); hook = data.hook; }
     if (req.headers.get("x-hook-secret") !== hook) return new Response("Forbidden", { status: 403 });
-    const user = Deno.env.get("GMAIL_USER")?.trim(), pass = Deno.env.get("GMAIL_APP_PASSWORD")?.replace(/\s+/g, "");
-    if (!user || !pass) return json({ sent: 0, reason: "mail er ikke sat op" }, 503);
+    const mx = mailer();
+    if (!mx) return json({ sent: 0, reason: "mail er ikke sat op" }, 503);
     const b = await req.json().catch(() => null);
     if (!b || !Array.isArray(b.recipients)) return json({ error: "bad request" }, 400);
     const from = String(b.group || "Padelklubben").replace(/["<>\r\n]/g, "").slice(0, 80);
     const replyTo = okMail(b.reply_to) ? b.reply_to : undefined;
     const subject = (b.test ? "[TEST] " : "") + String(b.title || "Nyhedsbrev").replace(/[\r\n]+/g, " ").slice(0, 150);
     const list = b.recipients.filter((r: { to?: unknown }) => okMail(r?.to)).slice(0, 150);
-    const tr = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, pool: true, maxConnections: 1, auth: { user, pass } });
     let sent = 0; const failed: string[] = [];
     for (const r of list) {
       const unsub = typeof r.unsub === "string" && r.unsub.startsWith("/afmeld?t=") ? r.unsub : null;
       const headers: Record<string, string> = unsub ? { "List-Unsubscribe": `<${APP}${unsub}>` } : {};
       let ok = false;
       for (let attempt = 1; attempt <= 4 && !ok; attempt++) {
-        try { await tr.sendMail({ from: { name: from, address: user }, to: r.to, replyTo, subject, text: plain(b, unsub), html: render(b, unsub), headers }); ok = true; sent++; }
-        catch (e) { const msg = (e as Error).message; console.error("nyhedsbrev fejl", mask(r.to), attempt, msg.slice(0, 120)); if (!/^4|\b4\d\d\b|ETIMEDOUT|ECONNRESET/.test(msg)) break; await sleep(1500 * attempt); }
+        try { await mx.send({ fromName: from, to: r.to, replyTo, subject, text: plain(b, unsub), html: render(b, unsub), headers }); ok = true; sent++; }
+        catch (e) { const msg = (e as Error).message; console.error("nyhedsbrev fejl", mx.kind, mask(r.to), attempt, msg.slice(0, 120)); if (!/^4|\b4\d\d\b|^429|ETIMEDOUT|ECONNRESET/.test(msg)) break; await sleep(1500 * attempt); }
       }
       if (!ok) failed.push(mask(r.to));
-      await sleep(400);
+      await sleep(mx.kind === "resend" ? 600 : 400);
     }
-    tr.close();
+    mx.close();
     console.log("nyhedsbrev sendt", sent, "fejlede", failed.length);
     return json({ sent, failed });
   } catch (e) { console.error("padel-newsletter", (e as Error).message); return json({ error: (e as Error).message.slice(0, 300) }, 500); }
