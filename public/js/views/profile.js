@@ -146,10 +146,43 @@ export async function renderMyPadel() {
     <div class="card goal"><div class="ghead"><b>🎯 Næste mål: ${goal} point</b><small>${goal - elo} point endnu · højeste ${best}</small></div><div class="bar"><i style="--w:${prog}%"></i></div></div>
     ${bestMate || nemesis ? `<div class="duos">${person(bestMate, '🤝 Bedste makker', 'mate')}${person(nemesis, '⚡ Nemesis', 'nem')}</div>` : ''}
     ${me?.eggs ? `<div class="card eggs">🥚 Du har givet <b>${me.eggs}</b> ${me.eggs === 1 ? 'æg' : 'æg'} (6–0)</div>` : ''}
+    ${badgesHtml(L, me, elo, rank, wins)}
     ${L.length ? `<h3>Seneste kampe</h3><div class="list">${L.slice().reverse().slice(0, 3).map((x) => `<div class="row"><div class="grow"><b>${x.sc}–${x.th}</b> med ${esc(first(x.mate))} <small>mod ${esc(first(x.opps[0]))} & ${esc(first(x.opps[1]))} · ${fmtDate(x.date, { day: 'numeric', month: 'short' })}</small></div><div class="delta ${x.d > 0 ? 'up' : x.d < 0 ? 'dn' : ''}">${x.d > 0 ? '+' : ''}${x.d}</div></div>`).join('')}</div>` : '<div class="card"><p class="muted">Når du har spillet din første kamp, kommer dine tal her. 🎾</p></div>'}
     <a class="btn allstats" href="#/spiller/${p.id}">📊 Al statistik og grafer ›</a>`;
   countUp(app);
+  const bd = app.querySelector('details.badges'); if (bd) bd.ontoggle = () => (S.badgesOpen = bd.open);
   requestAnimationFrame(() => app.querySelector('.goal .bar')?.classList.add('go'));
+}
+
+// Badges og milepæle: regnes ud fra kampene i gruppen. Låste badges viser, hvad man mangler.
+function badgesHtml(L, me, elo, rank, wins) {
+  const days = new Set(L.map((x) => x.date.toDateString())).size;
+  const mates = new Set(L.map((x) => x.mate)).size, opps = new Set(L.flatMap((x) => x.opps)).size;
+  const streak = me?.best_streak || 0, eggs = me?.eggs || 0, n = L.length;
+  const B = [
+    ['🎾', 'Første kamp', n, 1, 'kamp'],
+    ['🏅', 'Første sejr', wins, 1, 'sejr'],
+    ['🔟', '10 kampe', n, 10, 'kampe'],
+    ['🎖', '25 kampe', n, 25, 'kampe'],
+    ['🏟', '50 kampe', n, 50, 'kampe'],
+    ['💯', '100 kampe', n, 100, 'kampe'],
+    ['🔥', '3 sejre i træk', streak, 3, 'i træk'],
+    ['⚡', '5 sejre i træk', streak, 5, 'i træk'],
+    ['🥚', 'Æg-giver', eggs, 1, 'æg'],
+    ['📅', 'Fast inventar', days, 10, 'spilledage'],
+    ['🤝', 'Social sommerfugl', mates, 10, 'makkere'],
+    ['🧭', 'Mødt dem alle', opps, 20, 'modstandere'],
+    ['📈', '1100 point', elo, 1100, 'point'],
+    ['🚀', '1200 point', elo, 1200, 'point'],
+    ['👑', 'Nr. 1 på ranglisten', rank === 1 ? 1 : 0, 1, ''],
+  ];
+  const got = B.filter((b) => b[2] >= b[3]).length;
+  return `<details class="card badges" ${S.badgesOpen ? 'open' : ''}><summary><b>🏅 Badges</b><span class="muted">${got} af ${B.length} ›</span></summary>
+    <div class="bgrid">${B.map(([ic, t, v, goal, unit]) => {
+      const ok = v >= goal, left = Math.max(0, goal - v);
+      return `<div class="bdg ${ok ? 'ok' : ''}" title="${esc(t)}"><span class="bic">${ok ? ic : '🔒'}</span><b>${esc(t)}</b>${ok ? '<small>Opnået</small>' : unit ? `<small>${goal >= 1000 ? `${left} point mere` : `${Math.min(v, goal)}/${goal} ${unit}`}</small>` : '<small>Bliv nr. 1</small>'}
+        ${ok || goal >= 1000 || goal === 1 ? '' : `<i class="bprog" style="--w:${Math.round((Math.min(v, goal) / goal) * 100)}%"></i>`}</div>`;
+    }).join('')}</div></details>`;
 }
 
 function afterMyPadel() {

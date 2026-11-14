@@ -422,6 +422,10 @@ try {
   await page.waitForSelector('.pcard .prank');
   await page.waitForSelector('.mtiles');
   ok((await page.locator('.pcard').innerText()).includes('point') && (await page.locator('.mtiles').innerText()).toLowerCase().includes('kampe'), 'Min padel viser spillerkort, placering og sæsonens tal');
+  await page.click('details.badges summary');
+  await page.waitForSelector('.bdg');
+  ok(await page.locator('.bdg.ok').count() >= 2 && await page.locator('.bdg:not(.ok)').count() >= 1 && (await page.locator('details.badges summary').innerText()).match(/\d+ af \d+/), 'Min padel viser badges: opnåede og låste med hvad der mangler');
+  await shot('badges');
   await wait(1100);
   await shot('min-padel');
   await noOverflow('min padel');
@@ -1337,7 +1341,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Vinderchance på kampene') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Vinderchance og badges') && nm.includes('TV-skærmen: sponsorer'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

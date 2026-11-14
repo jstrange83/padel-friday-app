@@ -1362,3 +1362,14 @@ html.inapp body { overscroll-behavior-y: contain; }
 .wclbl { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--muted); margin-top: 3px; }
 .wclbl b { color: var(--text); font-variant-numeric: tabular-nums; }
 .wclbl small { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* Badges på Min padel */
+.badges summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; list-style: none; }
+.badges summary::-webkit-details-marker { display: none; }
+.bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; margin-top: 12px; }
+.bdg { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 12px 6px 10px; border-radius: 14px; background: var(--card2); opacity: .55; overflow: hidden; }
+.bdg.ok { opacity: 1; background: color-mix(in srgb, var(--accent) 16%, var(--card2)); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.bdg .bic { font-size: 28px; line-height: 1.1; }
+.bdg b { font-size: 12.5px; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; hyphens: auto; }
+.bdg small { font-size: 11px; color: var(--muted); }
+.bdg .bprog { position: absolute; left: 0; bottom: 0; height: 3px; width: var(--w); background: var(--accent); }

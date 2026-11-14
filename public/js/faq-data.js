@@ -136,6 +136,11 @@ export const FAQ = [
 <p>Admin og superbruger kan rette et resultat direkte, og pointene bliver regnet om med det samme.</p>`,
   },
   {
+    cat: 'Rangliste og point', group: true,
+    q: 'Hvad er badges?',
+    a: `<p>Under <b>Min padel → 🏅 Badges</b> samler du badges for det, du har opnået i gruppen: første kamp og første sejr, 10, 25, 50 og 100 kampe, 3 og 5 sejre i træk, æg-giver, 10 spilledage, 10 forskellige makkere, 20 forskellige modstandere, 1100 og 1200 point og nr. 1 på ranglisten. Låste badges er grå med en lås og viser, hvor langt du mangler.</p>`,
+  },
+  {
     cat: 'Resultater', group: true,
     q: 'Hvordan regnes vinderchancen ud?',
     a: `<p>Før en kamp er spillet, står der en vinderchance i procent. Den regnes ud fra gennemsnittet af de to spilleres point på hvert hold, på samme måde som ranglisten regner forventet resultat. Er holdene lige gode, er chancen 50% til hver. Jo flere point et hold har mere end det andet, jo større chance. Slår man et hold med højere vinderchance, giver det også flere point.</p>`,
