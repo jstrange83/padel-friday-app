@@ -1,0 +1,78 @@
+name: iPhone app (App Store)
+
+# Bygger iPhone-appen på en Mac hos GitHub.
+# - Uden Apple-nøgler: et testbyg uden signering, så vi ved, at projektet kan bygges.
+# - Med Apple-nøgler (GitHub-secrets): signeret build, der uploades direkte til App Store Connect (TestFlight).
+#   Secrets: APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (hele indholdet af .p8-filen).
+# Køres manuelt (Actions → iPhone app → Run workflow) eller når native/ios ændres.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'native/ios/**'
+      - 'native/package.json'
+      - 'native/capacitor.config.json'
+      - '.github/workflows/ios.yml'
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Vælg Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Tjek om Apple-nøglerne er sat op
+        id: keys
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ -n "$TEAM" ] && [ -n "$KID" ] && [ -n "$ISS" ] && [ -n "$P8" ]; then echo "ok=1" >> $GITHUB_OUTPUT
+          else echo "::warning::Apple-nøglerne mangler endnu. Laver kun et testbyg uden signering."; fi
+      - name: Installer Capacitor og CocoaPods
+        working-directory: native
+        run: npm ci && npx cap sync ios
+
+      - name: Testbyg uden signering
+        if: steps.keys.outputs.ok != '1'
+        working-directory: native/ios/App
+        run: |
+          set -o pipefail
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build | tail -40
+
+      - name: Byg, signer og upload til App Store Connect
+        if: steps.keys.outputs.ok == '1'
+        working-directory: native/ios/App
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KID: ${{ secrets.ASC_KEY_ID }}
+          ISS: ${{ secrets.ASC_ISSUER_ID }}
+          P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD: ${{ github.run_number }}
+        run: |
+          set -o pipefail
+          KEY="$RUNNER_TEMP/AuthKey_$KID.p8"
+          printf '%s\n' "$P8" > "$KEY"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $KEY -authenticationKeyID $KID -authenticationKeyIssuerID $ISS"
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM" CURRENT_PROJECT_VERSION="$BUILD" MARKETING_VERSION="1.0.$BUILD" \
+            $AUTH archive | tail -60
+          sed "s/TEAM_ID_PLACEHOLDER/$TEAM/" ../ci/ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            $AUTH | tail -60
+          rm -f "$KEY"
+          echo "### Uploadet til App Store Connect: version 1.0.$BUILD (build $BUILD)" >> $GITHUB_STEP_SUMMARY
