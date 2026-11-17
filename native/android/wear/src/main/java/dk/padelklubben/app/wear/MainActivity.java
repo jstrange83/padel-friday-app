@@ -219,6 +219,8 @@ public class MainActivity extends Activity {
             try { roundEnds = OffsetDateTime.parse(m.optString("ends")).toInstant().toEpochMilli(); } catch (Exception ignored) { }
         }
         showCount();
+        // Meld kampen live med det samme (0–0), så appen og TV'et viser den, så snart I går på banen
+        queueLive();
     }
 
     void showCount() {

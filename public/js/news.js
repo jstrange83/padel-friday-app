@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-18', date: '18. november 2026', groups: true, title: 'Banerne set fra oven, også på telefonen',
+    items: ['🎾 Alle kampe på spilledagen vises nu som en padelbane set fra oven, også på telefonen. Navnene står i hvert felt, så du kan se, hvem der står i venstre og højre side, og resultatet står på nettet. Din egen kamp øverst vises på samme måde.'],
+  },
+  {
     id: '2026-11-14c', date: '14. november 2026', groups: true, title: 'Smarte hjælpere i appen',
     items: [
       '📅 <b>Spilledage i kalenderen</b>: Tryk <b>Få dine spilledage i kalenderen</b> på en dag, du er tilmeldt (eller under Min padel). Så kommer dine spilledage og træninger selv i telefonens kalender og bliver opdateret, hvis noget ændres eller aflyses.',

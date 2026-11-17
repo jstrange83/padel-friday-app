@@ -267,10 +267,6 @@ function myNight(c, st) {
   }
   const m = rounds[r].find((x) => [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
   const onA = [m.a_left, m.a_right].includes(me);
-  // Mit hold til venstre, modstanderne til højre
-  const [ml, mr, ol, or] = onA ? [m.a_left, m.a_right, m.b_left, m.b_right] : [m.b_left, m.b_right, m.a_left, m.a_right];
-  const nm = (pid, sd) => `<span class="${pid === me ? 'meName' : ''}">${pid === me ? 'Dig' : esc(first(pid))}<em>${sd}</em></span>`;
-  const teams = `<div class="mbody nk"><div class="team">${nm(ml, 'V')}${nm(mr, 'H')}</div><div class="score muted">mod</div><div class="team">${nm(ol, 'V')}${nm(or, 'H')}</div></div>`;
   const canEnter = (now || c.free) && m.status === 'planlagt';
   if (canEnter) c.mineMatch = m.id;
   const lvm = liveOf(m);
@@ -281,7 +277,7 @@ function myNight(c, st) {
     : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<p class="muted small">Venter på, at modstanderne godkender rettelsen.</p>' : '';
   return card(lvm ? '<span class="livedot">●</span> Din kamp spilles nu' : now && !c.free ? 'Din kamp nu' : 'Din næste kamp',
     `<div class="pills">${pill(`Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''}`)}${pill(esc(courtById(m.court_id)?.name || ''))}${pill(time)}</div>
-    ${lvm ? courtHtml(m, me, liveScore(lvm), 'on') : teams}
+    ${courtHtml(m, me, lvm ? liveScore(lvm) : '<span class="pscore vs">VS</span>', 'on')}
     ${m.status === 'planlagt' && !lvm ? (() => { const pa = winChance(m, c.ev.group_id); return chanceBar(onA ? pa : 100 - pa, 'I ', ' dem'); })() : ''}
     ${todo.startsWith('<button') ? `<div class="mact">${todo}</div>` : todo}${canEnter ? enterForm(c, m) : ''}${signRow}`, now ? 'now' : '');
 }
@@ -369,7 +365,7 @@ function teamHtml(l, r, me) {
   return `<div class="team">${n(l, 'V')}${n(r, 'H')}</div>`;
 }
 
-// Computer: banen set fra oven med navnene i hvert felt. Hold A til venstre, hold B til højre, nettet i midten.
+// Banen set fra oven med navnene i hvert felt (alle kampe, telefon og computer). Hold A til venstre, hold B til højre, nettet i midten.
 // Set fra hver spillers egen side står venstre-spilleren (V) til venstre: for hold A er det øverst, for hold B nederst.
 function courtHtml(m, me, score, cls = '') {
   const box = (pid, side, pos) => `<div class="pbox ${pos} ${pid === me ? 'me' : ''}"><b>${esc(first(pid))}</b><small>${side === 'V' ? 'Venstre' : 'Højre'}</small></div>`;

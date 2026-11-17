@@ -172,7 +172,7 @@ try {
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner: ' + await page.locator('.rtabs .rtab').count() + ' ' + await page.evaluate(() => JSON.stringify(window.__mock.db().padel_events.map((e) => [e.format, e.round_minutes, e.duration_minutes]))));
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
-  ok(/Runde 1/.test(mc1) && (/Dig/.test(mc1) || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene med "Dig"');
+  ok(/Runde 1/.test(mc1) && ((await page.locator('.mine-card .pcourt .pbox.me').count()) === 1 || /pause/i.test(mc1)), 'Din næste kamp viser runde, bane og holdene som en bane med dig fremhævet');
   ok(/pause/i.test(mc1) || /Vinderchance/i.test(mc1), 'Din næste kamp viser vinderchancen');
   ok(await page.locator('.match .wchance').count() > 0, 'kampene viser vinderchance før de er spillet');
   ok(await page.evaluate(() => [...document.querySelectorAll('.match .wclbl')].every((el) => { const n = el.innerText.match(/(\d+)%/g).map((x) => parseInt(x)); return n.length === 2 && n[0] + n[1] === 100; })), 'vinderchancerne giver 100% tilsammen');

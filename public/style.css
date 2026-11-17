@@ -1264,20 +1264,15 @@ html.inapp body { overscroll-behavior-y: contain; }
 .nlaicard .mact .btn { flex: 1 1 0; }
 .nlmail h1, .nlmail h2 { text-align: left; }
 
-/* Spilledag: banerne set fra oven med navnene i hvert felt. Altid på computeren, og på telefonen når kampen spilles live */
+/* Spilledag: banerne set fra oven med navnene i hvert felt, ens for alle kampe (live eller ej) */
 .pcourt { display: none; }
 .match .pcourt { position: relative; margin: 10px 0 12px; height: 200px; border-radius: 14px; overflow: hidden;
-  background: #1f6fb8; border: 4px solid rgba(255,255,255,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.9); }
-@media (min-width: 900px) {
-  .match .mbody { display: none; }
-  .match .pcourt { display: flex; }
-}
-.match.islive .mbody { display: none; }
-.match.islive .pcourt { display: flex; }
+  background: #1f6fb8; border: 4px solid rgba(255,255,255,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.9); display: flex; }
+.match .mbody { display: none; }
 @media (max-width: 899px) {
-  .match.islive .pcourt { height: 170px; }
-  .match.islive .pcourt .pbox b { font-size: 15px; }
-  .match.islive .pcourt .pbox { padding: 4px 6px; }
+  .match .pcourt { height: 150px; margin: 8px 0 10px; }
+  .match .pcourt .pbox b { font-size: 15px; }
+  .match .pcourt .pbox { padding: 4px 6px; }
 }
 .pcourt .phalf { flex: 1; display: flex; min-width: 0; }
 .pcourt .pback { flex: 0 0 22%; }
@@ -1458,7 +1453,7 @@ form.enter input.auto { color: var(--accent); }
 .pcourt .pscore.live { display: flex; flex-direction: column; align-items: center; line-height: 1.05; padding: 4px 12px 6px; }
 .pcourt .pscore.live small { color: #ff5a5a; font-size: 10px; letter-spacing: .08em; }
 .pcourt .pscore.live em { font-size: 15px; }
-.pcourt.on { display: flex; position: relative; margin: 8px 0 10px; height: 170px; border-radius: 14px; overflow: hidden; background: #1f6fb8; border: 4px solid rgba(255,255,255,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.9); }
+.pcourt.on { display: flex; position: relative; margin: 8px 0 10px; height: 150px; border-radius: 14px; overflow: hidden; background: #1f6fb8; border: 4px solid rgba(255,255,255,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.9); }
 .pcourt.on .pbox b { font-size: 15px; }
 .pcourt.on .pbox { padding: 4px 6px; }
 .livedot { color: #ff5a5a; animation: livepulse 1.6s ease-in-out infinite; }

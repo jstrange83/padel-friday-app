@@ -92,7 +92,7 @@ export const FAQ = [
   {
     cat: 'Hold og runder',
     q: 'Hvad betyder venstre og højre side?',
-    a: `<p>I padel står man fast i enten venstre eller højre side. Vælg din favorit under profilen. Står du "Begge sider", kan du sættes ind hvor som helst. På kampkortet står <b>V</b> og <b>H</b> ved hver spiller.</p>`,
+    a: `<p>I padel står man fast i enten venstre eller højre side. Vælg din favorit under profilen. Står du "Begge sider", kan du sættes ind hvor som helst. På spilledagen vises hver kamp som en bane set fra oven, og under hvert navn står der <b>Venstre</b> eller <b>Højre</b>.</p>`,
   },
   {
     cat: 'Hold og runder', group: true,
