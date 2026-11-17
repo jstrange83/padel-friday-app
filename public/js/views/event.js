@@ -414,17 +414,28 @@ function matchCard(c, m) {
     if (run) links += `<button class="link sm dn" data-act="reset" data-id="${m.id}">Nulstil</button>`;
   }
   const changeNote = m.status === 'bekraeftet' && !run ? '<small class="muted">Retter du resultatet, skal en fra modstanderholdet godkende ændringen.</small>' : '';
-  const score = m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
+  const lv = liveOf(m);
+  const score = lv ? `<div class="score live"><small>● LIVE</small>${lv.main}${lv.pts ? `<em>${lv.pts}</em>` : ''}</div>`
+    : m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
   return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
-    ${courtHtml(m, me, m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
+    ${courtHtml(m, me, lv ? `<span class="pscore live">${lv.main}${lv.pts ? ` <em>${lv.pts}</em>` : ''}</span>` : m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
     ${pendingFor(m.id) ? `<div class="outq">⏳ ${pendingFor(m.id).a}–${pendingFor(m.id).b} er gemt på telefonen og sendes, når der er net</div>` : ''}
     ${m.status === 'planlagt' ? chanceBar(winChance(m, ev.group_id)) : ''}
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}
   </div>`;
+}
+
+// Live-stilling fra uret (kun kampe uden resultat, opdateret inden for 30 minutter)
+function liveOf(m) {
+  const l = m.live;
+  if (!l || m.status !== 'planlagt' || !m.live_at || Date.now() - new Date(m.live_at).getTime() > 30 * 60e3) return null;
+  if (l.mode === 'points') return { main: `${esc(l.pa)}<span>–</span>${esc(l.pb)}`, pts: '' };
+  const pts = l.pa === '0' && l.pb === '0' ? '' : `${esc(l.pa)}-${esc(l.pb)}`;
+  return { main: `${+l.ga}<span>–</span>${+l.gb}`, pts };
 }
 
 // Felter til resultat. Viser hvilket hold der er hvilket, så man ikke bytter om på tallene.

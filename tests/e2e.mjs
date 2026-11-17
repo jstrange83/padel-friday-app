@@ -2397,11 +2397,12 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('#calModal h2').innerText()).includes('Padel i din kalender'), 'tilmeldte kan få spilledagene i kalenderen');
   await page.click('#calClose');
   // Fast antal point (americano): skriv jeres point, så regnes modstandernes ud
-  const amx = await page.evaluate(() => { const db = window.__mock.db(); const m = db.padel_matches.find((x) => x.status === 'bekraeftet'); const e = db.padel_events.find((x) => x.id === m.event_id); e.format = 'americano'; e.points_per_match = 24; m.status = 'planlagt'; m.score_a = null; m.score_b = null; window.__mock.save(); return { e: e.id, m: m.id, r: m.round_no }; });
+  const amx = await page.evaluate(() => { const db = window.__mock.db(); const m = db.padel_matches.find((x) => x.status === 'bekraeftet'); const e = db.padel_events.find((x) => x.id === m.event_id); e.format = 'americano'; e.points_per_match = 24; m.status = 'planlagt'; m.score_a = null; m.score_b = null; m.live = { ga: 0, gb: 0, pa: '11', pb: '7', mode: 'points' }; m.live_at = new Date().toISOString(); window.__mock.save(); return { e: e.id, m: m.id, r: m.round_no }; });
   await page.goto(`http://localhost:8765/#/fredag/${amx.e}`);
   await page.reload();
   await page.waitForSelector('.evsub');
   if (await page.locator(`[data-rtab="${amx.r}"]`).count()) { await page.click(`[data-rtab="${amx.r}"]`); await wait(200); }
+  ok(/LIVE[\s\S]*11[\s\S]*7/.test(await page.locator(`#m-${amx.m} .score.live`).innerText()), 'live-stillingen fra uret vises på kampen');
   await page.locator(`#m-${amx.m} [data-act=enter]`).first().click();
   const amf = page.locator(`form.enter[data-id="${amx.m}"]:not([hidden])`).first();
   await amf.locator('input[name=a]').pressSequentially('15');

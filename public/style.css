@@ -1443,3 +1443,7 @@ form.enter input.auto { color: var(--accent); }
 .oldnews summary { cursor: pointer; font-weight: 700; color: var(--muted); }
 .oldnews .oldn { border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
 .watchform input { width: 100%; box-sizing: border-box; text-align: center; font-size: 28px; letter-spacing: 4px; font-weight: 800; padding: 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.score.live { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.score.live small { color: #ff5a5a; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.score.live em, .pscore.live em { font-style: normal; color: var(--accent); font-size: .7em; }
+.pscore.live { border-color: #ff5a5a; }

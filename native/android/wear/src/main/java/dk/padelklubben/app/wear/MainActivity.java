@@ -210,6 +210,12 @@ public class MainActivity extends Activity {
             score = new Score(mode, total, prefs.getBoolean("golden", false));
             scoreMatch = id;
             score.load(prefs.getString("score_" + id, null));
+            timeUpShown = false;
+        }
+        // Tidsspil: rundens sluttidspunkt, så uret kan tælle ned
+        roundEnds = 0;
+        if (!m.isNull("ends")) {
+            try { roundEnds = OffsetDateTime.parse(m.optString("ends")).toInstant().toEpochMilli(); } catch (Exception ignored) { }
         }
         showCount();
     }
@@ -231,11 +237,18 @@ public class MainActivity extends Activity {
         FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-2, -2, Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         tp.topMargin = dp(14);
         root.addView(t, tp);
+        timerView = null;
+        if (roundEnds > 0) {
+            timerView = t;
+            t.setTextSize(15);
+            ui.removeCallbacks(tick);
+            tick.run();
+        }
 
         LinearLayout bar = new LinearLayout(this);
         bar.setGravity(Gravity.CENTER);
         TextView undo = pill("↶", score.canUndo());
-        undo.setOnClickListener(v -> { if (score.canUndo()) { score.undo(); saveScore(); showCount(); } });
+        undo.setOnClickListener(v -> { if (score.canUndo()) { score.undo(); saveScore(); queueLive(); showCount(); } });
         TextView done = pill("✓", true);
         done.setOnClickListener(v -> showSave());
         TextView back = pill("✕", true);
@@ -261,13 +274,73 @@ public class MainActivity extends Activity {
             v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
             score.point(mine);
             saveScore();
+            queueLive();
             showCount();
         });
         return h;
     }
 
+    // ---------- Nedtælling ved tidsspil ----------
+    long roundEnds = 0;
+    boolean timeUpShown = false;
+    TextView timerView;
+    final Runnable tick = new Runnable() {
+        @Override public void run() {
+            if (timerView == null || !screen.equals("count") || roundEnds <= 0) return;
+            long left = roundEnds - System.currentTimeMillis();
+            if (left <= 0) {
+                timerView.setText("Tiden er gået");
+                timerView.setTextColor(ACCENT);
+                if (!timeUpShown) {
+                    timeUpShown = true;
+                    buzz();
+                    ui.postDelayed(MainActivity.this::showSave, 1200);
+                }
+                return;
+            }
+            long sec = left / 1000;
+            timerView.setText(String.format(Locale.ROOT, "⏱ %d:%02d", sec / 60, sec % 60));
+            timerView.setTextColor(sec <= 60 ? ACCENT : Color.WHITE);
+            ui.postDelayed(this, 1000);
+        }
+    };
+
+    void buzz() {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (v != null) v.vibrate(android.os.VibrationEffect.createWaveform(new long[]{0, 400, 200, 400, 200, 600}, -1));
+        } catch (Exception ignored) { }
+    }
+
     void saveScore() {
         if (score != null && scoreMatch != null) prefs.edit().putString("score_" + scoreMatch, score.save()).apply();
+    }
+
+    // Live-stilling: sendes kort efter hvert tryk (kun den nyeste), så appen og TV'et kan vise den
+    final Runnable sendLive = this::pushLive;
+
+    void queueLive() {
+        ui.removeCallbacks(sendLive);
+        ui.postDelayed(sendLive, 400);
+    }
+
+    void pushLive() {
+        if (score == null || scoreMatch == null) return;
+        String secret = prefs.getString("secret", null);
+        if (secret == null) return;
+        final String match = scoreMatch;
+        final int gm = score.games(true), gt = score.games(false);
+        final String pm = score.pointLabel(true), pt = score.pointLabel(false), mode = score.mode;
+        io.execute(() -> {
+            try {
+                Api.rpc("padel_watch_live_v2", new JSONObject().put("p_secret", secret).put("p_match", match)
+                    .put("p_gm", gm).put("p_gt", gt).put("p_pm", pm).put("p_pt", pt).put("p_mode", mode));
+            } catch (Exception e) {
+                // Intet net lige nu: prøv igen om lidt med den nyeste stilling
+                ui.removeCallbacks(sendLive);
+                ui.postDelayed(sendLive, 8000);
+            }
+        });
     }
 
     void showSave() {

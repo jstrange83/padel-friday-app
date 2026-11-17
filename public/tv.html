@@ -44,6 +44,7 @@
   .pnet { flex:0 0 .45vw; position:relative; background:repeating-linear-gradient(0deg,rgba(255,255,255,.95) 0 .25vw,rgba(255,255,255,.35) .25vw .5vw); }
   .pscore { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:1; background:var(--bg); color:var(--txt); border:.15vw solid rgba(255,255,255,.9); border-radius:.8vw; padding:.3vw .9vw; font-size:2vw; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .pscore i { font-style:normal; color:var(--mut); margin:0 .3vw; } .pscore.vs { font-size:1vw; letter-spacing:.15em; color:var(--mut); }
+  .pscore.live { border-color:#ff5a5a; } .pscore.live small { color:#ff5a5a; font-size:.8vw; letter-spacing:.1em; vertical-align:middle; } .pscore.live em { font-style:normal; color:var(--acc, #d4f53c); font-size:1.4vw; margin-left:.3vw; }
   .score { font-size:2.6vw; font-weight:800; font-variant-numeric:tabular-nums; min-width:7vw; text-align:center; }
   .score.vs { font-size:1.3vw; color:var(--mut); }
   .d { font-size:.95vw; font-weight:800; }
@@ -121,7 +122,7 @@ function pcourt(m, done) {
   const box = (n, side, pos, win) => `<div class="pbox ${pos} ${win ? 'win' : ''}"><b>${esc(n || '')}</b><small>${side}</small></div>`;
   const wa = done && m.sa > m.sb, wb = done && m.sb > m.sa;
   return `<div class="pcourt"><div class="phalf a"><div class="pback"></div><div class="pserve">${box(m.a[0], 'Venstre', 'top', wa)}${box(m.a[1], 'Højre', 'bot', wa)}</div></div>
-    <div class="pnet"><span class="pscore ${done ? '' : 'vs'}">${done ? `${m.sa}<i>–</i>${m.sb}` : 'VS'}</span></div>
+    <div class="pnet">${!done && m.live ? `<span class="pscore live"><small>● LIVE</small> ${m.live.mode === 'points' ? `${esc(m.live.pa)}<i>–</i>${esc(m.live.pb)}` : `${+m.live.ga}<i>–</i>${+m.live.gb}${m.live.pa === '0' && m.live.pb === '0' ? '' : ` <em>${esc(m.live.pa)}-${esc(m.live.pb)}</em>`}`}</span>` : `<span class="pscore ${done ? '' : 'vs'}">${done ? `${m.sa}<i>–</i>${m.sb}` : 'VS'}</span>`}</div>
     <div class="phalf b"><div class="pserve">${box(m.b[1], 'Højre', 'top', wb)}${box(m.b[0], 'Venstre', 'bot', wb)}</div><div class="pback"></div></div></div>`;
 }
 function render(d) {
