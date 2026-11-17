@@ -252,6 +252,9 @@ function myNight(c, st) {
     r = nos.filter((n) => n >= startR && !(n === ev.current_round && myDone(n)))[0];
     now = r === ev.current_round && ev.status === 'igang';
   }
+  // Spilles en af mine kampe live fra uret, er det den, der vises øverst
+  const myLive = (c.matches || []).find((x) => liveOf(x) && [x.a_left, x.a_right, x.b_left, x.b_right].includes(me));
+  if (myLive && rounds[myLive.round_no]) { r = myLive.round_no; now = true; }
   if (!r) return card('Dine kampe', '<p>✅ Du har spillet alle dine kampe i dag.</p>');
   c.mineRound = r;
   const pill = (t) => `<span class="pill">${t}</span>`;
@@ -272,6 +275,7 @@ function myNight(c, st) {
   if (canEnter) c.mineMatch = m.id;
   const lvm = liveOf(m);
   if (lvm) c.mineLive = m.id;
+  // Man kan altid taste på telefonen, også mens uret tæller
   const todo = canEnter ? `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`
     + (SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '')
     : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<p class="muted small">Venter på, at modstanderne godkender rettelsen.</p>' : '';
@@ -431,7 +435,7 @@ function matchCard(c, m) {
   </div>`;
 }
 
-const liveScore = (lv) => `<span class="pscore live"><small>● LIVE</small>${lv.main.replace('<span>–</span>', '<i>–</i>')}${lv.pts ? ` <em>${lv.pts}</em>` : ''}</span>`;
+const liveScore = (lv) => `<span class="pscore live"><small>● LIVE</small><span class="pmain">${lv.main.replace('<span>–</span>', '<i>–</i>')}</span>${lv.pts ? `<em>${lv.pts}</em>` : ''}</span>`;
 
 // Kampe der spilles live lige nu (som man ikke selv spiller i): vises øverst som baner
 function liveNow(c) {
@@ -441,10 +445,27 @@ function liveNow(c) {
     ${ms.map((m) => `<div class="lnc"><small class="muted">${esc(courtById(m.court_id)?.name || '')} · runde ${m.round_no}</small>${courtHtml(m, c.me, liveScore(liveOf(m)), 'on')}</div>`).join('')}</div>`;
 }
 
+// En spiller kan kun spille én kamp ad gangen: er en spiller live i flere kampe
+// (fx fordi uret er gået videre, før runden blev gemt), gælder kun den senest opdaterede.
+let staleLive = new Set();
+function markStaleLive(matches) {
+  staleLive = new Set();
+  const latest = {};
+  (matches || []).forEach((m) => {
+    if (!m.live || !m.live_at || m.status !== 'planlagt') return;
+    const t = new Date(m.live_at).getTime();
+    [m.a_left, m.a_right, m.b_left, m.b_right].forEach((p) => { if (p && (!latest[p] || latest[p].t < t)) latest[p] = { t, id: m.id }; });
+  });
+  (matches || []).forEach((m) => {
+    if (!m.live || !m.live_at) return;
+    if ([m.a_left, m.a_right, m.b_left, m.b_right].some((p) => p && latest[p] && latest[p].id !== m.id)) staleLive.add(m.id);
+  });
+}
+
 // Live-stilling fra uret (kun kampe uden resultat, opdateret inden for 30 minutter)
 function liveOf(m) {
   const l = m.live;
-  if (!l || m.status !== 'planlagt' || !m.live_at || Date.now() - new Date(m.live_at).getTime() > 30 * 60e3) return null;
+  if (!l || staleLive.has(m.id) || m.status !== 'planlagt' || !m.live_at || Date.now() - new Date(m.live_at).getTime() > 30 * 60e3) return null;
   if (l.mode === 'points') return { main: `${esc(l.pa)}<span>–</span>${esc(l.pb)}`, pts: '' };
   const pts = l.pa === '0' && l.pb === '0' ? '' : `${esc(l.pa)}-${esc(l.pb)}`;
   return { main: `${+l.ga}<span>–</span>${+l.gb}`, pts };
@@ -550,7 +571,7 @@ function signupsSection(c) {
         <div id="importRes"></div></details>` : ''}
     ${log.length ? `<details class="faq log"><summary>Til‑ og afmeldinger (${log.length})</summary><div>${log.map((l) => {
       const by = l.done_by && l.done_by !== l.player_id ? ` <small>af ${esc(first(l.done_by))}</small>` : '';
-      return `<div class="logrow">${editBtn('padel_signup_log', l.id)}<span class="${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '−'}</span>
+      return `<div class="logrow">${editBtn('padel_signup_log', l.id)}<span class="lsign ${l.action === 'til' ? 'ok' : 'dn'}">${l.action === 'til' ? '＋' : '－'}</span>
         <span class="grow">${esc(nameOf(l.player_id))} ${l.action === 'til' ? 'meldte til' : 'meldte fra'}${by}</span>
         <small class="muted">${fmtDate(l.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div>`;
     }).join('')}</div></details>` : ''}${c.started ? '</details>' : ''}`;
@@ -573,6 +594,7 @@ function cancelledCard(c) {
 
 function render(data) {
   const c = context(data);
+  markStaleLive(c.matches);
   const st = standingsOf(c);
   // Før dagen starter er tilmeldingen det vigtigste. Når den er i gang, er det runderne.
   const started = c.ev.status !== 'planlagt' || c.ev.current_round > 0 || c.base > 0;

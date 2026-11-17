@@ -2405,6 +2405,17 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok(/LIVE[\s\S]*11[\s\S]*7/.test(await page.locator(`#m-${amx.m} .pscore.live`).innerText()), 'live-stillingen fra uret vises på kampen');
   ok(await page.locator(`#m-${amx.m}.islive .pcourt`).isVisible(), 'en live-kamp vises som en bane, også på telefonen');
   ok(await page.locator('.wmain .pcourt.on .pscore.live, .page > .pcourt.on .pscore.live, .mine-card .pcourt.on .pscore.live, .livenow .pcourt.on .pscore.live').count() >= 1, 'live-kampen vises øverst (Din kamp eller Live nu)');
+  // En spiller kan kun være live i én kamp: en ældre live-kamp med samme spiller vises ikke som live
+  const dup = await page.evaluate((id) => { const db = window.__mock.db(); const m = db.padel_matches.find((x) => x.id === id); const ps = [m.a_left, m.a_right, m.b_left, m.b_right]; const o = db.padel_matches.find((x) => x.event_id === m.event_id && x.id !== id && [x.a_left, x.a_right, x.b_left, x.b_right].some((p) => ps.includes(p))); if (!o) return null; const old = { status: o.status, score_a: o.score_a, score_b: o.score_b }; Object.assign(o, { status: 'planlagt', score_a: null, score_b: null, live: { ga: 3, gb: 2, pa: '15', pb: '0', mode: 'set' }, live_at: new Date(Date.now() - 5 * 60e3).toISOString() }); window.__mock.save(); return { id: o.id, old }; }, amx.m);
+  if (dup) {
+    await page.reload(); await page.waitForSelector('.evsub');
+    ok(await page.locator('.pcourt.on .pscore.live').count() === 1, 'en ældre live-kamp med samme spiller vises ikke som live øverst');
+    ok(await page.locator(`#m-${dup.id}.islive`).count() === 0, 'den ældre live-kamp vises ikke som live i runderne');
+    ok(/^\d+–\d+$/.test((await page.locator('.pcourt.on .pscore.live .pmain').first().innerText()).replace(/\s/g, '')), 'live-stillingen står vandret (fx 0–1)');
+    await page.evaluate((d) => { const db = window.__mock.db(); const o = db.padel_matches.find((x) => x.id === d.id); Object.assign(o, d.old, { live: null, live_at: null }); window.__mock.save(); }, dup);
+    await page.reload(); await page.waitForSelector('.evsub');
+    if (await page.locator(`[data-rtab="${amx.r}"]`).count()) { await page.click(`[data-rtab="${amx.r}"]`); await wait(200); }
+  }
   await page.locator(`#m-${amx.m} [data-act=enter]`).first().click();
   const amf = page.locator(`form.enter[data-id="${amx.m}"]:not([hidden])`).first();
   await amf.locator('input[name=a]').pressSequentially('15');
