@@ -211,6 +211,7 @@ public class MainActivity extends Activity {
             scoreMatch = id;
             score.load(prefs.getString("score_" + id, null));
             timeUpShown = false;
+            minuteWarned = false;
         }
         // Tidsspil: rundens sluttidspunkt, så uret kan tælle ned
         roundEnds = 0;
@@ -299,16 +300,33 @@ public class MainActivity extends Activity {
                 return;
             }
             long sec = left / 1000;
+            if (sec < 60 && sec > 50 && !minuteWarned) { minuteWarned = true; shortBuzz(); }
             timerView.setText(String.format(Locale.ROOT, "⏱ %d:%02d", sec / 60, sec % 60));
             timerView.setTextColor(sec <= 60 ? ACCENT : Color.WHITE);
             ui.postDelayed(this, 1000);
         }
     };
 
+    // Tiden er gået: vibration og lyd (alarmlyd, så den også høres, selvom notifikationslyde er slået fra)
     void buzz() {
         try {
             android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
             if (v != null) v.vibrate(android.os.VibrationEffect.createWaveform(new long[]{0, 400, 200, 400, 200, 600}, -1));
+        } catch (Exception ignored) { }
+        try {
+            final android.media.ToneGenerator tg = new android.media.ToneGenerator(android.media.AudioManager.STREAM_ALARM, 100);
+            tg.startTone(android.media.ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, 2500);
+            ui.postDelayed(tg::release, 3000);
+        } catch (Exception ignored) { }
+    }
+
+    // Ét minut tilbage: et kort ryk i armen
+    boolean minuteWarned = false;
+
+    void shortBuzz() {
+        try {
+            android.os.Vibrator v = (android.os.Vibrator) getSystemService(VIBRATOR_SERVICE);
+            if (v != null) v.vibrate(android.os.VibrationEffect.createOneShot(250, android.os.VibrationEffect.DEFAULT_AMPLITUDE));
         } catch (Exception ignored) { }
     }
 
