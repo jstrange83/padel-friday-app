@@ -1,0 +1,35 @@
+// Padelklubben på uret (Wear OS). Samme app-id som telefon-appen, så den ligger under samme app i Google Play.
+apply plugin: 'com.android.application'
+
+android {
+    namespace "dk.padelklubben.app.wear"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "dk.padelklubben.app"
+        minSdkVersion 30
+        targetSdkVersion 35
+        // Ur-versionerne skal have deres egne numre (over telefon-appens)
+        versionCode(100000 + (System.getenv("VERSION_CODE") ?: "1").toInteger())
+        versionName((System.getenv("VERSION_NAME") ?: "1.0") + "-ur")
+    }
+    signingConfigs {
+        release {
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) {
+                storeFile file(System.getenv("ANDROID_KEYSTORE_FILE"))
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+    buildTypes {
+        release {
+            if (System.getenv("ANDROID_KEYSTORE_FILE")) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
