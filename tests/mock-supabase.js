@@ -1011,6 +1011,12 @@ Object.assign(RPC, {
   padel_event_set_booker: ({ e, p_user }) => { const ev = db.padel_events.find((x) => x.id === e); if (!canRun(ev.group_id)) throw new Error('Det har du ikke adgang til'); ev.booked_by = p_user; },
   padel_set_ball_fee: ({ g, p_fee }) => { if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin'); db.padel_groups.find((x) => x.id === g).ball_fee = p_fee || null; },
   padel_set_court_price: ({ p_court, p_price }) => { if (!me()?.is_superadmin) throw new Error('Kun superadmin'); db.padel_courts.find((c) => c.id === p_court).price = p_price || null; },
+  padel_watch_pair_v2: ({ p_code }) => {
+    if (String(p_code).replace(/\D/g, '') !== '123456') throw new Error('Koden passer ikke. Tjek tallene på uret, eller få en ny kode.');
+    (db.padel_watch_links_v2 ||= []).push({ id: 'w-' + Date.now(), user_id: me().id, device: 'Samsung Galaxy Watch', active: true, paired_at: now(), last_seen: null });
+    return { ok: true };
+  },
+  padel_watch_unlink_v2: ({ p_id }) => { const w = (db.padel_watch_links_v2 || []).find((x) => x.id === p_id); if (w) w.active = false; },
   padel_event_need_v2: ({ e, p_need }) => {
     const ev = db.padel_events.find((x) => x.id === e);
     const signed = db.padel_signups.filter((x) => x.event_id === e).map((x) => x.player_id);

@@ -41,12 +41,12 @@ jobs:
         run: |
           mkdir -p public/app
           cp native/android/app/build/outputs/apk/debug/app-debug.apk public/app/padelklubben.apk
+          cp native/android/wear/build/outputs/apk/debug/wear-debug.apk public/app/padelklubben-ur.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/app/padelklubben.apk
-          git commit -m "Ny test-APK af Padelklubben-appen" || exit 0
-          git pull --rebase origin main
-          git push origin HEAD:main
+          git add public/app/padelklubben.apk public/app/padelklubben-ur.apk
+          git commit -m "Ny test-APK af Padelklubben-appen (telefon og ur)" || exit 0
+          for i in 1 2 3 4; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 8; done
 
   release:
     # Signeret app-pakke (AAB) til Google Play. Kræver GitHub-secret ANDROID_SIGNING_PASSPHRASE.
@@ -100,4 +100,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add release/padelklubben.aab release/padelklubben-ur.aab release/version.txt
           git commit -m "Ny Google Play-pakke (AAB) version 1.0.${{ github.run_number }}" || exit 0
-          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && break; sleep 5; done
+          for i in 1 2 3 4; do git pull --rebase --autostash origin main && git push origin HEAD:main && break; sleep 8; done

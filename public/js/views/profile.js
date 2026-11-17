@@ -287,6 +287,7 @@ export function renderSettings() {
       <a class="row" href="#/beskeder"><span class="grow">🔔 Notifikationer og mails</span><span class="muted">›</span></a>
       ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende og tekststørrelse</span><span class="muted">›</span></a>'}
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
+      ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="watchRow"><span class="grow">⌚ Ur (Samsung / Wear OS)</span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="testAppRow"><span class="grow">🤖 Test-app til Android (QR)</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>
     </div>
@@ -343,6 +344,7 @@ function bind(isNew) {
   app.querySelectorAll('input[name=vmode]').forEach((r) => (r.onchange = () => { setViewMode(r.value); toast({ super: 'Du ser appen som superadmin', mine: 'Du ser appen med dine egne roller', bruger: 'Du ser appen som almindelig bruger' }[r.value]); hooks.boot(); }));
   document.getElementById('calRow')?.addEventListener('click', (e) => { e.preventDefault(); showCalendar(); });
   // Kun superadmin: QR-kode til test-appen, som en anden scanner med sin Android-telefon
+  document.getElementById('watchRow')?.addEventListener('click', (e) => { e.preventDefault(); showWatch(); });
   document.getElementById('testAppRow')?.addEventListener('click', (e) => { e.preventDefault(); showQR(location.origin + '/app/', 'Test-app til Android', 'Scan koden med Android-telefonens kamera. Siden viser, hvordan appen installeres.'); });
   document.getElementById('deleteMe')?.addEventListener('click', async (e) => {
     const who = S.viewAs ? S.me.name : 'din profil';
@@ -359,4 +361,34 @@ function bind(isNew) {
     document.getElementById('nav').innerHTML = '';
     renderInstall(() => hooks.boot());
   });
+}
+
+// ---------- Ur (Wear OS): forbind uret med koden, det viser ----------
+async function showWatch() {
+  let list = [];
+  try { list = await q(sb.from('padel_watch_links_v2').select('id,device,paired_at,last_seen').eq('active', true).order('paired_at', { ascending: false })); } catch { /* vist */ }
+  document.getElementById('watchModal')?.remove();
+  const wrap = document.createElement('div');
+  wrap.id = 'watchModal'; wrap.className = 'modal';
+  wrap.innerHTML = `<div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="watchTitle">
+    <div class="fgicon">⌚</div><h2 id="watchTitle">Padelklubben på uret</h2>
+    <p class="muted">Åbn Padelklubben på uret. Det viser en kode med 6 tal. Skriv den her.</p>
+    <form id="watchForm" class="watchform"><input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="123 456" aria-label="Kode fra uret" required>
+      <div class="mact"><button class="btn primary">Forbind uret</button></div></form>
+    ${list.length ? `<h3>Forbundne ure</h3><div class="list">${list.map((w) => `<div class="row"><span class="grow">${esc(w.device || 'Ur')}<small class="muted"> · ${w.last_seen ? 'brugt ' + fmtDate(w.last_seen, { day: 'numeric', month: 'short' }) : 'forbundet ' + fmtDate(w.paired_at, { day: 'numeric', month: 'short' })}</small></span><button class="link sm dn" data-wunlink="${w.id}">Fjern</button></div>`).join('')}</div>` : ''}
+    <p class="muted small">På uret kan du se din næste kamp og tælle point undervejs: tryk på jeres eller deres halvdel, når en bold er vundet. Når sættet er slut, gemmes resultatet med ét tryk.</p>
+    <div class="mact"><button class="btn ghost" id="watchClose">Luk</button></div></div>`;
+  document.body.appendChild(wrap);
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(); });
+  wrap.querySelector('#watchClose').onclick = close;
+  wrap.querySelector('#watchForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = e.target.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_watch_pair_v2', { p_code: e.target.code.value })); toast('Uret er forbundet ✓'); showWatch(); } catch { busy(btn, false); }
+  };
+  wrap.querySelectorAll('[data-wunlink]').forEach((b) => (b.onclick = async () => {
+    if (!confirm('Fjern uret? Det skal forbindes igen med en ny kode.')) return;
+    try { await q(sb.rpc('padel_watch_unlink_v2', { p_id: b.dataset.wunlink })); toast('Uret er fjernet'); showWatch(); } catch { /* vist */ }
+  }));
 }

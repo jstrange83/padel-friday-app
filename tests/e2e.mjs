@@ -2415,6 +2415,26 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('[data-tsize=""]');
   ok(await page.evaluate(() => !document.documentElement.dataset.text), 'tekststørrelsen kan sættes tilbage til normal');
 
+  // Ur (Wear OS): superadmin kan forbinde et ur med koden fra uret
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/indstillinger');
+  await page.waitForSelector('#watchRow');
+  await page.click('#watchRow');
+  await page.waitForSelector('#watchModal');
+  await page.fill('#watchForm input[name=code]', '999 999');
+  await page.click('#watchForm button');
+  await wait(400);
+  ok(await page.locator('#watchModal [data-wunlink]').count() === 0, 'forkert kode forbinder ikke uret');
+  await page.fill('#watchForm input[name=code]', '123 456');
+  await page.click('#watchForm button');
+  await page.waitForSelector('#watchModal [data-wunlink]');
+  ok((await page.locator('#watchModal').innerText()).includes('Samsung Galaxy Watch'), 'uret er forbundet og vises på listen');
+  await noOverflow('ur');
+  await page.click('#watchModal [data-wunlink]');
+  await wait(500);
+  ok(await page.locator('#watchModal [data-wunlink]').count() === 0, 'uret kan fjernes igen');
+  await page.click('#watchClose');
+
   // Swipe mod højre går tilbage til forrige side (i appen); lodret swipe gør ingenting
   await page.goto('http://localhost:8765/#/fredage');
   await page.waitForSelector('a.ev');
