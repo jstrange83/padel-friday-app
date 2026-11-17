@@ -2402,7 +2402,9 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('.evsub');
   if (await page.locator(`[data-rtab="${amx.r}"]`).count()) { await page.click(`[data-rtab="${amx.r}"]`); await wait(200); }
-  ok(/LIVE[\s\S]*11[\s\S]*7/.test(await page.locator(`#m-${amx.m} .score.live`).innerText()), 'live-stillingen fra uret vises på kampen');
+  ok(/LIVE[\s\S]*11[\s\S]*7/.test(await page.locator(`#m-${amx.m} .pscore.live`).innerText()), 'live-stillingen fra uret vises på kampen');
+  ok(await page.locator(`#m-${amx.m}.islive .pcourt`).isVisible(), 'en live-kamp vises som en bane, også på telefonen');
+  ok(await page.locator('.wmain .pcourt.on .pscore.live, .page > .pcourt.on .pscore.live, .mine-card .pcourt.on .pscore.live, .livenow .pcourt.on .pscore.live').count() >= 1, 'live-kampen vises øverst (Din kamp eller Live nu)');
   await page.locator(`#m-${amx.m} [data-act=enter]`).first().click();
   const amf = page.locator(`form.enter[data-id="${amx.m}"]:not([hidden])`).first();
   await amf.locator('input[name=a]').pressSequentially('15');

@@ -270,13 +270,15 @@ function myNight(c, st) {
   const teams = `<div class="mbody nk"><div class="team">${nm(ml, 'V')}${nm(mr, 'H')}</div><div class="score muted">mod</div><div class="team">${nm(ol, 'V')}${nm(or, 'H')}</div></div>`;
   const canEnter = (now || c.free) && m.status === 'planlagt';
   if (canEnter) c.mineMatch = m.id;
+  const lvm = liveOf(m);
+  if (lvm) c.mineLive = m.id;
   const todo = canEnter ? `<button class="btn sm primary" data-act="enter" data-id="${m.id}">Indtast resultat</button>`
     + (SR ? `<button class="btn sm" data-act="voice" data-id="${m.id}">🎤 Sig resultat</button>` : '')
     : m.status === 'indtastet' && (onA ? 'a' : 'b') === m.reported_team ? '<p class="muted small">Venter på, at modstanderne godkender rettelsen.</p>' : '';
-  return card(now && !c.free ? 'Din kamp nu' : 'Din næste kamp',
+  return card(lvm ? '<span class="livedot">●</span> Din kamp spilles nu' : now && !c.free ? 'Din kamp nu' : 'Din næste kamp',
     `<div class="pills">${pill(`Runde ${r}${r <= totalRounds ? ` af ${totalRounds}` : ''}`)}${pill(esc(courtById(m.court_id)?.name || ''))}${pill(time)}</div>
-    ${teams}
-    ${m.status === 'planlagt' ? (() => { const pa = winChance(m, c.ev.group_id); return chanceBar(onA ? pa : 100 - pa, 'I ', ' dem'); })() : ''}
+    ${lvm ? courtHtml(m, me, liveScore(lvm), 'on') : teams}
+    ${m.status === 'planlagt' && !lvm ? (() => { const pa = winChance(m, c.ev.group_id); return chanceBar(onA ? pa : 100 - pa, 'I ', ' dem'); })() : ''}
     ${todo.startsWith('<button') ? `<div class="mact">${todo}</div>` : todo}${canEnter ? enterForm(c, m) : ''}${signRow}`, now ? 'now' : '');
 }
 
@@ -365,9 +367,9 @@ function teamHtml(l, r, me) {
 
 // Computer: banen set fra oven med navnene i hvert felt. Hold A til venstre, hold B til højre, nettet i midten.
 // Set fra hver spillers egen side står venstre-spilleren (V) til venstre: for hold A er det øverst, for hold B nederst.
-function courtHtml(m, me, score) {
+function courtHtml(m, me, score, cls = '') {
   const box = (pid, side, pos) => `<div class="pbox ${pos} ${pid === me ? 'me' : ''}"><b>${esc(first(pid))}</b><small>${side === 'V' ? 'Venstre' : 'Højre'}</small></div>`;
-  return `<div class="pcourt">
+  return `<div class="pcourt ${cls}">
     <div class="phalf a"><div class="pback"></div><div class="pserve">${box(m.a_left, 'V', 'top')}${box(m.a_right, 'H', 'bot')}</div></div>
     <div class="pnet">${score}</div>
     <div class="phalf b"><div class="pserve">${box(m.b_right, 'H', 'top')}${box(m.b_left, 'V', 'bot')}</div><div class="pback"></div></div>
@@ -417,16 +419,26 @@ function matchCard(c, m) {
   const lv = liveOf(m);
   const score = lv ? `<div class="score live"><small>● LIVE</small>${lv.main}${lv.pts ? `<em>${lv.pts}</em>` : ''}</div>`
     : m.score_a != null ? `<div class="score">${m.score_a}<span>–</span>${m.score_b}</div>` : '<div class="score muted">vs</div>';
-  return `<div class="match ${myTeam ? 'mine' : ''}" id="m-${m.id}">
+  return `<div class="match ${myTeam ? 'mine' : ''} ${lv ? 'islive' : ''}" id="m-${m.id}">
     <div class="mhead"><b>${esc(courtById(m.court_id)?.name || '')}</b><span class="mhr">${editBtn('padel_matches', m.id)}${status}${links}${run && m.status === 'planlagt' ? `<button class="link sm" data-act="teams" data-id="${m.id}">👥 Ret hold</button>` : ''}</span></div>
     <div class="mbody">${teamHtml(m.a_left, m.a_right, me)}${score}${teamHtml(m.b_left, m.b_right, me)}</div>
-    ${courtHtml(m, me, lv ? `<span class="pscore live">${lv.main}${lv.pts ? ` <em>${lv.pts}</em>` : ''}</span>` : m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
+    ${courtHtml(m, me, lv ? liveScore(lv) : m.score_a != null ? `<span class="pscore">${m.score_a}<i>–</i>${m.score_b}</span>` : '<span class="pscore vs">VS</span>')}
     ${pendingFor(m.id) ? `<div class="outq">⏳ ${pendingFor(m.id).a}–${pendingFor(m.id).b} er gemt på telefonen og sendes, når der er net</div>` : ''}
     ${m.status === 'planlagt' ? chanceBar(winChance(m, ev.group_id)) : ''}
     ${actions ? `<div class="mact">${actions}</div>` : ''}
     ${enterForm(c, m, changeNote)}
     ${run && m.status === 'planlagt' ? teamForm(c, m) : ''}
   </div>`;
+}
+
+const liveScore = (lv) => `<span class="pscore live"><small>● LIVE</small>${lv.main.replace('<span>–</span>', '<i>–</i>')}${lv.pts ? ` <em>${lv.pts}</em>` : ''}</span>`;
+
+// Kampe der spilles live lige nu (som man ikke selv spiller i): vises øverst som baner
+function liveNow(c) {
+  const ms = (c.matches || []).filter((m) => liveOf(m) && m.id !== c.mineLive);
+  if (!ms.length) return '';
+  return `<div class="card livenow"><div class="mtitle"><span class="livedot">●</span> Live nu</div>
+    ${ms.map((m) => `<div class="lnc"><small class="muted">${esc(courtById(m.court_id)?.name || '')} · runde ${m.round_no}</small>${courtHtml(m, c.me, liveScore(liveOf(m)), 'on')}</div>`).join('')}</div>`;
 }
 
 // Live-stilling fra uret (kun kampe uden resultat, opdateret inden for 30 minutter)
@@ -582,7 +594,7 @@ function render(data) {
   <div class="page event wide">
     ${header(c)}
     <div class="wcols">
-      <div class="wmain">${approvals(c)}${myNight(c, st)}${timer(c)}${runBar(c)}${cancelBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
+      <div class="wmain">${approvals(c)}${myNight(c, st)}${liveNow(c)}${timer(c)}${runBar(c)}${cancelBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
       <aside class="wside">${priceCard(c)}${signupsSection(c)}${fineBox}</aside>
     </div>
   </div>` : `
@@ -590,6 +602,7 @@ function render(data) {
     ${header(c)}
     ${approvals(c)}
     ${myNight(c, st)}
+    ${liveNow(c)}
     ${priceCard(c)}
     ${timer(c)}
     ${runBar(c)}
