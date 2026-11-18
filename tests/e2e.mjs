@@ -1377,7 +1377,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Smarte hjælpere') && nm.includes('Swipe for at gå tilbage'), 'admin får popup med de nyeste nyheder');
+  ok(nm.includes('Banerne set fra oven, også på telefonen') && nm.includes('Smarte hjælpere'), 'admin får popup med de nyeste nyheder');
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();
@@ -1649,6 +1649,12 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.locator('.tr').nth(1).locator('.krow').first().locator('[data-abs$="|afbud"]').click();
   await wait(500);
   ok(await page.locator('.tr').nth(1).locator('.krow').first().locator('.btn.on.no').count(), 'afbud givet med ét tryk');
+  // Kage: forælderen melder, at de tager kage med til træningen
+  ok(await page.locator('.tr').first().locator('.cakerow [data-cake$="|1"]').count() === 1, 'forælderen kan melde, at de tager kage med');
+  await page.locator('.tr').first().locator('.cakerow [data-cake$="|1"]').click();
+  await wait(500);
+  ok(/Du tager kage med/.test(await page.locator('.tr').first().locator('.cakerow').innerText()) && await page.locator('.tr').first().locator('.cakerow .btn.on.yes').count() === 1, 'kagen er noteret: "Du tager kage med"');
+  ok(await page.evaluate(() => window.__mock.db().padel_club_cakes.filter((x) => x.active).length === 1), 'kagen er gemt');
   ok((await page.locator('.feecard').innerText()).includes('1.200 kr.'), 'kontingent for to børn vises');
   ok((await page.locator('.feecard .feeacct').innerText()).includes('Reg. 1234 konto 0012345678'), 'forælderen ser kontonummeret til overførsel');
   ok((await page.locator('.card.trainers').innerText()).includes('Brian'), 'forælderen ser holdets træner');

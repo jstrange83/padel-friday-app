@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-18b', date: '18. november 2026', club: true, title: 'Hvem tager kage med?',
+    items: ['🍰 På hver træning kan forældre nu trykke <b>Jeg tager kage med</b>. Så kan alle se, hvem der kommer med kage, og trænerne kan se det på deres oversigt. Tak til Daniel for idéen i forslagskassen!'],
+  },
+  {
     id: '2026-11-18', date: '18. november 2026', groups: true, title: 'Banerne set fra oven, også på telefonen',
     items: ['🎾 Alle kampe på spilledagen vises nu som en padelbane set fra oven, også på telefonen. Navnene står i hvert felt, så du kan se, hvem der står i venstre og højre side, og resultatet står på nettet. Din egen kamp øverst vises på samme måde.'],
   },

@@ -21,7 +21,7 @@ function seed() {
   return { padel_centers: centers, padel_courts: courts, padel_profiles: profiles, padel_events: [], padel_signups: [], padel_matches: [], padel_elo_changes: [], padel_signup_log: [],
     padel_groups: groups, padel_group_centers: centers.map((c) => ({ group_id: 'g-fre', center_id: c.id, enabled: true })), padel_group_members: members,
     padel_settings: [{ id: 1, global_ranking_public: false, feedback_after_matches: 0 }], padel_contacts: [], padel_fine_types: [], padel_fines: [], padel_suggestions: [], padel_admin_notices: [], padel_notifications: [], padel_push_subs: [],
-    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [], padel_club_events: [], padel_club_event_signups: [], padel_club_tasks: [], padel_club_task_helpers: [], padel_threads: [], padel_thread_msgs: [], padel_thread_reads: [] };
+    padel_club_teams: [], padel_club_kids: [], padel_club_guardians: [], padel_club_sessions: [], padel_club_absence: [], padel_club_attendance: [], padel_club_cancellations: [], padel_club_posts: [], padel_club_fees: [], padel_club_kid_info: [], padel_club_team_trainers: [], padel_club_staff: [], padel_club_certs: [], padel_club_events: [], padel_club_event_signups: [], padel_club_tasks: [], padel_club_task_helpers: [], padel_club_cakes: [], padel_threads: [], padel_thread_msgs: [], padel_thread_reads: [] };
 }
 const load = () => { try { return JSON.parse(sessionStorage.getItem(KEY)) || seed(); } catch { return seed(); } };
 let db = load();
@@ -529,6 +529,9 @@ Object.assign(RPC, {
     const v = { weekday: p_weekday, start_time: p_start + ':00', end_time: p_end + ':00', place: p_place?.trim() || null, active: p_active !== false };
     if (p_id) { Object.assign(db.padel_club_sessions.find((x) => x.id === p_id), v); return p_id; }
     const s = { id: uuid(), team_id: p_team, ...v, created_by: uid(), created_at: now() }; db.padel_club_sessions.push(s); return s.id;
+  },
+  padel_club_cake_v2: ({ p_session, p_day, p_on }) => {
+    upsert('padel_club_cakes', ['session_id', 'day', 'user_id'], { session_id: p_session, day: p_day, user_id: uid(), active: !!p_on, name: db.padel_profiles?.find((x) => x.id === uid())?.name || null });
   },
   padel_club_set_absence: ({ p_session, p_day, p_kid, p_status, p_reason }) => {
     if (!kidMine(p_kid) && !canRun(sessGroup(p_session))) throw new Error('Det har du ikke adgang til');

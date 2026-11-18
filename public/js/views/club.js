@@ -35,7 +35,7 @@ export async function loadClub(g = S.groupId, range = null) {
   ]);
   const sids = sessions.map((s) => s.id), kidIds = kids.map((k) => k.id);
   const inRange = (t) => sb.from(t).select('*').in('session_id', sids).gte('day', range.from).lte('day', range.to);
-  const [absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers] = await Promise.all([
+  const [absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers, cakes] = await Promise.all([
     sids.length && range ? q(inRange('padel_club_absence')) : [],
     sids.length && range ? q(inRange('padel_club_attendance')) : [],
     sids.length && range ? q(inRange('padel_club_cancellations')) : [],
@@ -46,6 +46,7 @@ export async function loadClub(g = S.groupId, range = null) {
     isAdmin(g) ? q(sb.from('padel_club_certs').select('*').eq('group_id', g)).catch(() => []) : [],
     kidIds.length ? q(sb.from('padel_club_kid_info').select('*').in('kid_id', kidIds)).catch(() => []) : [],
     q(sb.rpc('padel_club_trainer_contacts', { g })).catch(() => []),
+    sids.length && range ? q(inRange('padel_club_cakes').eq('active', true)).catch(() => []) : [],
   ]);
   // Arrangementer fra perioden og frem (med tilmeldinger og hjælpeopgaver)
   const evFrom = range ? new Date(`${range.from}T00:00:00Z`).toISOString() : new Date(Date.now() - 864e5).toISOString();
@@ -58,7 +59,7 @@ export async function loadClub(g = S.groupId, range = null) {
   ]);
   const tids2 = tasks.map((t) => t.id);
   const helpers = tids2.length ? await q(sb.from('padel_club_task_helpers').select('*').in('task_id', tids2).eq('active', true)).catch(() => []) : [];
-  S.club = { g, teams, sessions, kids, absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers: trainers || [], events, signups, tasks, helpers, counts: counts || [] };
+  S.club = { g, teams, sessions, kids, absence, attendance, cancels, fees, guardians, teamTrainers, staff, certs, kidInfo, trainers: trainers || [], cakes: cakes || [], events, signups, tasks, helpers, counts: counts || [] };
   return S.club;
 }
 
@@ -210,6 +211,18 @@ const who = (u) => (u && S.profiles[u] ? S.profiles[u].name : '');
 const byLine = (u, at, verb = 'Oprettet') => (isAdmin() && who(u) ? `<small class="muted byline">${verb} af ${esc(who(u))}${at ? ` · ${fmtDate(at, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</small>` : '');
 const cancelLine = (c) => (c ? `<div class="trcancel">❌ Aflyst${c.note ? `: ${esc(c.note)}` : ''}${byLine(c.set_by, c.updated_at, 'Aflyst')}</div>` : '');
 
+// Kage til træningen: forældrene melder selv, hvem der tager kage med (kun børnehold)
+const cakesOf = (sid, day) => (C().cakes || []).filter((x) => x.session_id === sid && x.day === day);
+const cakeNames = (cs) => cs.map((x) => (x.user_id === S.me?.id ? 'du' : esc((x.name || nameOf(x.user_id) || '').split(' ')[0]))).join(' og ');
+function cakeRow(o, today) {
+  if (o.day < today) return '';
+  const cs = cakesOf(o.s.id, o.day), mine = cs.some((x) => x.user_id === S.me?.id);
+  const others = cs.filter((x) => x.user_id !== S.me?.id);
+  return `<div class="cakerow"><span class="grow">🍰 <b>Kage</b>${cs.length ? `<small class="muted">${cap(cakeNames(cs))} tager kage med</small>` : '<small class="muted">Ingen har meldt sig endnu</small>'}</span>
+    ${mine ? `<button class="btn sm on yes" data-cake="${o.s.id}|${o.day}|0" aria-pressed="true">✓ Jeg tager kage med</button>`
+      : `<button class="btn sm" data-cake="${o.s.id}|${o.day}|1">${others.length ? 'Jeg tager også kage med' : 'Jeg tager kage med'}</button>`}</div>`;
+}
+
 function parentCard(o, active, today) {
   const kids = active.filter((k) => k.team_id === o.s.team_id);
   const c = cancelOf(o.s.id, o.day);
@@ -222,6 +235,7 @@ function parentCard(o, active, today) {
         ${o.day < today ? `<span class="badge ${yes ? 'ok' : ''}">${yes ? 'Kommer' : no ? 'Afbud' : 'Ikke svaret'}</span>`
           : `<div class="yesno"><button class="btn sm ${yes ? 'on yes' : ''}" data-abs="${key}|kommer" aria-pressed="${yes}">✓ Kommer</button><button class="btn sm ${no ? 'on no' : ''}" data-abs="${key}|afbud" aria-pressed="${no}">Afbud</button></div>`}</div>`;
     }).join('')}
+    ${c || !kids.some((k) => !k.adult) ? '' : cakeRow(o, today)}
   </div>`;
 }
 
@@ -236,7 +250,7 @@ function trainerCard(o, today) {
   const met = kids.filter((k) => present(o.s.id, o.day, k.id)).length;
   const open = S.trOpen === key;
   return `<details class="card tr trainer ${c ? 'cancelled' : ''}" data-tr="${key}" ${open ? 'open' : ''}><summary>${head(o)}
-      <div class="trcount">${c ? '' : `<span class="ok">✓ ${yesN} kommer</span>${no.length ? `<span class="no">✗ ${no.length} afbud</span>` : ''}${unans ? `<span class="unans">? ${unans} ikke svaret</span>` : ''}${canMark ? `<span class="muted">· ${met} mødt</span>` : ''}`}<span class="muted">›</span></div>
+      <div class="trcount">${c ? '' : `<span class="ok">✓ ${yesN} kommer</span>${no.length ? `<span class="no">✗ ${no.length} afbud</span>` : ''}${unans ? `<span class="unans">? ${unans} ikke svaret</span>` : ''}${canMark ? `<span class="muted">· ${met} mødt</span>` : ''}${cakesOf(o.s.id, o.day).length ? `<span class="cakeby">🍰 ${cakeNames(cakesOf(o.s.id, o.day))}</span>` : ''}`}<span class="muted">›</span></div>
     </summary>${cancelLine(c)}
     <div class="trlist">${kids.map((k) => {
       const a = absOf(o.s.id, o.day, k.id), ans = answer(o.s.id, o.day, k.id);
@@ -288,6 +302,11 @@ function bindTraining() {
       toast(st === 'afbud' ? (reason !== null ? 'Afbud er givet, og træneren har fået besked' : 'Afbud er givet') : 'Godt, vi ses! 🎾');
       viewTraining();
     } catch { busy(b, false); }
+  }));
+  app.querySelectorAll('[data-cake]').forEach((b) => (b.onclick = async () => {
+    const [sid, day, on] = b.dataset.cake.split('|');
+    busy(b, true);
+    try { await q(sb.rpc('padel_club_cake_v2', { p_session: sid, p_day: day, p_on: on === '1' })); toast(on === '1' ? 'Tak! Så ved de andre, at der kommer kage 🍰' : 'Du er taget af kagelisten'); viewTraining(); } catch { busy(b, false); }
   }));
   app.querySelectorAll('[data-att]').forEach((cb) => (cb.onchange = async () => {
     const [sid, day, kid] = cb.dataset.att.split('|');

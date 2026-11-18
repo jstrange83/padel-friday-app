@@ -572,6 +572,11 @@ export const FAQ = [
   },
   {
     cat: 'Juniorklub', club: true,
+    q: 'Hvordan melder jeg, at jeg tager kage med til træning?',
+    a: `<p>Nederst på hver træning under <b>Træning</b> står <b>🍰 Kage</b>. Tryk <b>Jeg tager kage med</b>, så kan de andre forældre og trænerne se det, og I undgår at få fem kager eller ingen. Har en anden allerede meldt sig, står der, hvem det er. Tryk på knappen igen, hvis du fortryder.</p>`,
+  },
+  {
+    cat: 'Juniorklub', club: true,
     q: 'Hvad er venteliste og prøvetræning?',
     a: `<p>Admin kan sætte <b>maks. antal børn</b> på et hold. Er holdet fuldt, kan træneren sætte et nyt barn på <b>venteliste</b>. Forældrene får besked, og trænerne får besked, når der bliver plads.</p>
 <p>Ved indmeldelse kan man krydse af, at barnet gerne vil <b>prøve 1-2 træninger</b> først. Træneren kan så give barnet prøvetræning. Barnet er med til træning og betaler ikke kontingent, indtil træneren melder det ind som medlem.</p>`,
