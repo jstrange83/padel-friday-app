@@ -990,6 +990,8 @@ Object.assign(RPC, {
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     notify(thPeople(x).filter((u) => u !== uid()), 'besked', '💬 ' + me().name + ': ' + x.subject, p_body.slice(0, 140), '/#/samtale/' + t);
   },
+  padel_event_door_v2: ({ e }) => (db.padel_event_doors || []).find((x) => x.event_id === e)?.code || null,
+  padel_event_door_set_v2: ({ e, p_code }) => { db.padel_event_doors ||= []; const x = db.padel_event_doors.find((d) => d.event_id === e); const code = (p_code || '').trim() || null; if (x) x.code = code; else db.padel_event_doors.push({ event_id: e, code }); },
   padel_event_price: ({ e }) => {
     const ev = db.padel_events.find((x) => x.id === e); if (!ev) return null;
     const ms = db.padel_matches.filter((m) => m.event_id === e);

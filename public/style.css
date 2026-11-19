@@ -1472,3 +1472,6 @@ form.enter input.auto { color: var(--accent); }
 .cakerow .btn { flex: 0 0 auto; }
 .cakerow .btn.on.yes { background: var(--up); border-color: var(--up); color: #06210f; font-weight: 700; }
 .trcount .cakeby { color: var(--text); font-weight: 600; }
+.doorcard .doorrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.doorcard .doorcode { font-size: 28px; font-weight: 800; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
+.doorcard .doorrow input { flex: 1 1 140px; min-width: 0; font-size: 18px; }

@@ -22,8 +22,11 @@ async function loadEvent(id) {
   ]);
   const ids = matches.map((m) => m.id);
   const changes = ids.length ? await q(sb.from('padel_elo_changes').select('*').in('match_id', ids).eq('active', true)) : [];
-  const price = await q(sb.rpc('padel_event_price', { e: id })).catch(() => null);
-  return { ev, signups, matches, changes, log, price };
+  const [price, door] = await Promise.all([
+    q(sb.rpc('padel_event_price', { e: id })).catch(() => null),
+    q(sb.rpc('padel_event_door_v2', { e: id })).catch(() => null),
+  ]);
+  return { ev, signups, matches, changes, log, price, door };
 }
 
 export async function viewEvent(id) {
@@ -207,6 +210,21 @@ function priceCard(c) {
     ${run ? (planned ? `<details class="bookedby"><summary class="muted small">Booket af ${esc(pr.payee_name || '')} · <span class="link sm">Skift</span></summary>${booker}</details>`
       : `<label class="small">Banen er booket af${booker}</label>`) : ''}
   </div>`;
+}
+
+// Koden til døren i centret: den, der har booket (eller admin), skriver den, når dagsplanen er lavet.
+// Kun tilmeldte, den der har booket, og admin kan se den.
+function doorCard(c) {
+  const { ev, me, signed, run } = c, pr = c.raw?.price, code = c.raw?.door || '';
+  if (!(c.raw?.matches || []).length || ev.status === 'afsluttet' || ev.cancelled_at) return '';
+  const canSet = run || (pr?.payee || ev.booked_by || ev.created_by) === me;
+  if (!code && !canSet) return '';
+  if (!canSet && !signed.includes(me)) return '';
+  if (code && !(canSet && S.doorEdit === ev.id)) return `<div class="card doorcard"><div class="mtitle">🔑 Kode til døren</div>
+    <div class="doorrow"><b class="doorcode">${esc(code)}</b><button type="button" class="btn sm" data-doorcopy="${esc(code)}">Kopiér</button>${canSet ? '<button type="button" class="link sm" id="doorEdit">Ret</button>' : ''}</div></div>`;
+  return `<form class="card doorcard" id="doorForm"><div class="mtitle">🔑 Kode til døren</div>
+    <p class="muted small">Skriv koden til døren i centret, så kan alle, der spiller, se den her.</p>
+    <div class="doorrow"><input name="code" value="${esc(code)}" maxlength="40" inputmode="text" autocomplete="off" placeholder="Fx 1234#" aria-label="Kode til døren"><button class="btn sm primary">Gem</button></div></form>`;
 }
 
 // Lille genvej til kalender-abonnementet, indtil man har sat det op
@@ -613,7 +631,7 @@ function render(data) {
     ${header(c)}
     <div class="wcols">
       <div class="wmain">${approvals(c)}${myNight(c, st)}${liveNow(c)}${timer(c)}${runBar(c)}${cancelBar(c)}${started ? roundsSection(c) + standingsSection(c, st) : roundsSection(c)}</div>
-      <aside class="wside">${priceCard(c)}${signupsSection(c)}${fineBox}</aside>
+      <aside class="wside">${priceCard(c)}${doorCard(c)}${signupsSection(c)}${fineBox}</aside>
     </div>
   </div>` : `
   <div class="page event">
@@ -622,6 +640,7 @@ function render(data) {
     ${myNight(c, st)}
     ${liveNow(c)}
     ${priceCard(c)}
+    ${doorCard(c)}
     ${timer(c)}
     ${runBar(c)}
     ${cancelBar(c)}
@@ -770,6 +789,14 @@ function bind(c) {
   app.querySelectorAll('.pricecard [data-paidfor]').forEach((b) => (b.onclick = async () => {
     try { await q(sb.rpc('padel_event_set_paid', { e: ev.id, p_player: b.dataset.paidfor, p_paid: b.dataset.on !== '1' })); await reload(); } catch {}
   }));
+  const df = document.getElementById('doorForm');
+  if (df) df.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = df.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_event_door_set_v2', { e: c.ev.id, p_code: df.code.value })); S.doorEdit = null; toast(df.code.value.trim() ? 'Koden er gemt. Alle, der spiller, kan se den' : 'Koden er fjernet'); viewEvent(c.ev.id); } catch { busy(btn, false); }
+  };
+  document.getElementById('doorEdit')?.addEventListener('click', () => { S.doorEdit = c.ev.id; viewEvent(c.ev.id); });
+  app.querySelectorAll('[data-doorcopy]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.doorcopy); toast('Koden er kopieret'); } catch { toast(`Koden er ${b.dataset.doorcopy}`); } }));
   app.querySelectorAll('.pricecard [data-mpopen]').forEach((b) => (b.onclick = () => openMobilePay(b.dataset.mpopen)));
   app.querySelectorAll('.pricecard [data-copy]').forEach((b) => (b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.copy); toast('Nummeret er kopieret'); } catch { toast(`Nummeret er ${b.dataset.copy}`); } }));
   act($('makePlan'), async () => {

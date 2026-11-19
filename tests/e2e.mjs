@@ -169,6 +169,12 @@ try {
   await page.reload();
   await page.waitForSelector('.pricecard');
   ok(await page.locator('.pricecard [data-paidfor="u-1"].on').count() === 1 && await page.locator('.pricecard details.bookedby').count() === 1, 'admin ser, hvem der har betalt, og "booket af" er foldet sammen, når dagsplanen er lavet');
+  // Koden til døren: admin skriver den, når dagsplanen er lavet, og den vises stort
+  ok(await page.locator('#doorForm input[name=code]').count() === 1, 'admin kan skrive koden til døren, når dagsplanen er lavet');
+  await page.fill('#doorForm input[name=code]', '4711#');
+  await page.click('#doorForm button.primary');
+  await page.waitForSelector('.doorcard .doorcode');
+  ok((await page.locator('.doorcard .doorcode').innerText()) === '4711#', 'koden til døren vises stort på dagen');
   ok(await page.locator('.rtabs .rtab').count() === 6, 'dagsplan med 6 runder som faner: ' + await page.locator('.rtabs .rtab').count() + ' ' + await page.evaluate(() => JSON.stringify(window.__mock.db().padel_events.map((e) => [e.format, e.round_minutes, e.duration_minutes]))));
   ok(await page.evaluate(() => window.__mock.db().padel_notifications.filter((n) => n.kind === 'dagsplan').length === 9), 'alle 9 tilmeldte (også den, der laver planen) får besked om dagsplanen');
   const mc1 = await page.locator('.mine-card').innerText();
@@ -1377,7 +1383,8 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.reload();
   await page.waitForSelector('#newsModal');
   const nm = await page.locator('#newsModal').innerText();
-  ok(nm.includes('Banerne set fra oven, også på telefonen') && nm.includes('Smarte hjælpere'), 'admin får popup med de nyeste nyheder');
+  const newest = await page.evaluate(async () => (await import('/js/news.js')).NEWS.filter((n) => !n.club && !n.centers).slice(0, 2).map((n) => n.title));
+  ok(newest.every((t) => nm.includes(t)), 'admin får popup med de nyeste nyheder: ' + newest.join(' / '));
   await shot('nyt-i-appen');
   await page.click('#newsOk');
   await page.reload();

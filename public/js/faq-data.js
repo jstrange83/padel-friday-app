@@ -96,6 +96,11 @@ export const FAQ = [
   },
   {
     cat: 'Hold og runder', group: true,
+    q: 'Hvor finder jeg koden til døren i centret?',
+    a: `<p>Når dagsplanen er lavet, kan den, der har booket banen, eller en admin skrive koden til døren på spilledagen. Den står så under <b>🔑 Kode til døren</b> for alle, der er tilmeldt. Tryk <b>Kopiér</b> for at kopiere den. Kun tilmeldte kan se koden.</p>`,
+  },
+  {
+    cat: 'Hold og runder', group: true,
     q: 'Hvad koster det at spille, og hvem betaler jeg til?',
     a: `<p>Prisen pr. spiller regnes sådan: Banelejen for de baner, I spiller på, deles ligeligt mellem alle, der spiller (rundet op til hele kroner), og så lægges der et beløb oveni til bolde, fx 15 kr.</p>
 <p>Når dagsplanen er lavet, står prisen på spilledagen under <b>💰 Bane og bolde</b> og i beskeden, du får, når dagsplanen er klar. Du betaler med MobilePay til den, der har booket banen. Tryk <b>📱 MobilePay</b>. Så kopieres nummeret, og MobilePay åbner, hvor du sætter nummeret ind og sender beløbet. Tryk så <b>Jeg har betalt</b>. Når du har betalt, forsvinder kortet, så det ikke fylder på dagen.</p>
