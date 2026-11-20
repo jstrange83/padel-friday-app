@@ -1,7 +1,7 @@
 // Klub (juniorklub): træningstider med afbud og fremmøde, opslag fra trænerne, indmeldelse af børn og kontingent.
 // Forældre melder børn ind; større børn kan få eget login via et link. Trænere = admin og superbruger i klubben.
 import { nameCard, bindNameCard } from './notify.js';
-import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide, rightIn } from '../core.js';
+import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn, setGroup, groupBar, nameOf, share, fmtDate, fmtPhone, radios, viewMode, isWide, rightIn, pubOrigin } from '../core.js';
 import { showQR } from '../qr.js';
 import { rightsOf, saveRights, loadGroupRights } from './rights.js';
 import { parseSession, SR, listen } from '../sessionvoice.js';
@@ -753,7 +753,7 @@ export async function myKidsSection(page = false) {
 }
 
 export function bindMyKids(rerender) {
-  const link = (code) => `${location.origin}/#/barn/${code}`;
+  const link = (code) => `${pubOrigin()}/#/barn/${code}`;
   const kid = (id) => S.myKids.find((x) => x.id === id);
   app.querySelectorAll('[data-kidlogin]').forEach((b) => (b.onclick = async () => {
     const k = kid(b.dataset.kidlogin);
@@ -1454,8 +1454,8 @@ export function showClubTodo() {
 
 // Invitationslink til klubben
 export const clubInvite = (g) => ({
-  qr: () => showQR(`${location.origin}/#/velkommen/${g}`, `Meld ind i ${group(g)?.name}`, { boern: 'Scan med telefonens kamera. Forældre opretter sig og melder deres barn ind.', voksne: 'Scan med telefonens kamera. Opret dig, og meld dig ind.', begge: 'Scan med telefonens kamera. Opret dig, og meld dig selv eller dit barn ind.' }[audience(g)]),
-  share: () => share(`${location.origin}/#/velkommen/${g}`, { boern: `Meld dit barn ind i ${group(g)?.name}!`, voksne: `Meld dig ind i ${group(g)?.name}!`, begge: `Meld dig selv eller dit barn ind i ${group(g)?.name}!` }[audience(g)] + ' Opret dig (eller log ind) her, og udfyld indmeldelsen:'),
+  qr: () => showQR(`${pubOrigin()}/#/velkommen/${g}`, `Meld ind i ${group(g)?.name}`, { boern: 'Scan med telefonens kamera. Forældre opretter sig og melder deres barn ind.', voksne: 'Scan med telefonens kamera. Opret dig, og meld dig ind.', begge: 'Scan med telefonens kamera. Opret dig, og meld dig selv eller dit barn ind.' }[audience(g)]),
+  share: () => share(`${pubOrigin()}/#/velkommen/${g}`, { boern: `Meld dit barn ind i ${group(g)?.name}!`, voksne: `Meld dig ind i ${group(g)?.name}!`, begge: `Meld dig selv eller dit barn ind i ${group(g)?.name}!` }[audience(g)] + ' Opret dig (eller log ind) her, og udfyld indmeldelsen:'),
 });
 
 // ---------- Popup: "Kommer X til næste træning?" ----------

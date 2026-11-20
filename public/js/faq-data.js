@@ -336,7 +336,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg bruge appen på computeren?',
-    a: `<p>Ja. Åbn <b>padel-friday-app.vercel.app</b> i din browser og log ind som på telefonen. På en stor skærm ligger menuen i venstre side, og siderne bruger hele bredden: spilledage og træninger i flere kolonner, dagsplanen med pris og tilmeldte ved siden af, og admin i to spalter.</p>`,
+    a: `<p>Ja. Åbn <b>padelklubben.dk</b> i din browser og log ind som på telefonen. På en stor skærm ligger menuen i venstre side, og siderne bruger hele bredden: spilledage og træninger i flere kolonner, dagsplanen med pris og tilmeldte ved siden af, og admin i to spalter.</p>`,
   },
   {
     cat: 'Bødekasse',

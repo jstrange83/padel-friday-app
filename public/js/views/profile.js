@@ -4,7 +4,7 @@ import { installHow, renderInstall } from '../install.js';
 import { unseenReplies } from './suggest.js';
 import { latestNewsId } from '../news.js';
 import { showQR } from '../qr.js';
-import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated, nameOf, first, fmtDate, share } from '../core.js';
+import { sb, S, app, hooks, hasSuggest, GENDER, SIDE, roleNames, roleIn, groupElo, group, isSuper, isClub, phoneOf, fmtPhone, esc, toast, q, busy, radios, viewMode, setViewMode, hasElevated, nameOf, first, fmtDate, share, pubOrigin } from '../core.js';
 import { myKidsSection, bindMyKids, showCalendar, discoverRow } from './club.js';
 import { editBtn, setEditMode } from '../editmode.js';
 import { msgRowLabel, unreadThreads } from './messages.js';
@@ -216,7 +216,7 @@ export async function renderMonth() {
   countUp(app);
   document.getElementById('mPrev').onclick = () => { S.monthOff = off - 1; renderMonth(); };
   document.getElementById('mNext').onclick = () => { if (canNext) { S.monthOff = off + 1; renderMonth(); } };
-  document.getElementById('mShare')?.addEventListener('click', () => share(location.origin, shareText));
+  document.getElementById('mShare')?.addEventListener('click', () => share(pubOrigin(), shareText));
 }
 
 // Badges og milepæle: regnes ud fra kampene i gruppen. Låste badges viser, hvad man mangler.

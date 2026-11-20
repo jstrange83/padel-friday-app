@@ -1,8 +1,7 @@
 // Admin for den valgte gruppe (invitation, anmodninger, medlemmer) og superadmin (grupper, centre, fælles rangliste).
 import {
   sb, S, app, hooks, hasSuggest, liveGroups, GENDER, SIDE, roleNames, roleIn, isSuper, isAdmin, canRun, isClub, hasRight, member, group, groupBar, groupCenterIds, setGroup,
-  esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks,
-} from '../core.js';
+  esc, nameOf, courtById, centerById, toast, q, busy, radios, share, phoneOf, fmtPhone, phoneLinks, pubOrigin } from '../core.js';
 import { startViewAs } from '../viewas.js';
 import { showQR } from '../qr.js';
 import { loadSuggestions, suggestTab, bindSuggestTab } from './suggest.js';
@@ -339,9 +338,9 @@ function bind() {
   const setMember = (p, role, status) => q(sb.rpc('padel_set_member', { g, p, p_role: role, p_status: status }));
 
   document.getElementById('inviteQR')?.addEventListener('click', () => (isClub() ? clubInvite(g).qr() :
-    showQR(`${location.origin}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}`, 'Scan med telefonens kamera for at oprette dig eller logge ind')));
+    showQR(`${pubOrigin()}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}`, 'Scan med telefonens kamera for at oprette dig eller logge ind')));
   document.getElementById('invite')?.addEventListener('click', () => (isClub() ? clubInvite(g).share() :
-    share(`${location.origin}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}! Opret en profil (eller log ind) her, så godkender jeg dig:`)));
+    share(`${pubOrigin()}/#/velkommen/${g}`, `Kom med i ${group()?.name || 'padel'}! Opret en profil (eller log ind) her, så godkender jeg dig:`)));
 
   const pl = app.querySelector('details.plist');
   if (pl) pl.ontoggle = () => (S.playersOpen = pl.open);

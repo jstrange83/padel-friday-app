@@ -250,3 +250,7 @@ export function setupBat() {
       .observe(document.body, { childList: true, subtree: true, characterData: true });
   } catch {}
 }
+
+// Den rigtige adresse til links, der deles (QR-koder, invitationer, del-knapper). Appen selv kan køre fra en anden adresse.
+export const APP_URL = 'https://padelklubben.dk';
+export const pubOrigin = () => (/^(localhost|127\.)/.test(location.hostname) ? location.origin : APP_URL);

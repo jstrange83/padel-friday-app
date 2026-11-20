@@ -2,8 +2,7 @@
 import {
   sb, S, app, hooks, isSuper, FORMAT, MODE, SIDE_SHORT, isAdmin, canRun, canJoin, setGroup, group, activeMembers, groupElo,
   esc, nameOf, first, shortName, fmtDate, hm, courtById, centerById, plural, toast, q, busy, share, onLeave, openMobilePay, isWide,
-  haptic, canPlan, mapsUrl,
-} from '../core.js';
+  haptic, canPlan, mapsUrl, pubOrigin } from '../core.js';
 import { generateRound } from '../pairing.js';
 import { lineup, lineupText } from '../lineup.js';
 import { SR, listenScore, beep } from '../voice.js';
@@ -846,10 +845,10 @@ function bind(c) {
   // TV-skærm: et hemmeligt link, der viser dagens baner, resultater og stilling live (uden login)
   act($('tvEvent'), async () => {
     const t = await q(sb.rpc('padel_tv_code_v2', { g: ev.group_id }));
-    castTv(`${location.origin}/tv/${t.token}`, t.code);
+    castTv(`${pubOrigin()}/tv/${t.token}`, t.code);
   });
   $('shareEvent')?.addEventListener('click', () =>
-    share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
+    share(`${pubOrigin()}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
   act($('rank'), async () => {
     if (!confirm('Tilføj dagen til den officielle rangliste? Pointene beregnes kamp for kamp.')) return;
     await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: true })); toast('Dagen tæller nu på ranglisten'); await reload();

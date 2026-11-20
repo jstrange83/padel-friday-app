@@ -1,5 +1,5 @@
 // "Læg på hjemmeskærmen": knap på Android/Chrome, vejledning på iPhone, hjælp hvis linket er åbnet i en anden app.
-import { app, toast, esc } from './core.js';
+import { app, toast, esc, pubOrigin } from './core.js';
 
 const UA = navigator.userAgent || '';
 const isIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -71,6 +71,6 @@ export function renderInstall(done) {
   });
   document.getElementById('copyKid')?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(kidCode()); toast('Koden er kopieret'); } catch { toast(`Koden er ${kidCode()}`); } });
   document.getElementById('copyLink')?.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(location.origin); toast('Linket er kopieret'); } catch { prompt('Kopiér linket', location.origin); }
+    try { await navigator.clipboard.writeText(pubOrigin()); toast('Linket er kopieret'); } catch { prompt('Kopiér linket', pubOrigin()); }
   });
 }
