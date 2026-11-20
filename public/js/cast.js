@@ -21,7 +21,9 @@ export function castTv(url) {
         ? `<button class="btn primary castbig" id="castApp">📡 Cast til TV</button>
           <small class="muted center castnote">Chrome åbner, hvor du trykker <b>Cast til TV</b> og vælger dit TV. Bagefter kan du gå tilbage til appen.</small>`
         : `<p class="muted small center">Din browser kan ikke caste. Brug Chrome på en computer eller en Android-telefon, eller åbn TV-skærmen på en computer, der er sluttet til TV'et.</p>`}
-      <div class="mact"><button class="btn" id="castOpen">🖥 Åbn TV-skærmen her</button><button class="btn" id="castCopy">🔗 Kopiér link</button></div>
+      <button class="btn castbig" id="castMirror">🪞 Skærmdeling: vis som TV her</button>
+      <small class="muted center castnote">Har TV'et ikke Chromecast, men kan spejle skærmen (fx AirPlay eller Smart View)? Tryk her, drej telefonen, og del skærmen til TV'et.</small>
+      <div class="mact"><button class="btn" id="castOpen">🖥 Åbn i nyt vindue</button><button class="btn" id="castCopy">🔗 Kopiér link</button></div>
       <button class="link sm castclose" id="castClose">Luk</button>`}
   </div>`;
   document.body.appendChild(box);
@@ -29,6 +31,7 @@ export function castTv(url) {
   box.onclick = (e) => { if (e.target === box) close(); };
   box.querySelector('#castClose')?.addEventListener('click', close);
   box.querySelector('#castStop')?.addEventListener('click', () => { try { conn?.terminate(); } catch {} conn = null; toast('TV-visningen er stoppet'); close(); });
+  box.querySelector('#castMirror')?.addEventListener('click', () => { close(); location.href = url + (url.includes('?') ? '&' : '?') + 'mirror=1'; });
   box.querySelector('#castOpen')?.addEventListener('click', () => { window.open(url, '_blank', 'noopener'); close(); });
   box.querySelector('#castCopy')?.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(url); toast('Linket er kopieret. Åbn det i browseren på TV\'et'); } catch { prompt('Kopiér linket', url); }

@@ -359,7 +359,7 @@ try {
   // TV-skærm: admin henter et hemmeligt link; skærmen viser baner, resultater og dagens stilling uden login
   await page.click('#tvEvent');
   await page.waitForSelector('#castModal');
-  ok((await page.locator('#castModal').innerText()).includes('Vis på TV') && await page.locator('#castOpen').count() === 1 && !(await page.locator('.qrmodal').count()), 'TV-knappen tilbyder at caste eller åbne TV-skærmen (ingen QR-kode)');
+  ok((await page.locator('#castModal').innerText()).includes('Vis på TV') && await page.locator('#castOpen').count() === 1 && await page.locator('#castMirror').count() === 1 && !(await page.locator('.qrmodal').count()), 'TV-knappen tilbyder at caste eller åbne TV-skærmen (ingen QR-kode)');
   await shot('tv-cast');
   await page.click('#castClose');
   // Cast-siden, som appen åbner i Chrome: godtager kun links til vores egne TV-sider
@@ -376,6 +376,11 @@ try {
   await page.waitForSelector('aside h2');
   { const t = await page.locator('#app').innerText(); ok(t.includes('Dagens stilling') && /Bane|Court/.test(t) && /\d–\d/.test(t), 'TV-skærmen viser baner, resultater og dagens stilling'); }
   await shot('tv-skaerm');
+  // Skærmdeling: TV-skærmen på telefonen i fuld skærm (åbnes med ?mirror=1)
+  await page.goto(`http://localhost:8765/tv.html?k=${tvTok}&mirror=1`);
+  await page.waitForSelector('#mirrorGo');
+  await page.click('#mirrorGo');
+  ok(!(await page.locator('#mirrorGo').count()) && await page.locator('#mirrorBack').count() === 1, 'skærmdeling: tryk viser TV-skærmen i fuld skærm med en Tilbage-knap');
   await page.goto('http://localhost:8765/#/fredage');
   await page.waitForSelector('#nav a');
 

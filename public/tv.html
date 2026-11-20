@@ -235,6 +235,32 @@ checkVersion(); setInterval(checkVersion, 120000);
 // Hold skærmen tændt, hvis browseren kan
 const keepOn = () => { try { navigator.wakeLock?.request('screen').catch(() => {}); } catch {} };
 keepOn(); document.addEventListener('visibilitychange', () => { if (!document.hidden) keepOn(); });
+
+// Skærmdeling (fx AirPlay/skærmspejling uden Chromecast): telefonen viser TV-skærmen i fuld skærm på tværs,
+// og telefonens skærm spejles til TV'et. Åbnes med ?mirror=1 fra knappen i appen.
+if (new URLSearchParams(location.search).has('mirror')) {
+  const st = document.createElement('style');
+  st.textContent = `#mirrorGo{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(11,22,38,.96);color:var(--txt);text-align:center;padding:24px;font-size:18px;border:0;width:100%}
+    #mirrorGo b{font-size:26px;color:var(--acc)} #mirrorGo span{color:var(--mut);max-width:420px;line-height:1.4}
+    #mirrorBack{position:fixed;top:8px;left:8px;z-index:40;background:rgba(19,35,58,.7);color:var(--txt);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;opacity:.35}
+    #mirrorBack:hover,#mirrorBack:focus{opacity:1}`;
+  document.head.appendChild(st);
+  const go = document.createElement('button');
+  go.id = 'mirrorGo';
+  go.innerHTML = '<div style="font-size:48px">📺</div><b>Tryk for at vise i fuld skærm</b><span>Drej telefonen på tværs, og start skærmdeling til TV\'et. Skærmen holdes tændt og opdaterer sig selv.</span>';
+  const back = document.createElement('button');
+  back.id = 'mirrorBack'; back.textContent = '‹ Tilbage';
+  back.onclick = async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); } catch {} if (history.length > 1) history.back(); else location.href = '/'; };
+  go.onclick = () => {
+    go.remove();
+    keepOn();
+    try {
+      const p = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+      Promise.resolve(p).then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+    } catch {}
+  };
+  document.body.append(go, back);
+}
 </script>
 </body>
 </html>

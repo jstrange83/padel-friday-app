@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-20', date: '20. november 2026', admin: true, title: 'TV-skærmen med skærmdeling',
+    items: ['📺 Har TV\'et i centret ikke Chromecast, men kan spejle skærmen (fx AirPlay eller Smart View), så tryk 📺 på spilledagen og vælg <b>🪞 Skærmdeling: vis som TV her</b>. Telefonen viser TV-skærmen i fuld skærm på tværs, holder skærmen tændt, og du deler bare skærmen til TV\'et.'],
+  },
+  {
     id: '2026-11-19', date: '19. november 2026', groups: true, title: 'Koden til døren står på spilledagen',
     items: ['🔑 Når dagsplanen er lavet, kan den, der har booket banen (eller en admin), skrive <b>koden til døren</b> på spilledagen. Så står den stort under <b>🔑 Kode til døren</b> for alle, der spiller, og man kan kopiere den med ét tryk.'],
   },
