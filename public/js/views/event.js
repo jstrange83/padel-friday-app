@@ -360,7 +360,8 @@ function freeBar(c) {
   const canPlan = !matches.length;
   const canRedoPlan = futureRounds.length > 0;
   const allDone = roundNos.length && roundNos.every(c.roundDone);
-  const extra = roundNos.length && !futureRounds.length;
+  // Ekstra runde/sæt kan altid lægges til sidst i planen, fx hvis kampene går hurtigt
+  const extra = roundNos.length && ev.status !== 'afsluttet';
   // Én stor knap kun når der er noget at gøre (lav plan / alt er spillet). Ellers en lille række.
   let primary = '';
   if (canPlan) {
@@ -370,11 +371,11 @@ function freeBar(c) {
   const small = [
     canRedoPlan ? '<button class="btn sm" id="redoPlan">🔄 Ny plan</button>' : '',
     !allDone && ev.status === 'igang' ? '<button class="btn sm ghost" id="finish">Afslut dagen</button>' : '',
-    extra ? '<button class="btn sm" id="extraRound">➕ Spil en ekstra runde</button>' : '',
     admin && !matches.length ? '<button class="btn sm ghost danger" id="delEvent">Slet dagen</button>' : '',
   ].filter(Boolean).join('');
-  if (!primary && !small) return '';
-  return `<div class="${primary ? 'card ' : ''}runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}</div>
+  const extraBtn = extra ? `<div class="mact"><button class="btn sm" id="extraRound">➕ ${c.isSet ? 'Ekstra sæt' : 'Ekstra runde'}</button></div>` : '';
+  if (!primary && !small && !extraBtn) return '';
+  return `<div class="${primary ? 'card ' : ''}runbar">${primary}${small ? `<div class="mact">${small}</div>` : ''}${extraBtn}</div>
     ${planOutdated ? '<div class="card warnbox">⚠️ Tilmeldingerne er ændret, siden dagsplanen blev lavet. Tryk <b>🔄 Ny plan</b> for at få dem med.</div>' : ''}`;
 }
 
@@ -652,7 +653,7 @@ function render(data) {
 
 // ---------- Knapper ----------
 function bind(c) {
-  const { ev, me, L, rounds, cur, matches, courts, futureRounds, totalRounds, nextPlanned, isAm, run } = c;
+  const { ev, me, L, rounds, cur, matches, courts, futureRounds, totalRounds, nextPlanned, lastDone, isAm, run } = c;
   const reload = async () => { await hooks.loadBase(); render(await loadEvent(ev.id)); };
   const $ = (id) => document.getElementById(id);
   const act = (el, fn) => el?.addEventListener('click', async (e) => {
@@ -745,14 +746,14 @@ function bind(c) {
   }
 
   // Runder: lav hold til en eller flere runder. Hver ny runde tager højde for dem, der lige er lavet.
-  const buildRounds = async (from, to) => {
+  const buildRounds = async (from, to, extra = false) => {
     // Gruppens point bruges til at gøre holdene lige og fordele baner efter niveau
     const players = L.playing.map((pid) => S.profiles[pid]).filter(Boolean).map((p) => ({ ...p, elo: groupElo(p.id, ev.group_id) }));
     const history = await q(sb.from('padel_matches').select('event_id,round_no,a_left,a_right,b_left,b_right,court_id,created_at')
       .order('created_at', { ascending: false }).limit(800));
     const rows = [];
     for (let r = from; r <= to; r++) {
-      const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo: r });
+      const res = generateRound({ players, courts, history, eventId: ev.id, mode: ev.team_mode, roundNo: r, extra });
       if (res.error) { toast(res.error, true); return false; }
       const ms = res.matches.map((m) => ({ ...m, event_id: ev.id, round_no: r }));
       rows.push(...ms);
@@ -765,8 +766,8 @@ function bind(c) {
     if (!L.courts) { toast('Der skal være mindst 4 tilmeldte', true); return false; }
     return !L.waiting.length || confirm(`${L.waiting.length} står på venteliste og kommer ikke med. Fortsæt?`);
   };
-  const startRound = async (r, rebuild) => {
-    if (rebuild && !(await buildRounds(r, r))) return;
+  const startRound = async (r, rebuild, extra = false) => {
+    if (rebuild && !(await buildRounds(r, r, extra))) return;
     await q(sb.rpc('padel_start_round', { p_event: ev.id, p_round: r }));
     await reload();
   };
@@ -775,7 +776,7 @@ function bind(c) {
     const open = cur.filter((m) => m.status !== 'bekraeftet').length;
     if (open && !confirm(`${open} kamp(e) i runde ${ev.current_round} mangler godkendt resultat. Start næste runde alligevel?`)) return;
     if (!nextPlanned && !lineupOk()) return;
-    await startRound(ev.current_round + 1, !nextPlanned);
+    await startRound(ev.current_round + 1, !nextPlanned, lastDone && !nextPlanned);
   });
   // Alle tilmeldte (også den, der laver planen) får en notifikation om, hvor og med hvem de starter
   const planNotify = async (redo) => { try { await sb.rpc('padel_event_plan_notify', { e: ev.id, p_redo: redo }); } catch {} };
@@ -811,7 +812,7 @@ function bind(c) {
   act($('extraRound'), async () => {
     if (!lineupOk()) return;
     const r = Math.max(0, ...c.roundNos) + 1;
-    if (await buildRounds(r, r)) { toast(`Runde ${r} er lavet`); await reload(); }
+    if (await buildRounds(r, r, true)) { toast(`${c.isSet ? 'Ekstra sæt' : 'Ekstra runde'} er lavet (runde ${r}) med så lige kampe som muligt`); await reload(); }
   });
   act($('redoRound'), async () => {
     if (!confirm(`Lav runde ${ev.current_round} om med nye hold?`)) return;

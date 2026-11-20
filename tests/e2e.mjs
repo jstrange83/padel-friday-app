@@ -351,6 +351,13 @@ try {
   await openAll();
   ok((await page.locator(`#m-${cm.id} .badge`).innerText()).includes('Point'), 'spillerens første resultat tæller uden godkendelse');
   await loginAs('jimmy@test');
+  // Ekstra sæt: lægges til sidst i planen, også før alle runder er spillet
+  { const before = await page.evaluate(() => Math.max(...window.__mock.db().padel_matches.filter((m) => m.event_id === location.hash.split('/').pop()).map((m) => m.round_no)));
+    ok(await page.locator('#extraRound').count() === 1, 'admin kan lægge et ekstra sæt til');
+    await page.click('#extraRound');
+    await wait(800);
+    const after = await page.evaluate(() => Math.max(...window.__mock.db().padel_matches.filter((m) => m.event_id === location.hash.split('/').pop()).map((m) => m.round_no)));
+    ok(after === before + 1, `ekstra sæt laver en ny runde til sidst (${before} → ${after})`); }
   await page.locator('#finish').first().click();
   await wait(400);
   ok((await text()).includes('afsluttet'), 'dagen afsluttet');

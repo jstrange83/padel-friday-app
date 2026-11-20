@@ -96,6 +96,11 @@ export const FAQ = [
   },
   {
     cat: 'Hold og runder', group: true,
+    q: 'Kan vi spille flere sæt end planlagt?',
+    a: `<p>Ja. Admin eller en superbruger trykker <b>➕ Ekstra sæt</b> på spilledagen. Så lægges en ny runde til sidst i planen. Appen vælger de mest lige kampe ud fra jeres point, men aldrig den samme kamp eller de samme makkere som i runden lige før, så der stadig bliver roteret. Tryk igen for endnu et sæt.</p>`,
+  },
+  {
+    cat: 'Hold og runder', group: true,
     q: 'Hvor finder jeg koden til døren i centret?',
     a: `<p>Når dagsplanen er lavet, kan den, der har booket banen, eller en admin skrive koden til døren på spilledagen. Den står så under <b>🔑 Kode til døren</b> for alle, der er tilmeldt. Tryk <b>Kopiér</b> for at kopiere den. Kun tilmeldte kan se koden.</p>`,
   },

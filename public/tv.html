@@ -20,7 +20,23 @@
   .rl { display:flex; align-items:center; gap:1vw; font-size:1.3vw; font-weight:700; }
   .rl .pill { background:var(--acc); color:#0b1626; border-radius:99px; padding:.25vw .9vw; }
   .rl .muted { color:var(--mut); font-weight:500; }
-  .courts { flex:1; min-height:0; display:grid; gap:1.2vw; grid-template-columns:repeat(var(--cols,2),1fr); align-content:start; }
+  .courts { flex:1; min-height:0; display:grid; gap:1.2vw; grid-template-columns:repeat(var(--cols,2),1fr); grid-auto-rows:minmax(0,1fr); align-content:stretch; }
+  /* Banerne fylder skærmen: én bane stor midt på, to side om side, 3-4 i et gitter, flere i tre kolonner */
+  .courts .court { min-height:0; }
+  .courts .pcourt { min-height:0; }
+  .courts.n1 { justify-items:center; }
+  .courts.n1 .court { width:min(100%, calc((100vh - 16vw) * 2.1)); padding:1.6vw 2vw; }
+  .courts.n1 .ch { font-size:2.2vw; } .courts.n1 .tag { font-size:1.2vw; padding:.3vw 1vw; }
+  .courts.n1 .pbox b { font-size:3.2vw; } .courts.n1 .pbox small { font-size:1.1vw; }
+  .courts.n1 .pscore { font-size:4.2vw; padding:.5vw 1.6vw; border-radius:1.2vw; } .courts.n1 .pscore.vs { font-size:1.8vw; }
+  .courts.n1 .pscore.live small { font-size:1.2vw; } .courts.n1 .pscore.live em { font-size:2.6vw; }
+  .courts.n2 .pbox b { font-size:2.2vw; } .courts.n2 .pbox small { font-size:.9vw; }
+  .courts.n2 .pscore { font-size:3vw; } .courts.n2 .pscore.live em { font-size:2vw; }
+  /* Live: LIVE øverst, partier i midten, point nedenunder, så tallene ikke blandes sammen */
+  .pscore.live { display:flex; flex-direction:column; align-items:center; line-height:1.05; }
+  .pscore.live .pg { display:block; } .pscore.live em { display:block; margin:0 !important; }
+  .court.live { border-color:#ff5a5a; box-shadow:0 0 0 .3vw rgba(255,90,90,.18); }
+  .tag.live { background:#ff5a5a; color:#fff; }
   .court { background:var(--card); border:2px solid var(--line); border-radius:1.2vw; padding:1.2vw 1.4vw; display:flex; flex-direction:column; gap:.8vw; transition:border-color .4s, box-shadow .4s; }
   .court.fresh { border-color:var(--acc); box-shadow:0 0 0 .3vw rgba(212,245,60,.25); }
   .ch { display:flex; justify-content:space-between; align-items:center; font-weight:800; font-size:1.4vw; }
@@ -122,7 +138,7 @@ function pcourt(m, done) {
   const box = (n, side, pos, win) => `<div class="pbox ${pos} ${win ? 'win' : ''}"><b>${esc(n || '')}</b><small>${side}</small></div>`;
   const wa = done && m.sa > m.sb, wb = done && m.sb > m.sa;
   return `<div class="pcourt"><div class="phalf a"><div class="pback"></div><div class="pserve">${box(m.a[0], 'Venstre', 'top', wa)}${box(m.a[1], 'Højre', 'bot', wa)}</div></div>
-    <div class="pnet">${!done && m.live ? `<span class="pscore live"><small>● LIVE</small> ${m.live.mode === 'points' ? `${esc(m.live.pa)}<i>–</i>${esc(m.live.pb)}` : `${+m.live.ga}<i>–</i>${+m.live.gb}${m.live.pa === '0' && m.live.pb === '0' ? '' : ` <em>${esc(m.live.pa)}-${esc(m.live.pb)}</em>`}`}</span>` : `<span class="pscore ${done ? '' : 'vs'}">${done ? `${m.sa}<i>–</i>${m.sb}` : 'VS'}</span>`}</div>
+    <div class="pnet">${!done && m.live ? `<span class="pscore live"><small>● LIVE</small><span class="pg">${m.live.mode === 'points' ? `${esc(m.live.pa)}<i>–</i>${esc(m.live.pb)}` : `${+m.live.ga}<i>–</i>${+m.live.gb}`}</span>${m.live.mode !== 'points' && !(m.live.pa === '0' && m.live.pb === '0') ? `<em>${esc(m.live.pa)}-${esc(m.live.pb)}</em>` : ''}</span>` : `<span class="pscore ${done ? '' : 'vs'}">${done ? `${m.sa}<i>–</i>${m.sb}` : 'VS'}</span>`}</div>
     <div class="phalf b"><div class="pserve">${box(m.b[1], 'Højre', 'top', wb)}${box(m.b[0], 'Venstre', 'bot', wb)}</div><div class="pback"></div></div></div>`;
 }
 function render(d) {
@@ -139,19 +155,20 @@ function render(d) {
     const inRound = ms.filter((m) => m.round === cur);
     const used = courts.filter((c) => ms.some((m) => m.court === c.id));
     const show = used.length ? used : courts;
-    const cols = show.length > 4 ? 3 : 2;
+    const n = show.length, cols = n === 1 ? 1 : n > 4 ? 3 : 2;
     const card = (c) => {
       const m = inRound.find((x) => x.court === c.id);
       if (!m) return `<div class="court"><div class="ch">${esc(c.name)}<small>Ingen kamp</small></div></div>`;
       const [ta, tb] = teams(m), done = m.status === 'bekraeftet';
       const fresh = done && seen && !seen.has(key(m));
-      return `<div class="court ${fresh ? 'fresh' : ''}"><div class="ch">${esc(c.name)}${done ? '<span class="tag">Resultat</span>' : '<span class="tag play">Spiller nu</span>'}</div>
+      const live = !done && m.live;
+      return `<div class="court ${fresh ? 'fresh' : ''} ${live ? 'live' : ''}"><div class="ch">${esc(c.name)}${done ? '<span class="tag">Resultat</span>' : live ? '<span class="tag live">● LIVE</span>' : '<span class="tag play">Spiller nu</span>'}</div>
         ${pcourt(m, done)}
         ${done && m.d != null ? `<div class="ch"><span class="d ${m.d > 0 ? 'up' : 'dn'}">${sign(m.d)}</span><span class="d ${m.d > 0 ? 'dn' : 'up'}">${sign(-m.d)}</span></div>` : ''}</div>`;
     };
     const status = ev.status === 'afsluttet' ? 'Dagen er slut' : `Runde ${cur} af ${rounds.length}`;
     main = `<div class="rl"><span class="pill">${status}</span><span class="muted">${esc(ev.center || '')} · ${hm(ev.starts_at)}–${hm(new Date(ev.starts_at).getTime() + ev.duration_minutes * 60e3)}</span></div>
-      <div class="courts" style="--cols:${cols}">${show.map(card).join('')}</div>`;
+      <div class="courts n${Math.min(n, 3)}" style="--cols:${cols}">${show.map(card).join('')}</div>`;
     const next = ms.filter((m) => m.round === cur + 1);
     if (next.length && ev.status !== 'afsluttet') main += `<div class="next"><b style="color:var(--mut)">Næste runde:</b>${next.map((m) => `<span>${esc(courts.find((c) => c.id === m.court)?.name || '')}: ${esc(teams(m)[0])} mod ${esc(teams(m)[1])}</span>`).join('')}</div>`;
     if ((d.standings || []).length) {

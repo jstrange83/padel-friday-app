@@ -14,7 +14,9 @@ function shuffle(a) {
   return a;
 }
 
-export function generateRound({ players, courts, history, eventId, mode, roundNo }) {
+// extra = ekstra runde/sæt efter planen: så lige kampe som muligt (niveau vægter mest), men aldrig samme kamp
+// eller makkerpar som i runden lige før, så der stadig roteres.
+export function generateRound({ players, courts, history, eventId, mode, roundNo, extra = false }) {
   const n = players.length;
   const nC = Math.min(courts.length, Math.floor(n / 4));
   if (nC === 0) return { error: 'Der skal være mindst 4 tilmeldte og 1 bane' };
@@ -33,11 +35,19 @@ export function generateRound({ players, courts, history, eventId, mode, roundNo
   for (const m of history) {
     const same = m.event_id === eventId;
     const a = ages[m.event_id] ?? 0;
-    const wp = same ? 1000 : Math.max(10, 80 - 15 * a);
-    const wo = same ? 50 : Math.max(2, 12 - 3 * a);
+    const wp = same ? (extra ? 25 : 1000) : Math.max(10, 80 - 15 * a);
+    const wo = same ? (extra ? 3 : 50) : Math.max(2, 12 - 3 * a);
     partner[key(m.a_left, m.a_right)] = (partner[key(m.a_left, m.a_right)] || 0) + wp;
     partner[key(m.b_left, m.b_right)] = (partner[key(m.b_left, m.b_right)] || 0) + wp;
     for (const x of [m.a_left, m.a_right]) for (const y of [m.b_left, m.b_right]) opp[key(x, y)] = (opp[key(x, y)] || 0) + wo;
+  }
+
+  // Ekstra runde: den seneste runde i dag må ikke gentages (hverken samme makker eller samme kamp)
+  const lastNo = Math.max(0, ...today.map((m) => m.round_no || 0).filter((r) => r < roundNo));
+  const lastPairs = new Set(), lastGames = new Set();
+  if (extra) for (const m of today.filter((x) => x.round_no === lastNo)) {
+    const ta = key(m.a_left, m.a_right), tb = key(m.b_left, m.b_right);
+    lastPairs.add(ta); lastPairs.add(tb); lastGames.add(ta < tb ? ta + '#' + tb : tb + '#' + ta);
   }
 
   // Hvem spiller denne runde: dem med flest pauser først, ellers tilfældigt
@@ -66,7 +76,13 @@ export function generateRound({ players, courts, history, eventId, mode, roundNo
     for (const [[i, j], [k, l]] of SPLITS) {
       const t1 = [q[i], q[j]], t2 = [q[k], q[l]];
       let c = teamCost(t1[0], t1[1]) + teamCost(t2[0], t2[1]);
-      c += Math.abs((t1[0].elo + t1[1].elo) / 2 - (t2[0].elo + t2[1].elo) / 2) * 0.4;
+      c += Math.abs((t1[0].elo + t1[1].elo) / 2 - (t2[0].elo + t2[1].elo) / 2) * (extra ? 3 : 0.4);
+      if (extra) {
+        const ka = key(t1[0].id, t1[1].id), kb = key(t2[0].id, t2[1].id);
+        if (lastGames.has(ka < kb ? ka + '#' + kb : kb + '#' + ka)) c += 100000;
+        if (lastPairs.has(ka)) c += 2000;
+        if (lastPairs.has(kb)) c += 2000;
+      }
       for (const x of t1) for (const y of t2) c += opp[key(x.id, y.id)] || 0;
       // Spillere på nogenlunde samme niveau i samme kamp, så de bedste ender sammen på den bedste bane
       const es = q.map((p) => p.elo);

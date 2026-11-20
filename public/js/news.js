@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-20b', date: '20. november 2026', groups: true, title: 'Ekstra sæt og pænere baner',
+    items: ['➕ Går kampene hurtigt, kan admin trykke <b>➕ Ekstra sæt</b> på spilledagen. Appen laver en ny runde til sidst med så lige kampe som muligt, men aldrig den samme kamp som lige er spillet, så der stadig roteres.', '🎾 Banerne har nu en fast form, så de ikke bliver lange og flade på computeren. På TV-skærmen fylder én bane det meste af skærmen, og flere baner står pænt i et gitter. Live-stillingen står med partier øverst og point nedenunder.'],
+  },
+  {
     id: '2026-11-20', date: '20. november 2026', admin: true, title: 'TV-skærmen med skærmdeling',
     items: ['📺 Har TV\'et i centret ikke Chromecast, men kan spejle skærmen (fx AirPlay eller Smart View), så tryk 📺 på spilledagen og vælg <b>🪞 Skærmdeling: vis som TV her</b>. Telefonen viser TV-skærmen i fuld skærm på tværs, holder skærmen tændt, og du deler bare skærmen til TV\'et.'],
   },
