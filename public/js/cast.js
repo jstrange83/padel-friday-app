@@ -5,7 +5,7 @@ import { esc, toast, haptic } from './core.js';
 
 let conn = null; // den aktive cast-forbindelse
 
-export function castTv(url) {
+export function castTv(url, code = null) {
   const native = !!window.Capacitor?.isNativePlatform?.();
   const canCast = 'PresentationRequest' in window && !native;
   const box = document.createElement('div');
@@ -21,6 +21,7 @@ export function castTv(url) {
         ? `<button class="btn primary castbig" id="castApp">📡 Cast til TV</button>
           <small class="muted center castnote">Chrome åbner, hvor du trykker <b>Cast til TV</b> og vælger dit TV. Bagefter kan du gå tilbage til appen.</small>`
         : `<p class="muted small center">Din browser kan ikke caste. Brug Chrome på en computer eller en Android-telefon, eller åbn TV-skærmen på en computer, der er sluttet til TV'et.</p>`}
+      ${code ? `<div class="tvcode"><b>📺 TV'ets egen browser</b><span>Åbn appen <b>Internet</b> (eller en anden browser) på TV'et, gå til <b>padelklubben.dk/tv</b>, og tast koden:</span><div class="tvcodenum">${esc(code)}</div><small class="muted">Koden gælder i 12 timer. TV'et husker jeres gruppe bagefter.</small></div>` : ''}
       <button class="btn castbig" id="castMirror">🪞 Skærmdeling: vis som TV her</button>
       <small class="muted center castnote">Har TV'et ikke Chromecast, men kan spejle skærmen (fx AirPlay eller Smart View)? Tryk her, drej telefonen, og del skærmen til TV'et.</small>
       <div class="mact"><button class="btn" id="castOpen">🖥 Åbn i nyt vindue</button><button class="btn" id="castCopy">🔗 Kopiér link</button></div>

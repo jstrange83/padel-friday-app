@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-20c', date: '20. november 2026', admin: true, title: 'TV-skærmen på Samsung TV og andre smart-TV',
+    items: ['📺 Har TV\'et ikke Chromecast, så åbn TV\'ets egen browser (fx <b>Internet</b> på Samsung), gå til <b>padelklubben.dk/tv</b> og tast den firecifrede kode, som står, når du trykker 📺 på spilledagen. TV\'et viser altid gruppens spilledag i dag og husker gruppen til næste gang.'],
+  },
+  {
     id: '2026-11-20b', date: '20. november 2026', groups: true, title: 'Ekstra sæt og pænere baner',
     items: ['➕ Går kampene hurtigt, kan admin trykke <b>➕ Ekstra sæt</b> på spilledagen. Appen laver en ny runde til sidst med så lige kampe som muligt, men aldrig den samme kamp som lige er spillet, så der stadig roteres.', '🎾 Banerne har nu en fast form, så de ikke bliver lange og flade på computeren. På TV-skærmen fylder én bane det meste af skærmen, og flere baner står pænt i et gitter. Live-stillingen står med partier øverst og point nedenunder.'],
   },

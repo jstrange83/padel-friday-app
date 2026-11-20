@@ -1477,3 +1477,5 @@ form.enter input.auto { color: var(--accent); }
 .doorcard .doorrow input { flex: 1 1 140px; min-width: 0; font-size: 18px; }
 svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline-block; }
 .logo svg.bat { width: 1em; height: 1em; }
+.tvcode { display: flex; flex-direction: column; gap: 6px; text-align: center; background: var(--card2); border-radius: 12px; padding: 12px; margin: 10px 0; }
+.tvcode .tvcodenum { font-size: 40px; font-weight: 800; letter-spacing: .25em; color: var(--accent); font-variant-numeric: tabular-nums; }

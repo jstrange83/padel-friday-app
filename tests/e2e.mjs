@@ -383,6 +383,18 @@ try {
   await page.waitForSelector('aside h2');
   { const t = await page.locator('#app').innerText(); ok(t.includes('Dagens stilling') && /Bane|Court/.test(t) && /\d–\d/.test(t), 'TV-skærmen viser baner, resultater og dagens stilling'); }
   await shot('tv-skaerm');
+  // TV'ets egen browser: padelklubben.dk/tv med en firecifret kode
+  { const code = await page.evaluate(() => window.__mock.db().padel_tv_codes?.[0]?.code);
+    ok(!!code, 'TV-knappen laver en kort kode til TV\'ets browser');
+    await page.evaluate(() => { try { localStorage.removeItem('fp-tv-token'); } catch {} });
+    await page.route(/localhost:8765\/tv\/\w+$/, (r) => r.fulfill({ contentType: 'text/html', body: fs.readFileSync(path.join(root, 'public', 'tv.html'), 'utf8') }));
+    await page.goto('http://localhost:8765/tv.html');
+    await page.waitForSelector('#tvCode');
+    await page.fill('#tvCode', '0000');
+    await page.waitForSelector('.cmsg:has-text("passer ikke")');
+    await page.fill('#tvCode', code);
+    await page.waitForURL(/\/tv\//, { timeout: 5000 }).catch(() => {});
+    ok(page.url().includes('/tv/' + tvTok), 'koden på TV\'et åbner gruppens TV-skærm: ' + page.url()); }
   // Skærmdeling: TV-skærmen på telefonen i fuld skærm (åbnes med ?mirror=1)
   await page.goto(`http://localhost:8765/tv.html?k=${tvTok}&mirror=1`);
   await page.waitForSelector('#mirrorGo');

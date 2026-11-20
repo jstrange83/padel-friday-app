@@ -845,8 +845,8 @@ function bind(c) {
   });
   // TV-skærm: et hemmeligt link, der viser dagens baner, resultater og stilling live (uden login)
   act($('tvEvent'), async () => {
-    const t = await q(sb.rpc('padel_tv_link_v2', { g: ev.group_id }));
-    castTv(`${location.origin}/tv/${t}`);
+    const t = await q(sb.rpc('padel_tv_code_v2', { g: ev.group_id }));
+    castTv(`${location.origin}/tv/${t.token}`, t.code);
   });
   $('shareEvent')?.addEventListener('click', () =>
     share(`${location.origin}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));

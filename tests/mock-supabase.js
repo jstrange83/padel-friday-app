@@ -234,6 +234,16 @@ const RPC = {
     if (!t) { t = { token: 'tv' + uuid().replace(/-/g, '').slice(0, 20), group_id: g }; db.padel_tv_links.push(t); }
     return t.token;
   },
+  padel_tv_code_v2: ({ g }) => {
+    if (!me()?.is_superadmin) throw new Error('TV-skærmen er ikke slået til endnu');
+    db.padel_tv_links ||= []; db.padel_tv_codes ||= [];
+    let t = db.padel_tv_links.find((x) => x.group_id === g);
+    if (!t) { t = { token: 'tv' + uuid().replace(/-/g, '').slice(0, 20), group_id: g }; db.padel_tv_links.push(t); }
+    let c = db.padel_tv_codes.find((x) => x.token === t.token);
+    if (!c) { c = { code: String(1000 + db.padel_tv_codes.length), token: t.token }; db.padel_tv_codes.push(c); }
+    return { code: c.code, token: t.token };
+  },
+  padel_tv_code_lookup_v2: ({ p_code }) => (db.padel_tv_codes || []).find((x) => x.code === p_code)?.token || null,
   padel_tv_v2: ({ p_token }) => {
     const t = (db.padel_tv_links || []).find((x) => x.token === p_token);
     if (!t) return null;

@@ -106,6 +106,10 @@
   @keyframes in { from { opacity:0; transform:scale(.97); } to { opacity:1; transform:none; } }
   .msg { background:var(--card); border-left:.4vw solid var(--acc); border-radius:.8vw; padding:.8vw 1.4vw; font-size:1.6vw; font-weight:700; margin:0 0 1vw; }
   .err { padding:6vw; font-size:2vw; color:var(--mut); }
+  .codescr { grid-column:1/3; grid-row:1/4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1.4vw; text-align:center; }
+  .codescr h1 { font-size:4vw; margin:0; } .codescr p { font-size:1.6vw; color:var(--mut); margin:0; } .codescr p b { color:var(--txt); }
+  .codescr input { font-size:8vw; width:24vw; text-align:center; letter-spacing:.3em; padding:.6vw 1vw; border-radius:1.2vw; border:.3vw solid var(--acc); background:var(--card); color:var(--txt); font-weight:800; font-variant-numeric:tabular-nums; }
+  .codescr .cmsg { color:var(--dn); min-height:2vw; }
 </style>
 </head>
 <body>
@@ -235,9 +239,34 @@ async function load() {
     last = data;
   } catch (e) { if (!last) app.innerHTML = '<div class="err">Kan ikke hente data. Prøver igen …</div>'; }
 }
-load();
-setInterval(load, 10000);
-setInterval(loadLook, 60000);
+// padelklubben.dk/tv uden link: tast den firecifrede kode fra appen med fjernbetjeningen.
+// TV'et husker gruppen bagefter, så næste gang åbner det direkte.
+function codeScreen(msg = '') {
+  app.innerHTML = `<div class="codescr"><div class="kicker">Padelklubben · TV-skærm</div>
+    <h1>Tast koden fra appen</h1>
+    <p>Tryk 📺 på spilledagen i appen. Koden står under <b>TV'ets egen browser</b>.</p>
+    <input id="tvCode" inputmode="numeric" autocomplete="off" maxlength="4" placeholder="····" aria-label="Kode">
+    <p class="cmsg">${esc(msg)}</p></div>`;
+  const inp = document.getElementById('tvCode');
+  inp.focus();
+  inp.addEventListener('input', async () => {
+    inp.value = inp.value.replace(/\D/g, '').slice(0, 4);
+    if (inp.value.length < 4) return;
+    let data = null; try { ({ data } = await sb.rpc('padel_tv_code_lookup_v2', { p_code: inp.value })); } catch {}
+    if (!data) { codeScreen('Koden passer ikke eller er udløbet. Prøv igen.'); return; }
+    try { localStorage.setItem('fp-tv-token', data); } catch {}
+    location.replace('/tv/' + data);
+  });
+}
+let saved = null; try { saved = localStorage.getItem('fp-tv-token'); } catch {}
+if (!token && saved && !new URLSearchParams(location.search).has('ny')) location.replace('/tv/' + saved);
+else if (!token) codeScreen();
+else {
+  try { localStorage.setItem('fp-tv-token', token); } catch {}
+  load();
+  setInterval(load, 10000);
+  setInterval(loadLook, 60000);
+}
 // Ny udgave af TV-skærmen lagt ud? Så genindlæses siden af sig selv (tjekkes hvert 2. minut)
 let ver = null;
 async function checkVersion() {

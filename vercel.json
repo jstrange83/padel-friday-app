@@ -46,6 +46,10 @@
     {
       "source": "/tv/:token",
       "destination": "/tv.html"
+    },
+    {
+      "source": "/tv",
+      "destination": "/tv.html"
     }
   ],
   "redirects": [
