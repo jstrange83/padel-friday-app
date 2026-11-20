@@ -736,7 +736,7 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .court .nettop { stroke: var(--text); stroke-opacity: .9; stroke-width: 2.5; }
 .court .netpost { stroke: var(--text); stroke-opacity: .9; stroke-width: 3; }
 .court .shadow { fill: #000; fill-opacity: .35; }
-.authx .word { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(76px, 26vw, 116px); line-height: .82; letter-spacing: -1px;
+.authx .word { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(48px, 14.5vw, 96px); line-height: .82; letter-spacing: -1px;
   margin: -34px 0 14px; color: var(--accent); position: relative; text-shadow: 0 6px 24px color-mix(in srgb, var(--bg) 70%, transparent); }
 .authx .intro { margin: 0 0 22px; font-size: 17px; line-height: 1.45; color: var(--text); opacity: .85; max-width: 34ch; }
 .authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--card); border-radius: 12px; margin-bottom: 16px; }
@@ -1479,3 +1479,7 @@ svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline
 .logo svg.bat { width: 1em; height: 1em; }
 .tvcode { display: flex; flex-direction: column; gap: 6px; text-align: center; background: var(--card2); border-radius: 12px; padding: 12px; margin: 10px 0; }
 .tvcode .tvcodenum { font-size: 40px; font-weight: 800; letter-spacing: .25em; color: var(--accent); font-variant-numeric: tabular-nums; }
+.authx .word span { color: var(--text); }
+.authx .pitch { list-style: none; padding: 0; margin: -8px 0 20px; display: flex; flex-wrap: wrap; gap: 6px; }
+.authx .pitch li { font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--text); }
+.authx .tvlink { margin-top: 2px; }

@@ -35,7 +35,7 @@ export function renderAuth(mode = 'login') {
     : ji?.kind === 'klub' && ji.audience === 'begge' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto (eller log ind), og meld bagefter dig selv eller dit barn ind.`
     : ji?.kind === 'klub' ? `Du er inviteret til <b>${esc(ji.name)}</b>. Opret en konto som forælder (eller log ind), og meld bagefter dit barn ind.`
     : invited ? 'Du er inviteret med til padel. Opret en konto, eller log ind hvis du har en, så kommer du med i gruppen.'
-    : 'Gør padel til ugens bedste aften. Tilmelding, fair hold, rangliste og fællesskab, samlet ét sted.';
+    : 'Padel-appen til private padelgrupper, klubber, centre og foreninger. Fra vennegruppen og firmaholdet til hele centret.';
   // Forsiden med beskrivelse vises kun på hjemmesiden for nye besøgende (ikke i appen og ikke fra en invitation)
   const landing = !invited && !ji && !window.Capacitor?.isNativePlatform?.();
   // Barnets eget login: ingen e-mail, bare ét tryk, så er barnet logget ind på telefonen
@@ -44,8 +44,9 @@ export function renderAuth(mode = 'login') {
   app.innerHTML = `
   <div class="auth authx" id="top">
     <div class="hero" aria-hidden="true">${court()}</div>
-    <h1 class="word">Padel</h1>
+    <h1 class="word">Padel<span>klubben</span></h1>
     <p class="intro">${intro}</p>
+    ${landing ? `<ul class="pitch"><li>✓ Tilmelding og venteliste</li><li>✓ Fair hold og rangliste</li><li>✓ Resultater live, også på TV</li><li>✓ Træning, bødekasse og betaling</li></ul>` : ''}
     <div class="authtabs" role="tablist">
       <button type="button" role="tab" class="${signup ? '' : 'on'}" aria-selected="${!signup}" ${signup ? 'id="switch"' : ''}>Log ind</button>
       <button type="button" role="tab" class="${signup ? 'on' : ''}" aria-selected="${signup}" ${signup ? '' : 'id="switch"'}>Opret konto</button>
@@ -59,7 +60,7 @@ export function renderAuth(mode = 'login') {
       ${signup ? '' : '<button class="link" type="button" id="forgot">Glemt adgangskode?</button>'}
     </form>
     <p class="center"><button class="link sm" type="button" id="kidCode">🧒 Barn uden e-mail? Log ind med din kode</button></p>
-    ${landing ? '<p class="center lmore"><a class="link sm" href="#hvad">Hvad er Padelklubben? ↓</a></p>' : ''}
+    ${landing ? '<p class="center lmore"><a class="link sm" href="#hvad">Hvad er Padelklubben? ↓</a></p><p class="center tvlink"><a class="link sm" href="/tv">📺 Er det TV\'et i centret? Vis TV-skærmen</a></p>' : ''}
   </div>${landing ? `<div id="hvad">${landingHtml()}</div>` : ''}`;
   if (landing) {
     bindLanding(() => renderAuth('signup'));
@@ -134,7 +135,7 @@ function renderKidLogin(ji) {
   app.innerHTML = `
   <div class="auth authx">
     <div class="hero" aria-hidden="true">${court()}</div>
-    <h1 class="word">Padel</h1>
+    <h1 class="word">Padel<span>klubben</span></h1>
     ${typed ? `<p class="intro">Skriv den kode, du har fået af din forælder. Du finder den også under <b>Min padel → ⚙️ Indstillinger</b>, når du er logget ind.</p>
       <form id="kidForm"><label>Din kode<input name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX" value="${esc(fmtKidCode(saved || ''))}"></label>
       <button class="btn primary big" id="kidGo">🎾 Kom i gang</button></form>`
