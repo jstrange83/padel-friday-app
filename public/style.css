@@ -1475,3 +1475,5 @@ form.enter input.auto { color: var(--accent); }
 .doorcard .doorrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .doorcard .doorcode { font-size: 28px; font-weight: 800; letter-spacing: 2px; font-variant-numeric: tabular-nums; }
 .doorcard .doorrow input { flex: 1 1 140px; min-width: 0; font-size: 18px; }
+svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline-block; }
+.logo svg.bat { width: 1em; height: 1em; }

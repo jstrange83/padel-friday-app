@@ -1,5 +1,6 @@
 // Opstart, login-tilstand, valgt gruppe og navigation mellem skærme.
-import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, viewMode, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage } from './core.js';
+import { sb, S, app, navEl, hooks, q, isAdmin, isSuper, canRun, isClub, viewMode, myGroups, setGroup, group, pendingForMe, hasSuggest, esc, toast, busy, leavePage, setupBat } from './core.js';
+setupBat();
 import { viewTraining, viewPosts, viewClubJoin, loadClubPending, isTreasurer, viewMyKids, hasAnyRight, showClubTodo, askNextTraining } from './views/club.js';
 import { viewPrivacy } from './views/privacy.js';
 import { viewThreads, viewThread, viewCompose } from './views/messages.js';

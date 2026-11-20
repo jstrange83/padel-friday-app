@@ -228,3 +228,25 @@ export function mapsUrl(center) {
     ? `https://maps.apple.com/?q=${encodeURIComponent(qy)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(qy)}`;
 }
+
+// Padelbat som ikon (emojien 🎾 vises som en tennisketsjer på mange telefoner)
+export const BAT = '<svg class="bat" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g transform="rotate(-38 30 30)"><rect x="27" y="40" width="8" height="20" rx="3.5" fill="#cbd5e1"/><rect x="27" y="40" width="8" height="5" fill="#ef4444"/><path d="M31 3c9.4 0 16 6.8 16 16.5 0 9.6-6.2 18.2-12.6 21.3h-6.8C21.2 37.7 15 29.1 15 19.5 15 9.8 21.6 3 31 3z" fill="#2563eb" stroke="#e5e7eb" stroke-width="2.4"/><g fill="#0b1626" opacity=".55"><circle cx="25" cy="14" r="1.7"/><circle cx="31" cy="12" r="1.7"/><circle cx="37" cy="14" r="1.7"/><circle cx="22" cy="20" r="1.7"/><circle cx="28" cy="18.5" r="1.7"/><circle cx="34" cy="18.5" r="1.7"/><circle cx="40" cy="20" r="1.7"/><circle cx="25" cy="25" r="1.7"/><circle cx="31" cy="24" r="1.7"/><circle cx="37" cy="25" r="1.7"/><circle cx="28" cy="30" r="1.7"/><circle cx="34" cy="30" r="1.7"/></g></g><circle cx="49" cy="48" r="7.5" fill="#d4f53c"/><path d="M43.5 44.5c3 1.5 4 5 2.6 9M54.5 51.5c-3-1.5-4-5-2.6-9" fill="none" stroke="#fff" stroke-width="1.4" opacity=".85"/></svg>';
+
+// Skift 🎾 ud med padelbatten overalt på skærmen (også i beskeder og nyheder), når noget bliver vist
+const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'OPTION', 'TITLE', 'INPUT']);
+function batify(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.nodeValue.includes('🎾') && !SKIP.has(n.parentNode?.nodeName) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+  const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+  for (const n of nodes) {
+    const span = document.createElement('span');
+    span.innerHTML = n.nodeValue.split('🎾').map((t) => t.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))).join(BAT);
+    n.replaceWith(...span.childNodes);
+  }
+}
+export function setupBat() {
+  try {
+    batify(document.body);
+    new MutationObserver((ms) => { for (const m of ms) { if (m.type === 'characterData') { if (m.target.nodeValue?.includes('🎾') && m.target.parentNode) batify(m.target.parentNode); } else m.addedNodes.forEach((x) => { if (x.nodeType === 1) batify(x); else if (x.nodeType === 3 && x.nodeValue.includes('🎾') && x.parentNode) batify(x.parentNode); }); } })
+      .observe(document.body, { childList: true, subtree: true, characterData: true });
+  } catch {}
+}
