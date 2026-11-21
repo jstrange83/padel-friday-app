@@ -1002,6 +1002,24 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   ok((await page.locator('#nav').innerText()).includes('Spilledage'), 'ny bruger overtager spilleren og er med i gruppen med det samme');
   const merged = await page.evaluate(() => { const db = JSON.parse(sessionStorage.getItem('mockdb')); return db.padel_profiles.find((p) => p.name === 'Nikolaj Ny' && p.placeholder).merged_into; });
   ok(merged === 'u-nyspiller', 'profilen uden login er koblet til den nye bruger');
+  // Ny bruger fra et link til en spilledag (fx QR-koden på TV'et): beder om at komme med i gruppen
+  { const ev2 = await page.evaluate(() => window.__mock.db().padel_events.find((e) => e.group_id === 'g-fre' && !e.cancelled_at)?.id);
+    await page.evaluate(() => sessionStorage.removeItem('mock-session'));
+    await page.goto('http://localhost:8765/#/fredag/' + ev2);
+    await page.reload();
+    await page.waitForSelector('#authForm');
+    await page.fill('input[name=email]', 'nyqrspiller@test');
+    await page.fill('input[name=password]', 'whatever');
+    await page.click('button[type=submit]');
+    await page.waitForSelector('#pf');
+    await page.fill('#pf input[name=name]', 'Quinn Qr');
+    await page.fill('#pf input[name=phone]', '+45 55667788');
+    await page.click('#pf label:has-text("Kvinde")');
+    await page.click('#pf button.primary');
+    await wait(1500);
+    ok(await page.evaluate(() => { const db = window.__mock.db(); const p = db.padel_profiles.find((x) => x.name === 'Quinn Qr'); return p && db.padel_group_members.some((m) => m.player_id === p.id && m.group_id === 'g-fre' && m.status === 'afventer'); }), 'ny bruger fra et spilledagslink beder automatisk om at komme med i gruppen'); }
+  // (Quinn fjernes igen, så de næste test ikke får godkend-popuppen)
+  await page.evaluate(() => { const db = window.__mock.db(); const p = db.padel_profiles.find((x) => x.name === 'Quinn Qr'); db.padel_group_members.filter((m) => m.player_id === p.id).forEach((m) => (m.status = 'fjernet')); db.padel_notifications.filter((n) => (n.ref || '').includes(p.id)).forEach((n) => { n.done_at = new Date().toISOString(); n.read_at = n.done_at; }); window.__mock.save(); });
 
   // Forslagskasse: superadmin sætter "spørg efter 3 kampe", spilleren får popup, sender forslag og får svar
   await loginAs('jimmy@test');

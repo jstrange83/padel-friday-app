@@ -397,6 +397,11 @@ const RPC = {
   },
   padel_admin_set_phone: ({ p_user, p_phone }) => setPhone(p_user, p_phone),
   padel_group_name: ({ g }) => db.padel_groups.find((x) => x.id === g)?.name,
+  padel_request_join_event_v2: ({ e }) => {
+    const ev = db.padel_events.find((x) => x.id === e); const g = ev && db.padel_groups.find((x) => x.id === ev.group_id);
+    if (!g || g.kind === 'klub') return null;
+    return { group: g.id, status: RPC.padel_request_join({ g: g.id }), name: g.name };
+  },
   padel_request_join: ({ g }) => {
     const m = GM(g, uid());
     if (m?.status === 'aktiv') return 'aktiv';

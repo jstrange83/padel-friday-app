@@ -300,6 +300,11 @@ export const FAQ = [
 <p>Når du har spillet et vist antal kampe, eller i en klub når dit barn har været til et antal træninger (eller du har været med i 3 uger), spørger appen også én gang, om du har et forslag.</p>`,
   },
   {
+    cat: 'Tilmelding og konto', group: true,
+    q: 'Hvordan inviterer jeg nye spillere til gruppen?',
+    a: `<p>Gå til <b>Admin → Spillere</b> og tryk <b>📤 Inviter</b> (eller <b>▦ QR</b>). Linket fører direkte til gruppen. Opretter nogen sig via et link til en spilledag, fx QR-koden på TV'et eller del-knappen på dagen, beder de automatisk om at komme med, og du får en popup med Godkend.</p>`,
+  },
+  {
     cat: 'Tilmelding og konto',
     q: 'Kan jeg selv oprette en padelgruppe?',
     a: `<p>Ja. Gå til <b>Min padel → ➕ Opret en ny padelgruppe</b>, giv gruppen et navn og vælg, hvor I spiller. Du bliver selv admin. Du kan skrive spillerne ind med det samme, ét navn pr. linje. De behøver ikke appen. Mangler jeres center, så skriv til kontakt@padelklubben.dk.</p>`,

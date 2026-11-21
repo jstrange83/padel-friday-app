@@ -79,13 +79,14 @@ function rememberJoin() {
 // (fx Gmail-appens egen), findes linket ikke i den browser, så det hentes fra kontoen i stedet.
 async function restoreJoin() {
   const md = S.session?.user?.user_metadata || {};
-  if (!md.padel_join && !md.padel_claim) return;
+  if (!md.padel_join && !md.padel_claim && !md.padel_next) return;
   try {
+    if (md.padel_next && !localStorage.getItem('fp-next')) localStorage.setItem('fp-next', md.padel_next);
     if (md.padel_claim && !localStorage.getItem('fp-claim')) localStorage.setItem('fp-claim', md.padel_claim);
     else if (md.padel_join && !localStorage.getItem('fp-join') && !localStorage.getItem('fp-claim')) localStorage.setItem('fp-join', md.padel_join);
   } catch {}
-  delete md.padel_join; delete md.padel_claim;
-  try { await sb.auth.updateUser({ data: { padel_join: null, padel_claim: null } }); } catch {}
+  delete md.padel_join; delete md.padel_claim; delete md.padel_next;
+  try { await sb.auth.updateUser({ data: { padel_join: null, padel_claim: null, padel_next: null } }); } catch {}
 }
 // Hvad er man inviteret til (vises på login og velkomst)
 async function loadJoinInfo() {
@@ -143,6 +144,14 @@ async function boot() {
     const joined = await handleJoin();
     let next = null;
     try { next = localStorage.getItem('fp-next'); localStorage.removeItem('fp-next'); } catch {}
+    // Link til en spilledag (del-knap eller QR på TV'et) i en gruppe, man ikke er med i: bed om at komme med
+    const evId = !joined && !S.viewAs && (next || location.hash).match(/^#\/fredag\/([0-9a-f-]{36})/i)?.[1];
+    if (evId) {
+      try {
+        const r = await q(sb.rpc('padel_request_join_event_v2', { e: evId }));
+        if (r?.status === 'afventer') { await loadBase(); toast(`Du har bedt om at komme med i ${r.name}. Du får besked, når en admin har godkendt dig`); }
+      } catch {}
+    }
     if (joined) { /* handleJoin har valgt siden */ }
     else if (next && next !== location.hash) location.hash = next;
     else if (/^#\/(velkommen|barn)/.test(location.hash)) location.hash = '#/fredage';

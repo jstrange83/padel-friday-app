@@ -92,9 +92,9 @@ export function renderAuth(mode = 'login') {
       try { localStorage.setItem('fp-remember', keep ? '1' : '0'); if (keep) localStorage.setItem('fp-email', creds.email); else localStorage.removeItem('fp-email'); } catch {}
       if (!signup) return await q(sb.auth.signInWithPassword(creds));
       // Invitationen gemmes på kontoen, så den virker, selvom mailen åbnes i en anden browser
-      let join = null, claim = null;
-      try { join = localStorage.getItem('fp-join'); claim = localStorage.getItem('fp-claim'); } catch {}
-      const res = await sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin, data: { ...(join ? { padel_join: join } : {}), ...(claim ? { padel_claim: claim } : {}) } } });
+      let join = null, claim = null, next = null;
+      try { join = localStorage.getItem('fp-join'); claim = localStorage.getItem('fp-claim'); next = localStorage.getItem('fp-next'); } catch {}
+      const res = await sb.auth.signUp({ ...creds, options: { emailRedirectTo: location.origin, data: { ...(join ? { padel_join: join } : {}), ...(claim ? { padel_claim: claim } : {}), ...(next ? { padel_next: next } : {}) } } });
       // Mailen har allerede en konto: skift til Log ind med mailen udfyldt
       if (res.error && /already (been )?registered|already exists/i.test(res.error.message || '')) {
         renderAuth('login');
