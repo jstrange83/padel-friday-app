@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-21b', date: '21. november 2026', admin: true, title: 'Godkend nye spillere med ét tryk',
+    items: ['👋 Når nogen vil være med i en af dine grupper, kommer der en popup, når du åbner appen, med <b>Godkend</b> og <b>Afvis</b> direkte. Trykker du på beskeden "X vil gerne være med", åbner popuppen med det samme. Trykker du <b>Senere</b>, kommer den igen, næste gang du åbner appen.'],
+  },
+  {
     id: '2026-11-21', date: '21. november 2026', title: 'Opret din egen padelgruppe, også med gæster',
     items: ['➕ Alle kan nu oprette deres egen private padelgruppe under <b>Min padel → Opret en ny padelgruppe</b>. Du bliver selv admin.', '👥 Spillerne kan du bare skrive ind med navn. De behøver ikke appen: du tilmelder dem, laver hold og taster resultaterne. På spilledagen kan du også skrive et navn, appen ikke kender, og trykke <b>➕ som gæst</b>.'],
   },

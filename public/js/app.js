@@ -10,6 +10,7 @@ import { viewRanking, viewPlayer } from './views/ranking.js';
 import { viewEvents, viewEventForm, askOpenSpots } from './views/events.js';
 import { viewEvent } from './views/event.js';
 import { viewNewGroup } from './views/newgroup.js';
+import { askPending } from './views/pending.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
@@ -164,6 +165,8 @@ async function gates() {
   await route();
   // Én gang pr. åbning: spørg om forslag, når spilleren har spillet nok kampe
   // "Nyt i appen" først; ellers evt. spørgsmål om forslag (aldrig to popups på én gang)
+  // Admins: nye spillere, der venter på godkendelse (vises igen, hvis der kommer nye)
+  if (!S.viewAs && askPending()) return;
   if (!S.viewAs && !S.newsChecked) { S.newsChecked = true; if (maybeShowNews()) return; }
   // Trænere: nye børn eller børn uden hold, når appen åbnes
   if (!S.viewAs && !S.todoChecked) { S.todoChecked = true; if (showClubTodo()) return; }
@@ -293,6 +296,8 @@ const ROUTES = {
   samtale: (id) => viewThread(id),
   'ny-besked': () => viewCompose(),
   'ny-gruppe': () => viewNewGroup(),
+  // Fra beskeden "X vil gerne være med": spilledagene med godkend-popup ovenpå
+  godkend: async () => { await viewEvents(); if (!askPending(true)) location.hash = '#/admin'; },
 };
 // Sider der ikke findes i en klub (spilledage, rangliste, bøder) viser Træning
 const NOT_IN_CLUB = ['fredage', 'fredag', 'ny-fredag', 'ret-fredag', 'rangliste', 'spiller', 'boeder'];

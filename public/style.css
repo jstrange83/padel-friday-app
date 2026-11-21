@@ -1486,3 +1486,7 @@ svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline
 .guestadd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
 .guestsbox { margin-top: 10px; } .guestsbox summary { cursor: pointer; list-style: none; }
 .newgrp .checks { margin-bottom: 8px; }
+.pendcard .pendlist { display: flex; flex-direction: column; gap: 8px; margin: 10px 0 14px; max-height: 50vh; overflow: auto; text-align: left; }
+.pendrow { display: flex; align-items: center; gap: 10px; background: var(--card2); border-radius: 12px; padding: 10px 12px; flex-wrap: wrap; }
+.pendrow .grow { min-width: 0; flex: 1 1 140px; } .pendrow small { display: block; }
+.pendrow .mact { margin: 0; }

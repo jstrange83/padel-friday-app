@@ -714,7 +714,13 @@ try {
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
   await page.waitForSelector('#nav a:has-text("Admin")');
+  // Popup ved åbning: ny spiller venter på godkendelse, med Godkend/Afvis direkte
+  await page.waitForSelector('#pendModal');
+  ok((await page.locator('#pendModal').innerText()).includes('Test Anne') && await page.locator('#pendModal [data-pyes]').count() === 1, 'admin får en popup, når en ny spiller vil være med');
+  await shot('godkend-popup');
+  await page.click('#pendLater');
   await page.click('#nav a:has-text("Spilledage")');
+  ok(!(await page.locator('#pendModal').count()), 'popuppen kommer ikke igen efter Senere');
   await page.waitForSelector('.approvals [data-pok]');
   ok((await page.locator('#nav a:has-text("Admin") .navbadge').innerText()) === '1', 'Admin i menuen viser 1, der venter');
   ok((await page.locator('.approvals').innerText()).includes('Test Anne'), 'Spilledage viser, at Anne vil være med');
@@ -2540,6 +2546,16 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
     await page.locator('#addHits [data-guest="mand"]').click();
     await wait(800);
     ok(await page.evaluate(() => { const db = window.__mock.db(); const p = db.padel_profiles.find((x) => x.name === 'Bent Besøg'); return p && db.padel_signups.some((s) => s.event_id === 'ev-venne' && s.player_id === p.id); }), 'en gæst tilføjes og tilmeldes direkte fra spilledagen'); }
+  // Godkend direkte fra popuppen (fx når man trykker på beskeden "X vil gerne være med")
+  { const gid = await page.evaluate(() => { const db = window.__mock.db(); const g = db.padel_groups.find((x) => x.name === 'Vennepadel'); const p = db.padel_profiles.find((x) => x.name === 'Gæst Gerda');
+      db.padel_group_members.push({ group_id: g.id, player_id: p.id, role: 'bruger', status: 'afventer', elo: 1000 }); window.__mock.save(); return g.id; });
+    await page.goto('http://localhost:8765/#/fredage'); await page.reload();
+    await page.waitForSelector('#nav a');
+    await page.goto('http://localhost:8765/#/godkend');
+    await page.waitForSelector('#pendModal [data-pyes]');
+    await page.locator('#pendModal [data-pyes]').first().click();
+    await wait(800);
+    ok(await page.evaluate((g) => window.__mock.db().padel_group_members.find((m) => m.group_id === g && m.status === 'afventer') === undefined, gid), 'admin godkender en ny spiller direkte i popuppen'); }
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {
