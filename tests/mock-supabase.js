@@ -366,6 +366,35 @@ const RPC = {
     db.padel_group_members.push({ group_id: g, player_id: id, role: 'bruger', status: 'aktiv', elo: 1000 });
     return id;
   },
+  padel_admin_create_player_v2: ({ g, p_name, p_phone, p_gender, p_side }) => {
+    if (!(me()?.is_superadmin || GM(g, uid())?.role === 'admin')) throw new Error('Kun gruppens admin kan oprette spillere');
+    if (!['mand', 'kvinde'].includes(p_gender)) throw new Error('Vælg køn');
+    const ph = p_phone ? cleanPhone(p_phone) : null;
+    if (ph && db.padel_contacts.some((c) => c.phone === ph && !db.padel_profiles.find((p) => p.id === c.player_id)?.merged_into)) throw new Error('Der er allerede en spiller med det telefonnummer. Send dem en invitation i stedet.');
+    const id = 'u-ph-' + uuid().slice(0, 8);
+    db.padel_profiles.push({ id, name: p_name.trim(), gender: p_gender, side: p_side || 'begge', elo: 1000, is_admin: false, role: 'bruger', placeholder: true });
+    if (ph) db.padel_contacts.push({ player_id: id, phone: ph });
+    db.padel_group_members.push({ group_id: g, player_id: id, role: 'bruger', status: 'aktiv', elo: 1000 });
+    return id;
+  },
+  padel_add_guests_v2: ({ g, p_names, p_gender, p_event }) => {
+    const added = [], reused = [];
+    for (const raw of p_names || []) {
+      const n = raw.trim().replace(/\s+/g, ' '); if (!n) continue;
+      let p = db.padel_profiles.find((x) => x.name.toLowerCase() === n.toLowerCase() && GM(g, x.id)?.status === 'aktiv');
+      if (!p) { const id = RPC.padel_admin_create_player_v2({ g, p_name: n, p_phone: null, p_gender: p_gender || 'mand', p_side: 'begge' }); p = db.padel_profiles.find((x) => x.id === id); added.push(n); } else reused.push(n);
+      if (p_event && !db.padel_signups.some((s) => s.event_id === p_event && s.player_id === p.id)) db.padel_signups.push({ event_id: p_event, player_id: p.id, created_at: now() });
+    }
+    return { added, reused };
+  },
+  padel_create_own_group_v2: ({ p_name, p_centers }) => {
+    if (!p_centers?.length) throw new Error('Vælg mindst ét center');
+    const id = 'g-' + uuid().slice(0, 8);
+    db.padel_groups.push({ id, name: p_name.trim(), kind: 'gruppe', ranking_mode: 'gruppe', created_by: uid() });
+    p_centers.forEach((c) => db.padel_group_centers.push({ group_id: id, center_id: c }));
+    db.padel_group_members.push({ group_id: id, player_id: uid(), role: 'admin', status: 'aktiv', elo: 1000 });
+    return id;
+  },
   padel_admin_set_phone: ({ p_user, p_phone }) => setPhone(p_user, p_phone),
   padel_group_name: ({ g }) => db.padel_groups.find((x) => x.id === g)?.name,
   padel_request_join: ({ g }) => {

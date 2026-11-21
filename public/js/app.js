@@ -9,6 +9,7 @@ import { renderProfile, renderSettings, renderMonth } from './views/profile.js';
 import { viewRanking, viewPlayer } from './views/ranking.js';
 import { viewEvents, viewEventForm, askOpenSpots } from './views/events.js';
 import { viewEvent } from './views/event.js';
+import { viewNewGroup } from './views/newgroup.js';
 import { viewAdmin } from './views/admin.js';
 import { viewFaq } from './views/faq.js';
 import { viewFines, newFines, renderFineGate } from './views/fines.js';
@@ -259,6 +260,7 @@ async function viewNoGroup() {
       ? `<p>Du har bedt om at komme med i <b>${mine.filter((m) => m.status === 'afventer').map((m) => esc(nameOfGroup(m.group_id))).join(', ')}</b>.</p>
          <p class="muted">Når en admin har godkendt dig, kan du se fredagene og tilmelde dig. Kig forbi igen senere.</p>`
       : '<p class="muted">Du er ikke med i en gruppe endnu. Har du fået et invitationslink, så tryk på det igen. Ellers bed en admin om et link til jeres gruppe.</p>'}
+    <a class="btn primary" href="#/ny-gruppe">➕ Opret din egen padelgruppe</a>
     <button class="btn" id="reload">Tjek igen</button>
     <a class="btn ghost" href="#/profil">Min profil</a>
   </div>`;
@@ -290,6 +292,7 @@ const ROUTES = {
   samtaler: () => viewThreads(),
   samtale: (id) => viewThread(id),
   'ny-besked': () => viewCompose(),
+  'ny-gruppe': () => viewNewGroup(),
 };
 // Sider der ikke findes i en klub (spilledage, rangliste, bøder) viser Træning
 const NOT_IN_CLUB = ['fredage', 'fredag', 'ny-fredag', 'ret-fredag', 'rangliste', 'spiller', 'boeder'];
@@ -299,7 +302,7 @@ async function route() {
   window.scrollTo(0, 0);
   let [, page, id] = (location.hash || '#/fredage').split('?')[0].split('/');
   renderNav();
-  if (!S.groupId && !['profil', 'indstillinger', 'faq', 'admin', 'klub-ind', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern', 'samtaler', 'samtale'].includes(page)) return viewNoGroup();
+  if (!S.groupId && !['profil', 'indstillinger', 'faq', 'admin', 'klub-ind', 'ny-gruppe', 'beskeder', 'nyt', 'udseende', 'privatliv', 'boern', 'samtaler', 'samtale'].includes(page)) return viewNoGroup();
   if (isClub() && (!page || NOT_IN_CLUB.includes(page))) page = 'traening';
   try { await (ROUTES[page] || ROUTES.fredage)(id); } catch (e) { console.error(e); }
   renderNav();

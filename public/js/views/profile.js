@@ -78,6 +78,7 @@ export async function renderMyPadel() {
       ${!viewing ? '<a class="row" href="#" id="calRow"><span class="grow">📅 Padel i min kalender</span><span class="muted">›</span></a>' : ''}
       ${hasSuggest() ? '<a class="row" href="#/forslag" id="sugRow"><span class="grow">💡 Forslagskasse</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/nyt"><span class="grow">🆕 Nyt og på vej</span><span class="muted">›</span></a>
+      ${!viewing ? '<a class="row" href="#/ny-gruppe" id="newGroupRow"><span class="grow">➕ Opret en ny padelgruppe</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/faq"><span class="grow">❓ Spørgsmål og svar</span><span class="muted">›</span></a>
     </div>`;
   const tip = nameCard() + (!phone ? `<a class="card warnbox" href="#/indstillinger">📱 ${viewing ? 'Spilleren mangler et telefonnummer ›' : 'Tilføj dit telefonnummer, så admin kan få fat i dig ›'}</a>` : '');

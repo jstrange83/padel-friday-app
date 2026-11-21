@@ -129,13 +129,17 @@ const noLoginNote = (p) => (p.placeholder ? '<p class="muted small">Har ikke opr
 function createPlayerBox() {
   return `<div class="card newplayer" ${S.newPlayerOpen ? '' : 'hidden'}><b>➕ Opret spiller</b>
     <form id="newPlayer">
-      <p class="muted small">Til en spiller, der ikke har oprettet sig selv. Spilleren kan med det samme tilmeldes og sættes på hold. Når de senere opretter sig med samme telefonnummer, overtager de profilen med kampe og point.</p>
+      <p class="muted small">Til en spiller eller gæst, der ikke har appen. Spilleren kan med det samme tilmeldes og sættes på hold, og du taster resultaterne. Skriver du telefonnummeret, kan de senere selv oprette sig og overtage profilen med kampe og point.</p>
       <label>Navn<input name="name" required maxlength="60" autocomplete="off"></label>
-      <label>Telefonnummer<input name="phone" type="tel" inputmode="tel" required placeholder="Fx 12 34 56 78" autocomplete="off"></label>
+      <label>Telefonnummer <small class="muted">(valgfrit)</small><input name="phone" type="tel" inputmode="tel" placeholder="Fx 12 34 56 78" autocomplete="off"></label>
       <div class="lbl">Køn</div>${radios('npgender', GENDER, '')}
       <div class="lbl">Foretrukken side</div>${radios('npside', SIDE, 'begge')}
       <div class="mact"><button type="button" class="btn sm ghost" id="newPlayerClose">Luk</button><button class="btn sm primary">Opret spiller</button></div>
-    </form></div>`;
+    </form>
+    <details class="guestsbox"><summary class="link sm">👥 Flere på én gang (kun navne)</summary>
+      <form id="addGuests"><label>Navne <small class="muted">(ét pr. linje)</small><textarea name="names" rows="4" placeholder="Mikkel&#10;Rasmus&#10;Sara"></textarea></label>
+        <div class="lbl">Køn</div>${radios('ggender', GENDER, 'mand')}
+        <div class="mact"><button class="btn sm primary">Tilføj spillerne</button></div></form></details></div>`;
 }
 
 function allPlayers() {
@@ -427,6 +431,19 @@ function bind() {
     gmem.addEventListener('click', keep, true);
     gmem.addEventListener('change', keep, true);
   }
+  const ag = document.getElementById('addGuests');
+  if (ag) ag.onsubmit = async (e) => {
+    e.preventDefault();
+    const names = ag.names.value.split(/\r?\n|,/).map((x) => x.trim()).filter(Boolean);
+    if (!names.length) return toast('Skriv mindst ét navn', true);
+    const btn = ag.querySelector('button.primary'); busy(btn, true);
+    try {
+      const r = await q(sb.rpc('padel_add_guests_v2', { g, p_names: names, p_gender: ag.ggender.value, p_event: null }));
+      toast(`${r.added.length} ${r.added.length === 1 ? 'spiller' : 'spillere'} tilføjet${r.reused.length ? ` (${r.reused.length} fandtes allerede)` : ''}`);
+      S.newPlayerOpen = false;
+      await refresh();
+    } catch { busy(btn, false); }
+  };
   const npb = document.getElementById('newPlayerBtn');
   if (npb) npb.onclick = () => { S.newPlayerOpen = true; np.closest('.newplayer').hidden = false; np.elements.name.focus(); };
   if (np) {
@@ -436,7 +453,7 @@ function bind() {
       const btn = np.querySelector('button.primary');
       busy(btn, true);
       try {
-        await q(sb.rpc('padel_admin_create_player', { g, p_name: np.elements.name.value, p_phone: np.phone.value, p_gender: np.npgender.value, p_side: np.npside.value }));
+        await q(sb.rpc('padel_admin_create_player_v2', { g, p_name: np.elements.name.value, p_phone: np.phone.value, p_gender: np.npgender.value, p_side: np.npside.value }));
         toast(`${np.elements.name.value.trim()} er oprettet`);
         S.newPlayerOpen = false;
         await refresh();

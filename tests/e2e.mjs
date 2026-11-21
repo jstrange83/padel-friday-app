@@ -145,7 +145,11 @@ try {
   await page.click('#importGo');
   await page.waitForSelector('#importRes .warnc');
   { const r = await page.locator('#importRes').innerText(); ok(r.includes('Test Eva') && r.includes('Test Freja') && r.includes('Ukendt Person'), 'indsat liste tilmelder kendte spillere og viser dem, appen ikke kender'); }
+  { const n = await page.locator('#importRes [data-guests]').count(); ok(n === 2, 'navne, appen ikke kender, kan tilføjes som gæster: ' + n + ' ' + (await page.locator('#importRes').innerHTML()).slice(0, 300)); }
   await shot('indsaet-liste');
+  await page.fill('#addSearch', 'Bent Besøg');
+  ok(await page.locator('#addHits [data-guest]').count() === 2, 'et ukendt navn kan tilføjes som gæst direkte fra spilledagen');
+  await page.fill('#addSearch', '');
   ok((await text()).includes('2 baner klar · 1 på venteliste'), 'venteliste ved 9 tilmeldte');
   await shot('tilmeldte');
 
@@ -960,6 +964,13 @@ try {
 await page.waitForSelector('details.plist'); await page.evaluate(() => document.querySelectorAll('details.plist').forEach((d) => (d.open = true)));
     ok((await page.locator('#players').innerText()).includes('Nikolaj Ny') && (await page.locator('.prow', { hasText: 'Nikolaj Ny' }).innerText()).includes('Uden login'), 'admin opretter spiller uden login');
   await shot('opret-spiller');
+  // Flere spillere på én gang med kun navne (gæster uden app)
+  await page.click('#newPlayerBtn');
+  await page.locator('.guestsbox summary').click();
+  await page.fill('#addGuests textarea[name=names]', 'Gæst Gustav\nGæst Gerda');
+  await page.click('#addGuests button.primary');
+  await wait(600);
+  ok(await page.evaluate(() => ['Gæst Gustav', 'Gæst Gerda'].every((n) => window.__mock.db().padel_profiles.some((p) => p.name === n && p.placeholder))), 'admin tilføjer flere spillere med kun navne');
   await page.goto(evUrl);
   await page.waitForSelector('.page.event');
   if (await page.locator('#addSearch').count()) {
@@ -2510,6 +2521,25 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await wait(600);
   ok(page.url().includes('#/fredage'), 'swipe mod højre går tilbage til forrige side: ' + page.url());
 
+  // Alle kan oprette deres egen private padelgruppe og skrive spillerne ind med navn
+  await loginAs('jimmy@test');
+  await page.goto('http://localhost:8765/#/ny-gruppe');
+  await page.waitForSelector('#ownGroup');
+  await page.fill('#ownGroup input[name=name]', 'Vennepadel');
+  await page.locator('#ownGroup .checks label').first().click();
+  await page.fill('#ownGroup textarea[name=names]', 'Ven Viggo\nVen Villy\nVen Vagn');
+  await page.click('#ownGroup button.primary');
+  await wait(1200);
+  ok(await page.evaluate(() => { const db = window.__mock.db(); const g = db.padel_groups.find((x) => x.name === 'Vennepadel'); return g && db.padel_group_members.filter((m) => m.group_id === g.id).length === 4 && db.padel_group_members.some((m) => m.group_id === g.id && m.role === 'admin'); }), 'en bruger opretter sin egen gruppe, bliver admin og har 3 gæster med');
+  { const eid = await page.evaluate(() => { const db = window.__mock.db(); const g = db.padel_groups.find((x) => x.name === 'Vennepadel'); const c = db.padel_group_centers.find((x) => x.group_id === g.id).center_id;
+      const tpl = db.padel_events[0]; const e = { ...tpl, id: 'ev-venne', group_id: g.id, center_id: c, status: 'planlagt', current_round: 0, cancelled_at: null, starts_at: new Date(Date.now() + 864e5).toISOString(), court_ids: db.padel_courts.filter((k) => k.center_id === c).map((k) => k.id).slice(0, 1) };
+      db.padel_events.push(e); window.__mock.save(); return e.id; });
+    await page.goto('http://localhost:8765/#/fredag/' + eid);
+    await page.waitForSelector('#addSearch');
+    await page.fill('#addSearch', 'Bent Besøg');
+    await page.locator('#addHits [data-guest="mand"]').click();
+    await wait(800);
+    ok(await page.evaluate(() => { const db = window.__mock.db(); const p = db.padel_profiles.find((x) => x.name === 'Bent Besøg'); return p && db.padel_signups.some((s) => s.event_id === 'ev-venne' && s.player_id === p.id); }), 'en gæst tilføjes og tilmeldes direkte fra spilledagen'); }
   ok(!errors.length, 'ingen JavaScript-fejl: ' + errors.join(' | '));
   console.log('\nALLE TEST OK');
 } catch (e) {

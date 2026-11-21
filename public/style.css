@@ -1483,3 +1483,6 @@ svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline
 .authx .pitch { list-style: none; padding: 0; margin: -8px 0 20px; display: flex; flex-wrap: wrap; gap: 6px; }
 .authx .pitch li { font-size: 13px; font-weight: 600; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; color: var(--text); }
 .authx .tvlink { margin-top: 2px; }
+.guestadd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.guestsbox { margin-top: 10px; } .guestsbox summary { cursor: pointer; list-style: none; }
+.newgrp .checks { margin-bottom: 8px; }

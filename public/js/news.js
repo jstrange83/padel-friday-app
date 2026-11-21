@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-21', date: '21. november 2026', title: 'Opret din egen padelgruppe, også med gæster',
+    items: ['➕ Alle kan nu oprette deres egen private padelgruppe under <b>Min padel → Opret en ny padelgruppe</b>. Du bliver selv admin.', '👥 Spillerne kan du bare skrive ind med navn. De behøver ikke appen: du tilmelder dem, laver hold og taster resultaterne. På spilledagen kan du også skrive et navn, appen ikke kender, og trykke <b>➕ som gæst</b>.'],
+  },
+  {
     id: '2026-11-20c', date: '20. november 2026', admin: true, title: 'TV-skærmen på Samsung TV og andre smart-TV',
     items: ['📺 Har TV\'et ikke Chromecast, så åbn TV\'ets egen browser (fx <b>Internet</b> på Samsung), gå til <b>padelklubben.dk/tv</b> og tast den firecifrede kode, som står, når du trykker 📺 på spilledagen. TV\'et viser altid gruppens spilledag i dag og husker gruppen til næste gang.'],
   },

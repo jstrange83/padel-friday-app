@@ -719,7 +719,16 @@ function bind(c) {
   });
   if (S.importResult && $('importRes')) {
     const r = S.importResult;
-    $('importRes').innerHTML = `${r.added.length ? `<p class="ok small">✓ Tilmeldt: ${r.added.map(esc).join(', ')}</p>` : ''}${r.already.length ? `<p class="muted small">Var allerede tilmeldt: ${r.already.map(esc).join(', ')}</p>` : ''}${r.missing.length ? `<p class="warnc small">Ikke fundet i appen (${r.missing.length}): ${r.missing.map(esc).join(', ')}. Send dem invitationslinket, eller opret dem under Admin → Spillere.</p>` : ''}`;
+    $('importRes').innerHTML = `${r.added.length ? `<p class="ok small">✓ Tilmeldt: ${r.added.map(esc).join(', ')}</p>` : ''}${r.already.length ? `<p class="muted small">Var allerede tilmeldt: ${r.already.map(esc).join(', ')}</p>` : ''}${r.missing.length ? `<p class="warnc small">Ikke fundet i appen (${r.missing.length}): ${r.missing.map(esc).join(', ')}.</p>
+      ${run ? `<div class="mact"><button class="btn sm primary" data-guests="mand">➕ Gæster ♂</button><button class="btn sm" data-guests="kvinde">➕ Gæster ♀</button></div><p class="muted small">Gæster behøver ikke appen. Du tilmelder dem og taster resultaterne.</p>` : '<p class="muted small">Send dem invitationslinket.</p>'}` : ''}`;
+    $('importRes').querySelectorAll('[data-guests]').forEach((b) => (b.onclick = async () => {
+      busy(b, true);
+      try {
+        const g2 = await q(sb.rpc('padel_add_guests_v2', { g: ev.group_id, p_names: r.missing, p_gender: b.dataset.guests, p_event: ev.id }));
+        toast(`${g2.added.length + g2.reused.length} tilføjet og tilmeldt`);
+        await hooks.loadBase(); await reload();
+      } catch { busy(b, false); }
+    }));
     S.importResult = null;
   }
   // Søg og tilmeld en spiller fra gruppen
@@ -729,8 +738,21 @@ function bind(c) {
     const draw = () => {
       const t = search.value.trim().toLowerCase();
       const hits = t ? others.filter((p) => p.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(t)) || p.name.toLowerCase().includes(t)).slice(0, 8) : [];
-      $('addHits').innerHTML = hits.map((p) => `<button class="hit" data-add="${p.id}">${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em></button>`).join('')
-        || (t ? '<p class="muted small">Ingen i gruppen matcher.</p>' : '');
+      const raw = search.value.trim();
+      // Ingen i gruppen med det navn: tilføj som gæst (uden app) og tilmeld med det samme
+      const guest = run && raw.length >= 2 && !hits.some((p) => p.name.toLowerCase() === raw.toLowerCase())
+        ? `<div class="guestadd"><span class="muted small">Ikke i appen?</span><button class="hit" data-guest="mand">➕ ${esc(raw)} som gæst ♂</button><button class="hit" data-guest="kvinde">➕ ${esc(raw)} som gæst ♀</button></div>` : '';
+      $('addHits').innerHTML = (hits.map((p) => `<button class="hit" data-add="${p.id}">${esc(p.name)}<em>${SIDE_SHORT[p.side] || ''}</em></button>`).join('')
+        || (t && !guest ? '<p class="muted small">Ingen i gruppen matcher.</p>' : '')) + guest;
+      $('addHits').querySelectorAll('[data-guest]').forEach((b) => (b.onclick = async () => {
+        busy(b, true);
+        try {
+          await q(sb.rpc('padel_add_guests_v2', { g: ev.group_id, p_names: [raw], p_gender: b.dataset.guest, p_event: ev.id }));
+          toast(`${raw} er tilføjet som gæst og tilmeldt`);
+          await hooks.loadBase(); await reload();
+          $('addSearch')?.focus();
+        } catch { busy(b, false); }
+      }));
       $('addHits').querySelectorAll('[data-add]').forEach((b) => (b.onclick = async () => {
         busy(b, true);
         try {

@@ -300,9 +300,19 @@ export const FAQ = [
 <p>Når du har spillet et vist antal kampe, eller i en klub når dit barn har været til et antal træninger (eller du har været med i 3 uger), spørger appen også én gang, om du har et forslag.</p>`,
   },
   {
+    cat: 'Tilmelding og konto',
+    q: 'Kan jeg selv oprette en padelgruppe?',
+    a: `<p>Ja. Gå til <b>Min padel → ➕ Opret en ny padelgruppe</b>, giv gruppen et navn og vælg, hvor I spiller. Du bliver selv admin. Du kan skrive spillerne ind med det samme, ét navn pr. linje. De behøver ikke appen. Mangler jeres center, så skriv til kontakt@padelklubben.dk.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto', group: true,
+    q: 'Kan vi have gæster med, der ikke har appen?',
+    a: `<p>Ja. Skriv navnet i <b>Tilmeld en spiller</b> på spilledagen, og tryk <b>➕ som gæst</b>. Så er gæsten tilmeldt og kommer med på hold. Du kan også tilføje flere på én gang under <b>Admin → Spillere → ➕ Opret → Flere på én gang</b>, eller indsætte en liste og trykke <b>➕ Gæster</b> ved dem, appen ikke kender. Resultaterne taster du eller en anden fra gruppen.</p>`,
+  },
+  {
     cat: 'Tilmelding og konto', group: true,
     q: 'Kan admin oprette en spiller, der ikke selv har oprettet sig?',
-    a: `<p>Ja. Under <b>Admin → Spillere</b> kan gruppens admin trykke <b>Opret spiller</b> og skrive navn, telefonnummer, køn og side. Spilleren er med i gruppen med det samme, kan tilmeldes spilledage, sættes på hold og få point. Der står "Uden login" ved navnet.</p>
+    a: `<p>Ja. Under <b>Admin → Spillere</b> kan gruppens admin trykke <b>Opret spiller</b> og skrive navn, køn og side. Telefonnummer er valgfrit. Spilleren er med i gruppen med det samme, kan tilmeldes spilledage, sættes på hold og få point. Der står "Uden login" ved navnet.</p>
 <p>Når spilleren senere selv opretter sig med <b>samme telefonnummer</b>, overtager de profilen med alle kampe, point, grupper og bøder.</p>`,
   },
   {
