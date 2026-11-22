@@ -736,7 +736,7 @@ details.plist[open] > summary::after, details.gset[open] > summary::after, detai
 .court .nettop { stroke: var(--text); stroke-opacity: .9; stroke-width: 2.5; }
 .court .netpost { stroke: var(--text); stroke-opacity: .9; stroke-width: 3; }
 .court .shadow { fill: #000; fill-opacity: .35; }
-.authx .word { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(48px, 14.5vw, 96px); line-height: .82; letter-spacing: -1px;
+.authx .word { font-family: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif; font-weight: 900; font-size: clamp(48px, 14.5vw, 64px); line-height: .82; letter-spacing: -1px;
   margin: -34px 0 14px; color: var(--accent); position: relative; text-shadow: 0 6px 24px color-mix(in srgb, var(--bg) 70%, transparent); }
 .authx .intro { margin: 0 0 22px; font-size: 17px; line-height: 1.45; color: var(--text); opacity: .85; max-width: 34ch; }
 .authtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--card); border-radius: 12px; margin-bottom: 16px; }
@@ -975,6 +975,7 @@ details.people { display: block; }
   .authx { max-width: 1080px; display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 64px; align-items: center; padding-top: 80px; }
   .authx .hero { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
   .authx > :not(.hero) { grid-column: 2; }
+  .authx .word { font-size: clamp(64px, 6.5vw, 96px); }
 }
 @media (min-width: 1500px) {
   .page.wide, .page.events, .page.admin, .page.profile, .page.fines { max-width: 1440px; }

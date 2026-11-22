@@ -5,12 +5,12 @@ const UA = navigator.userAgent || '';
 const isIOS = /iPhone|iPad|iPod/.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const inAppBrowser = /FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\/|Snapchat|TikTok|LinkedInApp/.test(UA);
 const iosNonSafari = isIOS && /CriOS|FxiOS|EdgiOS|OPiOS/.test(UA);
-export const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+export const isStandalone = () => !!window.Capacitor?.isNativePlatform?.() || window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
 let deferred = null;
 let onChange = () => {};
 
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; onChange(); });
-window.addEventListener('appinstalled', () => { deferred = null; skip(365); toast('Padel er lagt på hjemmeskærmen'); onChange(); });
+window.addEventListener('appinstalled', () => { deferred = null; skip(365); toast('Padelklubben er lagt på hjemmeskærmen'); onChange(); });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
 // Hvordan kan man installere her? null = allerede installeret eller ikke muligt
@@ -46,12 +46,12 @@ export function renderInstall(done) {
       <button class="btn primary gbig" id="doInstall">Læg på hjemmeskærmen</button>`;
   } else if (how === 'ios') {
     lead = 'Det tager 10 sekunder. Gør sådan her:';
-    body = `<div class="gsteps">${step(1, `Tryk på <span class="gpill">${SHARE} Del</span> i Safari`)}${step(2, `Vælg <span class="gpill">${PLUS} Føj til hjemmeskærm</span>`)}${step(3, 'Tryk <b>Tilføj</b>, og åbn Padel fra hjemmeskærmen')}</div>
+    body = `<div class="gsteps">${step(1, `Tryk på <span class="gpill">${SHARE} Del</span> i Safari`)}${step(2, `Vælg <span class="gpill">${PLUS} Føj til hjemmeskærm</span>`)}${step(3, 'Tryk <b>Tilføj</b>, og åbn Padelklubben fra hjemmeskærmen')}</div>
       ${kidCode() ? `<div class="kidcodebox"><small>Første gang du åbner den fra hjemmeskærmen, trykker du <b>Barn uden e-mail? Log ind med din kode</b> og skriver:</small><b>${kidCode()}</b><button class="btn sm" id="copyKid">Kopiér koden</button></div>`
         : '<p class="muted small">Første gang du åbner den fra hjemmeskærmen, skal du logge ind igen.</p>'}`;
   } else if (how === 'ios-other' || how === 'inapp') {
     lead = 'Det kan ikke lade sig gøre herfra. Gør sådan her:';
-    body = `<div class="gsteps">${step(1, how === 'inapp' ? `Tryk på <b>•••</b> eller "Åbn i browser" og vælg <b>${isIOS ? 'Safari' : 'Chrome'}</b>` : 'Åbn linket i <b>Safari</b>')}${step(2, 'Læg Padel på hjemmeskærmen derfra')}</div>
+    body = `<div class="gsteps">${step(1, how === 'inapp' ? `Tryk på <b>•••</b> eller "Åbn i browser" og vælg <b>${isIOS ? 'Safari' : 'Chrome'}</b>` : 'Åbn linket i <b>Safari</b>')}${step(2, 'Læg Padelklubben på hjemmeskærmen derfra')}</div>
       <button class="btn" id="copyLink">Kopiér linket</button>`;
   } else {
     lead = 'Åbn appen i Chrome eller Safari på din telefon, og vælg "Føj til hjemmeskærm" i menuen.';
@@ -59,7 +59,7 @@ export function renderInstall(done) {
   app.innerHTML = `
   <div class="gate">
     <div class="gtop"><button class="gskip" id="skipInstall">Spring over</button>
-      <img src="icon-180.png" alt="" class="gicon"><h1>Læg Padel på din hjemmeskærm</h1><p>${lead}</p></div>
+      <img src="icon-180.png" alt="" class="gicon"><h1>Læg Padelklubben på din hjemmeskærm</h1><p>${lead}</p></div>
     <div class="gbody">${body}</div>
   </div>`;
   document.getElementById('skipInstall').onclick = () => { skip(14); done(); };
