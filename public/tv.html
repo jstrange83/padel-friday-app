@@ -191,12 +191,13 @@ function render(d) {
       <p class="cta">Tilmeld dig i Padelklubben-appen. Scan koden for at åbne den.</p></div>`;
   }
   const sp = (look?.sponsors || []).filter((x) => x?.name);
-  const qrUrl = ev ? `${APPURL}/#/fredag/${ev.id}` : d.next?.id ? `${APPURL}/#/fredag/${d.next.id}` : APPURL;
+  // QR-koden er gruppens invitationslink: nye beder om at komme med, og dem der er med, lander på spilledagene
+  const qrUrl = d.group_id ? `${APPURL}/#/velkommen/${d.group_id}` : APPURL;
   app.innerHTML = `<header><div><div class="kicker">${esc(d.group)}</div><h1>${esc(day(d.now, { weekday: 'long', day: 'numeric', month: 'long' }))}</h1>
       <div class="sub">${ev ? esc(ev.title || 'Spilledag') : 'Padelklubben'}</div></div><div class="clock" id="clock"></div></header>
     <main>${look?.message ? `<div class="msg">${esc(look.message)}</div>` : ''}${main}</main>
     <aside><h2>${sideTitle}</h2><div class="rows">${side || '<p style="color:var(--mut)">Ingen resultater endnu.</p>'}</div>
-      <div class="qr">${qrSvg(qrUrl)}<span>${ev ? 'Scan og se kampene, og meld resultater i appen' : d.next ? 'Scan og tilmeld dig næste spilledag' : 'Følg med i Padelklubben-appen'}</span></div></aside>
+      <div class="qr">${qrSvg(qrUrl)}<span>${ev ? 'Scan og kom med i gruppen, se kampene og meld resultater i appen' : 'Scan og kom med i gruppen og næste spilledag'}</span></div></aside>
     <footer>${sp.length ? `<div class="spons"><span>Tak til vores sponsorer</span>${sp.map((x) => `<div class="sp">${x.logo ? `<img src="${esc(x.logo)}" alt="">` : ''}<b>${esc(x.name)}</b></div>`).join('')}</div>` : `Opdaterer automatisk · ${esc(d.group)}`}</footer>`;
   clock();
 }

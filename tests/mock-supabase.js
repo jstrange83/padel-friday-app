@@ -258,7 +258,7 @@ const RPC = {
       r.n++; r.f += f; r.a += a; r.diff += f - a; if (f > a) r.w++;
       r.pts += db.padel_elo_changes.find((x) => x.match_id === m.id && x.player_id === pid && x.active)?.delta || 0;
     }
-    return { group: gr.name, now: now(),
+    return { group: gr.name, group_id: gr.id, now: now(),
       event: ev && { id: ev.id, title: ev.title, starts_at: ev.starts_at, status: ev.status, current_round: ev.current_round, format: ev.format, round_minutes: ev.round_minutes, duration_minutes: ev.duration_minutes, center: db.padel_centers.find((c) => c.id === ev.center_id)?.name },
       next: (() => { const n = db.padel_events.filter((e) => e.group_id === g && !e.cancelled_at && e.starts_at > now() && e.id !== ev?.id).sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0];
         if (!n) return null; const su = db.padel_signups.filter((x) => x.event_id === n.id);

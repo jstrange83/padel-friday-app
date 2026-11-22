@@ -302,7 +302,7 @@ export const FAQ = [
   {
     cat: 'Tilmelding og konto', group: true,
     q: 'Hvordan inviterer jeg nye spillere til gruppen?',
-    a: `<p>Gå til <b>Admin → Spillere</b> og tryk <b>📤 Inviter</b> (eller <b>▦ QR</b>). Linket fører direkte til gruppen. Opretter nogen sig via et link til en spilledag, fx QR-koden på TV'et eller del-knappen på dagen, beder de automatisk om at komme med, og du får en popup med Godkend.</p>`,
+    a: `<p>Gå til <b>Admin → Spillere</b> og tryk <b>📤 Inviter</b> (eller <b>▦ QR</b>). Linket fører direkte til gruppen. QR-koden på TV-skærmen er også gruppens link. Nye beder om at komme med, og du får en popup med Godkend.</p>`,
   },
   {
     cat: 'Tilmelding og konto',

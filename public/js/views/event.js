@@ -151,7 +151,7 @@ function header(c) {
   const status = ev.cancelled_at ? ' · <b class="dn">Aflyst</b>' : ev.status === 'igang' ? ' · <b class="live-txt">● I gang</b>' : ev.status === 'afsluttet' ? ' · Afsluttet' : '';
   return `
     <div class="head"><button class="back" onclick="location.hash='#/fredage'">‹ ${esc(group()?.name || 'Tilbage')}</button>
-      ${admin ? `<div class="tools">${isSuper() ? '<button class="icon" id="tvEvent" aria-label="TV-skærm" title="Vis dagen på et TV i centret (kun superadmin)">📺</button>' : ''}${ev.status !== 'afsluttet' ? '<button class="icon" id="shareEvent" aria-label="Del dagen">📤</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
+      ${admin ? `<div class="tools">${isSuper() ? '<button class="icon" id="tvEvent" aria-label="TV-skærm" title="Vis dagen på et TV i centret (kun superadmin)">📺</button>' : ''}<a class="icon" href="#/ret-fredag/${ev.id}" aria-label="Ret dagen">✏️</a></div>` : ''}${editBtn('padel_events', ev.id)}</div>
     <h1 class="cap evtitle">${fmtDate(ev.starts_at, { weekday: 'long', day: 'numeric', month: 'long' })}</h1>
     <p class="muted evsub">${hm(ev.starts_at)}–${hm(c.endsAt)} · ${center ? `<a class="maplink" href="${esc(mapsUrl(center))}" target="_blank" rel="noopener" title="Vis vej til ${esc(center.name)}">📍 ${esc(center.name)}</a>` : ''}${ev.title ? ` · ${esc(ev.title)}` : ''}${status}</p>
     ${quickSettings(c, '')}`;
@@ -869,8 +869,6 @@ function bind(c) {
     const t = await q(sb.rpc('padel_tv_code_v2', { g: ev.group_id }));
     castTv(`${pubOrigin()}/tv/${t.token}`, t.code);
   });
-  $('shareEvent')?.addEventListener('click', () =>
-    share(`${pubOrigin()}/#/fredag/${ev.id}`, `${ev.title || group()?.name || 'Padel'} ${fmtDate(ev.starts_at)} i ${c.center?.name || ''}. Tilmeld dig her:`));
   act($('rank'), async () => {
     if (!confirm('Tilføj dagen til den officielle rangliste? Pointene beregnes kamp for kamp.')) return;
     await q(sb.rpc('padel_admin_set_ranked', { p_event: ev.id, p_ranked: true })); toast('Dagen tæller nu på ranglisten'); await reload();
