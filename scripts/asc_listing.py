@@ -76,6 +76,7 @@ def shots(pattern, kind):
         print('lagt op', name)
 shots('native/ios/store/iphone-*.png', 'APP_IPHONE_67')
 shots('native/ios/store/ipad-*.png', 'APP_IPAD_PRO_3GEN_129')
+shots('native/ios/store/watch-*.png', 'APP_WATCH_ULTRA')
 
 # Nyeste færdige byg
 builds = call('GET', f'/builds?filter[app]={app}&filter[processingState]=VALID&sort=-uploadedDate&limit=1')['data']

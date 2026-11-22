@@ -12,6 +12,7 @@ on:
     branches: [main]
     paths:
       - 'native/ios/**'
+      - '!native/ios/store/**'
       - 'native/package.json'
       - 'native/capacitor.config.json'
       - '.github/workflows/ios.yml'
