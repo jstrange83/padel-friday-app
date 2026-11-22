@@ -14,7 +14,7 @@ await new Promise((r) => setTimeout(r, 800));
 
 const browser = await chromium.launch();
 // Skærmbredde kan sættes med W=320 (lille telefon) for at tjekke, at alt passer
-const page = await browser.newPage({ viewport: { width: +process.env.W || 390, height: 844 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: +process.env.W || 390, height: +process.env.H || 844 }, deviceScaleFactor: +process.env.DPR || 2 });
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error' && !/mobilepay:|scheme does not have a registered handler/i.test(m.text())) errors.push('console: ' + m.text()); });
@@ -49,7 +49,9 @@ const btnAudit = async (where) => {
   });
   if (bad.length) { if (process.env.AUDIT) console.log(`KNAPPER ${where}:\n  ` + bad.join('\n  ')); else ok(false, `knapper (${where}): ${bad.join('; ')}`); }
 };
-const shot = async (name) => { await btnAudit(name); return page.screenshot({ path: path.join(shots, `${String(++step).padStart(2, '0')}-${name}.png`), fullPage: true }); };
+// STORE=mappe: gemmer også et skærmbillede i skærmstørrelse af udvalgte sider (til App Store/Google Play)
+const STORE_PICK = (process.env.STORE_PICK || 'fredage-4,dagsplan,runde1,rangliste,statistik-sammenlign,min-padel,badges,klub-voksen-traening').split(',');
+const shot = async (name) => { await btnAudit(name); if (process.env.STORE && STORE_PICK.includes(name)) { fs.mkdirSync(process.env.STORE, { recursive: true }); await page.evaluate(() => { window.scrollTo(0, 0); const tt = document.getElementById('toast'); if (tt) tt.style.display = 'none'; const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) n.nodeValue = n.nodeValue.replace(/\bTest (?=[A-ZÆØÅ])/g, '').replace(/26[\s\u00a0]?12[\s\u00a0]?92[\s\u00a0]?08/g, '12 34 56 78').replace(/\bTest\b/g, 'Jimmy'); }); await page.screenshot({ path: path.join(process.env.STORE, `${String(STORE_PICK.indexOf(name) + 1)}-${name}.png`) }); await page.evaluate(() => { const tt = document.getElementById('toast'); if (tt) tt.style.display = ''; }); } return page.screenshot({ path: path.join(shots, `${String(++step).padStart(2, '0')}-${name}.png`), fullPage: true }); };
 const ok = (cond, msg) => { if (!cond) throw new Error('FEJL: ' + msg); console.log('✓', msg); };
 const text = async () => (await page.locator('#app').innerText()).toLowerCase();
 const wait = (ms = 300) => page.waitForTimeout(ms);

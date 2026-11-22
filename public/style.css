@@ -503,7 +503,7 @@ a.ev, .match, .fine, .card.sug, .list .row, .myfine, .logrow, .stats-page .head,
 @media (min-width: 900px) {
   body { padding-bottom: 0; padding-left: 230px; }
   #nav { top: 0; bottom: 0; right: auto; width: 230px; flex-direction: column; gap: 4px; padding: 24px 14px; border-top: 0; border-right: 1px solid var(--line); }
-  #nav::before { content: '🎾 Padel'; display: block; font-size: 22px; font-weight: 800; letter-spacing: -.5px; color: var(--text); padding: 0 12px 18px; }
+  #nav::before { content: 'Padelklubben'; display: block; font-size: 22px; font-weight: 800; letter-spacing: -.5px; color: var(--text); padding: 0 12px 18px; }
   #nav a { flex: none; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 11px 12px; border-radius: 12px; font-size: 15px; font-weight: 600; }
   #nav a span { font-size: 20px; }
   #nav a:hover { background: var(--card); color: var(--text); }
@@ -1239,7 +1239,7 @@ html.inapp body { overscroll-behavior-y: contain; }
 .nlfoot { background: #f7f6fc !important; color: #6b6985; font-size: 12px; line-height: 1.6; padding: 14px 22px; border-radius: 0 0 16px 16px; }
 .nlrow-item small { display: block; }
 .nloptcard .switch { margin-top: 8px; }
-@media (min-width: 1000px) {
+@media (min-width: 1300px) {
   .nlwrap { grid-template-columns: minmax(0, 1fr) minmax(0, 560px); align-items: start; }
   .nlprev { position: sticky; top: 16px; }
 }

@@ -1,0 +1,23 @@
+name: App Store side (iPhone)
+
+# Lægger tekster, skærmbilleder og kontakt til Apple op i App Store Connect og vælger nyeste byg.
+# Sender ikke til godkendelse. Startes manuelt eller når native/ios/store ændres.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'native/ios/store/**'
+      - 'scripts/asc_listing.py'
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install "pyjwt[crypto]" requests
+      - run: python scripts/asc_listing.py
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
