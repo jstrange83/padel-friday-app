@@ -69,7 +69,7 @@ async function sendFcm(token: string, m: Msg): Promise<"ok" | "gone" | "skip"> {
 // ---------- iPhone (Apple Push Notification service) ----------
 let apns: { jwt: string; at: number } | null = null;
 async function apnsJwt() {
-  const p8 = Deno.env.get("APNS_KEY"), kid = Deno.env.get("APNS_KEY_ID"), team = Deno.env.get("APNS_TEAM_ID");
+  const p8 = Deno.env.get("APNS_KEY"), kid = Deno.env.get("APNS_KEY_ID") || "KA7MC3332S", team = Deno.env.get("APNS_TEAM_ID") || "J8UAJ59QRB";
   if (!p8 || !kid || !team) return null;
   if (apns && Date.now() - apns.at < 40 * 60_000) return apns.jwt;
   const key = await importPKCS8(p8.replace(/\\n/g, "\n"), "ES256");
