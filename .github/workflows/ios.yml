@@ -42,6 +42,10 @@ jobs:
       - name: Installer Capacitor og CocoaPods
         working-directory: native
         run: npm ci && npx cap sync ios
+      - name: Læg Apple Watch-appen ind i projektet
+        run: |
+          gem list -i xcodeproj >/dev/null || sudo gem install xcodeproj --no-document
+          ruby native/ios/ci/add_watch.rb
 
       - name: Testbyg uden signering
         if: steps.keys.outputs.ok != '1'
