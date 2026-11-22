@@ -10,7 +10,8 @@ final class Model: ObservableObject {
     @Published var screen: Screen = .loading("Henter …")
     @Published var state: [String: Any] = [:]
     @Published var score: Score?
-    @Published var manMine = 0, manThem = 0
+    @Published var manMine = 0
+    @Published var manThem = 0
     @Published var now = Date()
 
     var scoreMatch: String?
