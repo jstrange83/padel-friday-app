@@ -27,9 +27,12 @@ if os.environ.get('SUBMIT') == '1':
     print('submissions:', [(s['id'], s['attributes'].get('state')) for s in subs])
     open_sub = next((s for s in subs if s['attributes'].get('state') in ('READY_FOR_REVIEW', 'UNRESOLVED_ISSUES')), None)
     if open_sub and open_sub['attributes']['state'] == 'UNRESOLVED_ISSUES':
-        call('PATCH', f"/reviewSubmissions/{open_sub['id']}", json={'data': {'type': 'reviewSubmissions', 'id': open_sub['id'], 'attributes': {'submitted': True}}})
-        print('sendt ind igen (samme submission)')
-    else:
+        # Den afviste indsendelse annulleres, og versionen sendes ind i en ny
+        r = requests.patch(f"{API}/reviewSubmissions/{open_sub['id']}", headers={'Authorization': 'Bearer ' + tok()}, json={'data': {'type': 'reviewSubmissions', 'id': open_sub['id'], 'attributes': {'canceled': True}}})
+        print('annuller gammel', r.status_code, r.text[:600])
+        time.sleep(20)
+        open_sub = None
+    if True:
         sid = open_sub['id'] if open_sub else call('POST', '/reviewSubmissions', json={'data': {'type': 'reviewSubmissions', 'attributes': {'platform': 'IOS'}, 'relationships': {'app': {'data': {'type': 'apps', 'id': app}}}}})['data']['id']
         if not open_sub:
             call('POST', '/reviewSubmissionItems', json={'data': {'type': 'reviewSubmissionItems', 'relationships': {'reviewSubmission': {'data': {'type': 'reviewSubmissions', 'id': sid}}, 'appStoreVersion': {'data': {'type': 'appStoreVersions', 'id': ver}}}}})
