@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-23', date: '23. november 2026', title: 'Anmeld og bloker',
+    items: ['🚩 Under en besked eller et opslag fra en anden kan du nu trykke <b>Anmeld</b>, hvis indholdet er krænkende eller upassende. Anmeldelsen går til Padelklubben, som kigger på den inden for 24 timer.', '🚫 Med <b>Bloker</b> ser du ikke længere beskeder og opslag fra personen. Du fjerner blokeringen under <b>Min padel → Indstillinger → Blokerede brugere</b>.', '📜 Der er nu <a href="/vilkaar" target="_blank" rel="noopener">vilkår for brug</a> med nultolerance over for krænkende indhold. Nye brugere accepterer dem, når de opretter en konto.'],
+  },
+  {
     id: '2026-11-21b', date: '21. november 2026', admin: true, title: 'Godkend nye spillere med ét tryk',
     items: ['👋 Når nogen vil være med i en af dine grupper, kommer der en popup, når du åbner appen, med <b>Godkend</b> og <b>Afvis</b> direkte. Trykker du på beskeden "X vil gerne være med", åbner popuppen med det samme. Trykker du <b>Senere</b>, kommer den igen, næste gang du åbner appen.'],
   },

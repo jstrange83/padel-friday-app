@@ -1103,8 +1103,18 @@ Object.assign(RPC, {
     upsert('padel_thread_reads', ['thread_id', 'user_id'], { thread_id: t, user_id: uid(), read_at: now() });
     db.padel_notifications.filter((n) => n.user_id === uid() && n.url === '/#/samtale/' + t && !n.read_at).forEach((n) => (n.read_at = now()));
     return { ...x, kid: KID(x.kid_id)?.name || null, creator: nameOf(x.created_by), staff: thStaffIds(x).includes(uid()), people: thPeople(x).map(nameOf).sort(),
-      msgs: db.padel_thread_msgs.filter((m) => m.thread_id === t).map((m) => ({ id: m.id, body: m.body, image: m.image || null, author: nameOf(m.author), mine: m.author === uid(), at: m.created_at })) };
+      msgs: db.padel_thread_msgs.filter((m) => m.thread_id === t).map((m) => { const bl = (db.padel_blocks_v2 || []).some((b) => b.blocker === uid() && b.blocked === m.author);
+        return { id: m.id, body: bl ? null : m.body, image: bl ? null : (m.image || null), blocked: bl, author: nameOf(m.author), author_id: m.author, mine: m.author === uid(), at: m.created_at }; }) };
   },
+  padel_block_v2: ({ p_user, p_on = true }) => { db.padel_blocks_v2 ||= []; if (p_user === uid()) throw new Error('Du kan ikke blokere dig selv');
+    db.padel_blocks_v2 = db.padel_blocks_v2.filter((b) => !(b.blocker === uid() && b.blocked === p_user)); if (p_on) db.padel_blocks_v2.push({ blocker: uid(), blocked: p_user }); },
+  padel_my_blocks_v2: () => (db.padel_blocks_v2 || []).filter((b) => b.blocker === uid()).map((b) => ({ id: b.blocked, name: nameOf(b.blocked) })),
+  padel_report_v2: ({ p_kind, p_item, p_reason, p_details }) => { db.padel_reports_v2 ||= [];
+    const tgt = p_kind === 'msg' ? db.padel_thread_msgs.find((m) => m.id === p_item)?.author : p_kind === 'post' ? (db.padel_club_posts || []).find((x) => x.id === p_item)?.author : p_item;
+    db.padel_reports_v2.push({ id: 'r' + Math.random().toString(36).slice(2, 8), reporter: uid(), kind: p_kind, item_id: p_item, target_user: tgt, reason: p_reason, details: p_details, status: 'ny', created_at: now() }); },
+  padel_reports_list_v2: () => { if (!me()?.is_superadmin) throw new Error('Det har du ikke adgang til');
+    return (db.padel_reports_v2 || []).map((r) => ({ id: r.id, kind: r.kind, item_id: r.item_id, reason: r.reason, details: r.details, excerpt: '', status: r.status, at: r.created_at, reporter: nameOf(r.reporter), target: nameOf(r.target_user), target_id: r.target_user })); },
+  padel_report_status_v2: ({ p_id, p_status }) => { const r = (db.padel_reports_v2 || []).find((x) => x.id === p_id); if (r) r.status = p_status; },
 });
 
 export function createClient() {

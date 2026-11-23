@@ -3,6 +3,7 @@
 import { sb, S, app, hooks, esc, toast, q, busy, fmtDate, group, isClub, canRun, isAdmin } from '../core.js';
 import { hasAnyRight, hasAdults } from './club.js';
 import { loadUnread } from './notify.js';
+import { reportLinks, bindReportLinks } from '../report.js';
 
 const ROLE = { traenere: 'Trænerne', bestyrelse: 'Bestyrelsen', kasserer: 'Kassereren', admin: 'Admin' };
 const roleLabel = (r, club) => (r === 'admin' && !club ? 'Gruppens admin' : r === 'admin' ? 'Klubbens admin' : ROLE[r]);
@@ -177,13 +178,15 @@ export async function viewThread(id) {
     <h1>${esc(t.subject)}</h1>
     <p class="muted small thmeta">${t.from_staff ? `Fra ${esc(t.creator)} til forældrene` : `Til ${esc(roleLabel(t.to_role, club).toLowerCase())}`}${t.kid ? ` · om ${esc(t.kid)}` : ''} · ${esc(gname)}</p>
     <details class="thpeople"><summary class="muted small">👥 Med i samtalen (${(t.people || []).length})</summary><p class="small">${(t.people || []).map(esc).join(', ')}</p></details>
-    <div class="msgs">${(t.msgs || []).map((m) => `<div class="msg ${m.mine ? 'mine' : ''}"><small>${m.mine ? 'Dig' : esc(m.author || 'Tidligere bruger')} · ${when(m.at)}</small>${m.image ? `<img class="msgimg" data-path="${esc(m.image)}" alt="Billede">` : ''}${m.body ? `<p>${esc(m.body).replace(/\n/g, '<br>')}</p>` : ''}</div>`).join('')}</div>
+    <div class="msgs">${(t.msgs || []).map((m) => m.blocked ? `<div class="msg blockedmsg"><small>${esc(m.author || 'Tidligere bruger')} · ${when(m.at)}</small><p class="muted small">Besked fra en bruger, du har blokeret. <button class="link sm" data-unblk="${m.author_id}" data-bname="${esc(m.author || 'brugeren')}">Fjern blokering</button></p></div>`
+      : `<div class="msg ${m.mine ? 'mine' : ''}"><small>${m.mine ? 'Dig' : esc(m.author || 'Tidligere bruger')} · ${when(m.at)}</small>${m.image ? `<img class="msgimg" data-path="${esc(m.image)}" alt="Billede">` : ''}${m.body ? `<p>${esc(m.body).replace(/\n/g, '<br>')}</p>` : ''}${m.mine ? '' : reportLinks('msg', m.id, m.author_id, m.author)}</div>`).join('')}</div>
     <form class="card replybox" id="rep"><textarea name="body" rows="3" maxlength="4000" placeholder="Skriv et svar"></textarea>
       ${picker()}<div class="mact">${t.status === 'aaben' ? (t.staff ? '<button type="button" class="btn sm ghost" id="solve">✓ Løst</button>' : '') : '<button type="button" class="btn sm ghost" id="reopen">↺ Genåbn</button>'}<button class="btn sm primary">Svar</button></div></form>
     ${t.status !== 'aaben' ? '<p class="muted small center">✓ Samtalen er markeret som løst. Skriver nogen igen, åbner den igen.</p>' : ''}
   </div>`;
   app.querySelector('.msgs .msg:last-child')?.scrollIntoView({ block: 'nearest' });
   showImages(app);
+  bindReportLinks(app, () => viewThread(id));
   const f = document.getElementById('rep');
   bindPicker(f);
   f.onsubmit = async (e) => {

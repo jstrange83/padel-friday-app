@@ -1,6 +1,16 @@
 // Spørgsmål og svar til FAQ under profilen. Hold teksterne korte og i samme tone som appen.
 export const FAQ = [
   {
+    cat: 'Tilmelding og konto',
+    q: 'Hvordan anmelder eller blokerer jeg nogen?',
+    a: `<p>Under en besked eller et opslag fra en anden står <b>🚩 Anmeld</b> og <b>🚫 Bloker</b>. Anmelder du, vælger du en grund, og anmeldelsen går til Padelklubben, som kigger på den inden for 24 timer. Personen får ikke at vide, hvem der har anmeldt.</p><p>Blokerer du en person, ser du ikke længere personens beskeder og opslag. Du fjerner blokeringen under <b>Min padel → ⚙️ Indstillinger → 🚫 Blokerede brugere</b>.</p>`,
+  },
+  {
+    cat: 'Tilmelding og konto',
+    q: 'Hvor kan jeg læse vilkårene?',
+    a: `<p>Vilkårene står på <a href="/vilkaar" target="_blank" rel="noopener">padelklubben.dk/vilkaar</a>. Der er nultolerance over for krænkende, chikanerende eller upassende indhold. Indhold, der bryder vilkårene, bliver fjernet, og den, der har skrevet det, kan blive fjernet fra gruppen.</p>`,
+  },
+  {
     cat: 'Point og rangliste', group: true,
     q: 'Hvordan ser jeg, hvad en kamp gav i point?',
     a: `<p>Tryk <b>📊 Detaljer</b> på en spillet kamp. Så ser du banen med holdene og resultatet, hvad hver spiller fik eller mistede, og point før → efter kampen. Du kan også se dine kampe på samme bane den dag, runde for runde.</p>`,

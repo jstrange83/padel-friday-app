@@ -132,7 +132,7 @@ export function landingHtml() {
 
     <footer class="lfoot">
       <div><b>Padelklubben</b> · FST Gruppen ApS · CVR 43100009</div>
-      <div><a href="mailto:kontakt@padelklubben.dk">kontakt@padelklubben.dk</a> · <a href="/support">Hjælp</a> · <a href="/privatliv">Privatliv</a> · <a href="/nyt">Nyt og på vej</a></div>
+      <div><a href="mailto:kontakt@padelklubben.dk">kontakt@padelklubben.dk</a> · <a href="/support">Hjælp</a> · <a href="/privatliv">Privatliv</a> · <a href="/vilkaar">Vilkår</a> · <a href="/nyt">Nyt og på vej</a></div>
     </footer>
   </div>`;
 }

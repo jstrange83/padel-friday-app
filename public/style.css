@@ -1491,3 +1491,15 @@ svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline
 .pendrow { display: flex; align-items: center; gap: 10px; background: var(--card2); border-radius: 12px; padding: 10px 12px; flex-wrap: wrap; }
 .pendrow .grow { min-width: 0; flex: 1 1 140px; } .pendrow small { display: block; }
 .pendrow .mact { margin: 0; }
+/* Anmeld og bloker */
+.repacts { display: flex; gap: 14px; margin-top: 4px; opacity: .75; }
+.repacts .link { font-size: 12px; padding: 2px 0; }
+.msg .repacts { justify-content: flex-start; }
+.blockedmsg { opacity: .7; font-style: italic; }
+.repreasons { display: grid; gap: 6px; margin: 10px 0; }
+.reprow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+.reprow input { width: 18px; height: 18px; margin: 0; }
+.report.new { border-left: 4px solid var(--dn, #ef4444); }
+.report blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+.authx .terms span { font-size: 14px; line-height: 1.4; }
+.authx .terms a { color: var(--accent); }

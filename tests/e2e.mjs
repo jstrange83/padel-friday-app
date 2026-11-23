@@ -687,6 +687,10 @@ try {
   await page.fill('input[name=email]', 'nytobias@test');
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
+  await wait(300);
+  ok(!(await page.locator('text=Tjek din mail').count()), 'konto kan ikke oprettes uden at acceptere vilkårene');
+  await page.$eval('input[name=terms]', (e) => (e.checked = true));
+  await page.click('button[type=submit]');
   await page.waitForSelector('text=Tjek din mail');
   await page.evaluate(() => { localStorage.removeItem('fp-join'); localStorage.removeItem('fp-claim'); });
   await page.goto('http://localhost:8765/');
@@ -2097,6 +2101,23 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.click('#solve');
   await wait(500);
   ok((await text()).includes('markeret som løst'), 'samtalen er markeret som løst');
+  // Anmeld og bloker (krav fra Apple ved brugerindhold)
+  await page.click('.msg:not(.mine) [data-rep]');
+  await page.waitForSelector('#repModal');
+  await shot('anmeld-besked');
+  await page.click('#repModal button.primary');
+  await page.waitForSelector('#repModal', { state: 'detached' });
+  ok(await page.evaluate(() => (window.__mock.db().padel_reports_v2 || []).some((r) => r.kind === 'msg' && r.reason)), 'en besked kan anmeldes med en grund');
+  await page.click('.msg:not(.mine) [data-blk]');
+  await page.waitForSelector('.msg.blockedmsg');
+  ok(!(await page.locator('.msg.blockedmsg p').textContent()).includes('Hej'), 'beskeder fra en blokeret bruger skjules');
+  await page.goto(page.url().replace(/#.*/, '#/blokerede'));
+  await page.waitForSelector('[data-unblk]');
+  await shot('blokerede');
+  await page.click('[data-unblk]');
+  await page.waitForSelector('#blkList >> text=Du har ikke blokeret nogen');
+  ok(true, 'blokeringen kan fjernes under Blokerede brugere');
+  await page.goBack(); await wait(600);
   const idaId = await page.evaluate(() => window.__mock.db().padel_club_kids.find((k) => k.name === 'Ida Test').id);
   await page.goto('about:blank');
   await page.goto(`http://localhost:8765/#/ny-besked?barn=${idaId}`);
@@ -2269,6 +2290,10 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('input[name=email]', 'nyvoksen@test');
   await page.fill('input[name=password]', 'whatever');
   await page.click('button[type=submit]');
+  await wait(300);
+  ok(!(await page.locator('text=Tjek din mail').count()), 'konto kan ikke oprettes uden at acceptere vilkårene');
+  await page.$eval('input[name=terms]', (e) => (e.checked = true));
+  await page.click('button[type=submit]');
   await page.waitForSelector('text=Tjek din mail');
   await page.goto('http://localhost:8765/');
   await page.waitForSelector('#authForm');
@@ -2383,6 +2408,7 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   if (!(await page.locator('button[type=submit]:has-text("Opret konto")').count())) await page.click('#switch');
   await page.fill('input[name=email]', 'test5@fredagspadel.test');
   await page.fill('input[name=password]', 'whatever');
+  await page.$eval('input[name=terms]', (e) => (e.checked = true));
   await page.click('button[type=submit]');
   await wait(500);
   ok((await page.locator('button[type=submit]').innerText()) === 'Log ind' && (await page.inputValue('input[name=email]')) === 'test5@fredagspadel.test', 'eksisterende mail: skifter til Log ind med mailen udfyldt');

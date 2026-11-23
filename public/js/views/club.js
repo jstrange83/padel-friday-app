@@ -5,6 +5,7 @@ import { sb, S, app, hooks, esc, toast, q, busy, group, canRun, isAdmin, roleIn,
 import { showQR } from '../qr.js';
 import { rightsOf, saveRights, loadGroupRights } from './rights.js';
 import { parseSession, SR, listen } from '../sessionvoice.js';
+import { loadBlocks, isBlocked, reportLinks, bindReportLinks } from '../report.js';
 
 // ---------- Datoer (altid dansk tid) ----------
 export const todayISO = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Copenhagen' }).format(new Date());
@@ -456,6 +457,7 @@ export async function viewPosts() {
   ]);
   const teams = C().teams;
   const tname = (id) => teams.find((t) => t.id === id)?.name;
+  await loadBlocks();
   const list = [...posts.filter((p) => p.pinned), ...posts.filter((p) => !p.pinned)];
   app.innerHTML = `
   <div class="page club">
@@ -476,14 +478,16 @@ export async function viewPosts() {
         <p class="muted small">Alle forældre og børn på holdet får en notifikation.</p>
         <button class="btn primary">Send opslag</button>
       </form></details>` : ''}
-    ${list.map((p) => `
+    ${list.filter((p) => !isBlocked(p.author)).map((p) => `
       <div class="card post ${p.pinned ? 'pinned' : ''}">
         <div class="ftop"><span class="grow">${p.pinned ? '📌 ' : ''}${p.title ? `<b>${esc(p.title)}</b>` : ''}</span><span class="badge">${esc(tname(p.team_id) || 'Hele klubben')}</span></div>
         <p class="ptext">${rich(p.body)}</p>
         <small class="muted">${esc(nameOf(p.author).split(' ')[0])} · ${fmtDate(p.created_at, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small>
+        ${reportLinks('post', p.id, p.author, nameOf(p.author))}
         ${trainer ? `<div class="ptools"><button class="link sm" data-ppin="${p.id}">${p.pinned ? 'Løsn' : '📌 Fastgør'}</button><button class="link sm dn" data-phide="${p.id}">Slet</button></div>` : ''}
       </div>`).join('') || `<div class="card empty"><p class="muted">Ingen opslag endnu.${trainer ? ' Skriv det første ovenfor.' : ' Her kommer beskeder fra trænerne.'}</p></div>`}
   </div>`;
+  bindReportLinks(app, () => viewPosts());
   const f = document.getElementById('postForm');
   const ppl = app.querySelector('details.people');
   if (ppl) ppl.ontoggle = () => (S.peopleOpen = ppl.open);

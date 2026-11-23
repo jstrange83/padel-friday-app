@@ -28,6 +28,10 @@
       "destination": "/privatliv.html"
     },
     {
+      "source": "/vilkaar",
+      "destination": "/vilkaar.html"
+    },
+    {
       "source": "/support",
       "destination": "/support.html"
     },

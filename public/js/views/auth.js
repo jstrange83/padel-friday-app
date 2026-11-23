@@ -56,6 +56,7 @@ export function renderAuth(mode = 'login') {
       <label>Adgangskode<input type="password" name="password" required minlength="6" autocomplete="${signup ? 'new-password' : 'current-password'}">
         ${signup ? '<small class="muted">Mindst 6 tegn.</small>' : ''}</label>
       <label class="switch remember"><input type="checkbox" name="remember" ${rememberMe() ? 'checked' : ''}><span>Husk mig på denne enhed</span></label>
+      ${signup ? '<label class="switch terms"><input type="checkbox" name="terms" required><span>Jeg accepterer <a href="/vilkaar" target="_blank" rel="noopener">vilkårene</a>, herunder nultolerance over for krænkende indhold</span></label>' : ''}
       <button class="btn primary" type="submit">${signup ? 'Opret konto' : 'Log ind'}</button>
       ${signup ? '' : '<button class="link" type="button" id="forgot">Glemt adgangskode?</button>'}
     </form>

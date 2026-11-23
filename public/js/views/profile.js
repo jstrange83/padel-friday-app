@@ -290,6 +290,8 @@ export function renderSettings() {
       ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="watchRow"><span class="grow">⌚ Ur (Samsung / Wear OS)</span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="testAppRow"><span class="grow">🤖 Test-app til Android (QR)</span><span class="muted">›</span></a>' : ''}
+      ${viewing ? '' : '<a class="row" href="#/blokerede"><span class="grow">🚫 Blokerede brugere</span><span class="muted">›</span></a>'}
+      ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#/anmeldelser"><span class="grow">🚩 Anmeldelser</span><span class="muted">›</span></a>' : ''}
       <a class="row" href="#/privatliv"><span class="grow">🔒 Privatliv</span><span class="muted">›</span></a>
     </div>
     ${!viewing && hasElevated() ? `<div class="card modecard"><b>👁 Visning</b>

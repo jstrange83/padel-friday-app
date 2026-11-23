@@ -10,7 +10,7 @@ export function viewPrivacy() {
 
     <div class="card"><h3>Hvem står for oplysningerne</h3>
       <p>Appen udgives af FST Gruppen ApS (CVR 43100009), Bjørn Andersens Vej 57, Blistrup, 3230 Græsted. Kontakt: <a href="mailto:kontakt@padelklubben.dk">kontakt@padelklubben.dk</a>. I en gruppe eller klub er det gruppens eller klubbens admin, der bestemmer, hvem der er med, og som bruger oplysningerne til at styre spilledage, hold og træning.</p>
-      <p>Har du spørgsmål, så skriv til os, brug <a href="#/forslag">Forslagskassen</a> eller kontakt din gruppes admin. Hele politikken kan også læses på <a href="/privatliv" target="_blank" rel="noopener">padelklubben.dk/privatliv</a>.</p></div>
+      <p>Har du spørgsmål, så skriv til os, brug <a href="#/forslag">Forslagskassen</a> eller kontakt din gruppes admin. Hele politikken kan også læses på <a href="/privatliv" target="_blank" rel="noopener">padelklubben.dk/privatliv</a>, og vilkårene for brug på <a href="/vilkaar" target="_blank" rel="noopener">padelklubben.dk/vilkaar</a>.</p></div>
 
     <div class="card"><h3>Hvad gemmes om dig</h3>
       <ul>
