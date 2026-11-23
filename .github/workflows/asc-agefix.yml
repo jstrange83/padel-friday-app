@@ -1,0 +1,21 @@
+name: App Store aldersgrænse-rettelse
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: 'Send ind igen bagefter (1 = ja)'
+        default: '0'
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install "pyjwt[crypto]" requests
+      - run: python scripts/asc_agefix.py
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          SUBMIT: ${{ inputs.submit }}
