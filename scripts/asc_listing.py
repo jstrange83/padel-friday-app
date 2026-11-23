@@ -26,8 +26,26 @@ def patch(kind, id, attrs=None, rels=None):
 
 app = call('GET', f'/apps?filter[bundleId]={BUNDLE}')['data'][0]['id']
 vers = call('GET', f'/apps/{app}/appStoreVersions?filter[platform]=IOS')['data']
-ver = [v for v in vers if v['attributes']['appStoreState'] in ('PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED')][0]['id']
+ONLY_REVIEW = os.environ.get('ONLY_REVIEW') == '1'  # kun noter/kontakt til Apple (virker også mens appen venter på review)
+ok_states = ('PREPARE_FOR_SUBMISSION', 'DEVELOPER_REJECTED', 'REJECTED', 'METADATA_REJECTED') + (('WAITING_FOR_REVIEW', 'IN_REVIEW') if ONLY_REVIEW else ())
+cand = [v for v in vers if v['attributes']['appStoreState'] in ok_states]
+print('versioner:', [(v['attributes']['versionString'], v['attributes']['appStoreState']) for v in vers])
+ver = cand[0]['id']
 print('app', app, 'version', ver)
+VIDEO = os.environ.get('VIDEO_URL', '').strip()
+L['review']['notes'] = L['review']['notes'].replace('{VIDEO}', VIDEO or 'will be added here shortly')
+
+# Kontakt og noter til Apples testere
+rv = dict(L['review'])
+cur = call('GET', f'/appStoreVersions/{ver}/appStoreReviewDetail', ok404=True).get('data')
+if cur: patch('appStoreReviewDetails', cur['id'], rv)
+else: call('POST', '/appStoreReviewDetails', json={'data': {'type': 'appStoreReviewDetails', 'attributes': rv,
+          'relationships': {'appStoreVersion': {'data': {'type': 'appStoreVersions', 'id': ver}}}}})
+print('kontakt til Apple sat')
+
+if ONLY_REVIEW:
+    print('færdig (kun noter)'); raise SystemExit(0)
+
 
 # Version: copyright
 patch('appStoreVersions', ver, {'copyright': L['copyright']})
@@ -46,14 +64,6 @@ patch('appInfoLocalizations', il['id'], {'name': L['name'], 'subtitle': L['subti
 patch('appInfos', info['id'], rels={'primaryCategory': {'data': {'type': 'appCategories', 'id': 'SPORTS'}},
                                     'secondaryCategory': {'data': {'type': 'appCategories', 'id': 'LIFESTYLE'}}})
 print('app-info og kategori sat')
-
-# Kontakt og noter til Apples testere
-rv = dict(L['review'])
-cur = call('GET', f'/appStoreVersions/{ver}/appStoreReviewDetail', ok404=True).get('data')
-if cur: patch('appStoreReviewDetails', cur['id'], rv)
-else: call('POST', '/appStoreReviewDetails', json={'data': {'type': 'appStoreReviewDetails', 'attributes': rv,
-          'relationships': {'appStoreVersion': {'data': {'type': 'appStoreVersions', 'id': ver}}}}})
-print('kontakt til Apple sat')
 
 # Skærmbilleder
 def shots(pattern, kind):

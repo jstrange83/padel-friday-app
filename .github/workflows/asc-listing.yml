@@ -5,6 +5,13 @@ name: App Store side (iPhone)
 # Adgangskoden til demo-kontoen ligger kun i App Store Connect, ikke her.
 on:
   workflow_dispatch:
+    inputs:
+      only_review:
+        description: 'Kun noter og kontakt til Apple (1 = ja)'
+        default: '0'
+      video_url:
+        description: 'Link til skærmoptagelsen'
+        default: ''
 
 jobs:
   listing:
@@ -17,3 +24,5 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ONLY_REVIEW: ${{ inputs.only_review }}
+          VIDEO_URL: ${{ inputs.video_url }}
