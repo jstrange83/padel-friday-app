@@ -1503,3 +1503,7 @@ svg.bat { width: 1.15em; height: 1.15em; vertical-align: -.22em; display: inline
 .report blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
 .authx .terms span { font-size: 14px; line-height: 1.4; }
 .authx .terms a { color: var(--accent); }
+/* Hent appen i App Store / Google Play */
+.storegate .storebtn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; }
+.storegate .storebtn small { font-weight: 500; font-size: 13px; opacity: .8; }
+.storegate .gsteps { margin-top: 8px; }

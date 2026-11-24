@@ -12,7 +12,7 @@ async function pushCard() {
   if (!pushSupported() && !iosHint) return `<div class="card"><p class="muted small">${isNativeApp() ? 'Opdater appen i Google Play eller App Store for at få notifikationer.' : 'Din browser kan ikke vise notifikationer.'} Beskederne står stadig her i appen.</p></div>`;
   return `<div class="card pushcard">
     <label class="switch"><input type="checkbox" id="pushToggle" ${on ? 'checked' : ''} ${iosHint ? 'disabled' : ''}><span>🔔 Notifikationer på denne enhed</span></label>
-    <p class="muted small">${iosHint ? 'På iPhone skal appen være lagt på hjemmeskærmen, før den kan sende notifikationer. Tryk Del → Føj til hjemmeskærm, og åbn appen derfra.'
+    <p class="muted small">${iosHint ? 'På iPhone får du notifikationer ved at hente Padelklubben i <a href="https://apps.apple.com/dk/app/id6838013332" target="_blank" rel="noopener">App Store</a>.'
       : on ? 'Slået til. Du får besked, fx når du får en plads fra ventelisten.' : 'Slå til for at få besked på telefonen eller computeren, fx når du får en plads fra ventelisten.'}</p></div>`;
 }
 

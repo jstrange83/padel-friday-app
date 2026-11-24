@@ -755,7 +755,7 @@ try {
   await ip.fill('input[name=password]', 'whatever');
   await ip.click('button[type=submit]');
   await ip.waitForSelector('.gate');
-  ok((await ip.locator('.gate').innerText()).includes('Føj til hjemmeskærm'), 'iPhone: vejledning til hjemmeskærm');
+  ok((await ip.locator('.gate').innerText()).includes('App Store') && (await ip.locator('.gate a[data-store=ios]').getAttribute('href')).includes('apps.apple.com'), 'iPhone: siden om appen i App Store vises efter login');
   await ip.screenshot({ path: path.join(shots, 'install-iphone.png') });
   await ip.click('#skipInstall');
   await ip.waitForSelector('#nav a');
@@ -763,7 +763,7 @@ try {
   await ip.click('#nav a:has-text("Min padel")');
   await ip.click('#toSettings');
   await ip.waitForSelector('.page.settings .me-card');
-  ok(await ip.locator('#installRow').count() === 1, 'iPhone: hjemmeskærm ligger under Profil');
+  ok(await ip.locator('#installRow').count() === 1, 'iPhone: Hent appen ligger under Profil');
   await iphone.close();
 
   // Bødekasse: admin slår til, giver bøde, spilleren melder betalt, admin godkender

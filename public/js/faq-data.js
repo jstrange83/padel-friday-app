@@ -255,8 +255,8 @@ export const FAQ = [
   },
   {
     cat: 'Tilmelding og konto',
-    q: 'Hvordan får jeg appen på hjemmeskærmen?',
-    a: `<p><b>iPhone:</b> åbn appen i Safari, tryk på del‑ikonet og vælg "Føj til hjemmeskærm".</p><p><b>Android:</b> åbn appen i Chrome, tryk på de tre prikker og vælg "Føj til startskærm".</p>`,
+    q: 'Hvor henter jeg appen?',
+    a: `<p>Padelklubben er gratis i <a href="https://apps.apple.com/dk/app/id6838013332" target="_blank" rel="noopener">App Store</a> (iPhone og iPad) og <a href="https://play.google.com/store/apps/details?id=dk.padelklubben.app" target="_blank" rel="noopener">Google Play</a> (Android). Log ind med samme e-mail og adgangskode som før, og sig ja til notifikationer.</p><p>Har du tidligere lagt Padelklubben på hjemmeskærmen fra browseren, så slet den gamle genvej: hold fingeren på ikonet, og vælg <b>Fjern</b>. Linkene står også under <b>Min padel → ⚙️ Indstillinger → 📲 Hent appen</b>.</p>`,
   },
   {
     cat: 'Tilmelding og konto',
@@ -281,8 +281,7 @@ export const FAQ = [
     q: 'Kan jeg få notifikationer på telefonen?',
     a: `<p>Ja. Tryk på <b>🔔</b> på Spilledage (eller <b>Min padel → Beskeder og notifikationer</b>) og slå <b>Notifikationer på denne enhed</b> til.</p>
 <p>Du får fx besked, når du får en plads fra ventelisten. Admins får besked, når nogen vil være med i gruppen, og en popup med Godkend og Afvis, når de åbner appen. Alle beskeder står også under 🔔 i appen.</p>
-<p>Bruger du <b>Padelklubben-appen fra Google Play</b>, spørger telefonen, om appen må sende notifikationer. Sig ja. Har du sagt nej, kan det ændres under telefonens <b>Indstillinger → Apps → Padelklubben → Notifikationer</b>.</p>
-<p>Bruger du appen i browseren på iPhone, skal den være lagt på hjemmeskærmen først (Del → Føj til hjemmeskærm), og så skal den åbnes derfra.</p>
+<p>Bruger du <b>Padelklubben-appen fra App Store eller Google Play</b>, spørger telefonen, om appen må sende notifikationer. Sig ja. Har du sagt nej, kan det ændres under telefonens <b>Indstillinger → Padelklubben → Notifikationer</b>.</p>
 <p>Mister telefonen nettet, står der en rød bjælke øverst. Siden opdateres selv, når nettet er tilbage.</p>`,
   },
   {

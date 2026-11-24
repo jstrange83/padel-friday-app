@@ -5,6 +5,10 @@ import { sb, S, q, esc, canRun, isSuper } from './core.js';
 
 export const NEWS = [
   {
+    id: '2026-11-24', date: '24. november 2026', title: 'Padelklubben er i App Store og Google Play',
+    items: ['📱 Padelklubben er nu en rigtig app. Hent den gratis i <a href="https://apps.apple.com/dk/app/id6838013332" target="_blank" rel="noopener">App Store</a> (iPhone og iPad) eller <a href="https://play.google.com/store/apps/details?id=dk.padelklubben.app" target="_blank" rel="noopener">Google Play</a> (Android), og log ind med samme e-mail og adgangskode som nu.', '🔔 Sig ja til notifikationer, så får du besked direkte på telefonen.', '🗑 Har du lagt Padelklubben på hjemmeskærmen fra browseren, så slet den gamle genvej, så du ikke har to.'],
+  },
+  {
     id: '2026-11-23', date: '23. november 2026', title: 'Anmeld og bloker',
     items: ['🚩 Under en besked eller et opslag fra en anden kan du nu trykke <b>Anmeld</b>, hvis indholdet er krænkende eller upassende. Anmeldelsen går til Padelklubben, som kigger på den inden for 24 timer.', '🚫 Med <b>Bloker</b> ser du ikke længere beskeder og opslag fra personen. Du fjerner blokeringen under <b>Min padel → Indstillinger → Blokerede brugere</b>.', '📜 Der er nu <a href="/vilkaar" target="_blank" rel="noopener">vilkår for brug</a> med nultolerance over for krænkende indhold. Nye brugere accepterer dem, når de opretter en konto.'],
   },

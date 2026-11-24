@@ -287,7 +287,7 @@ export function renderSettings() {
     <div class="list links">
       <a class="row" href="#/beskeder"><span class="grow">🔔 Notifikationer og mails</span><span class="muted">›</span></a>
       ${viewing ? '' : '<a class="row" href="#/udseende"><span class="grow">🎨 Udseende og tekststørrelse</span><span class="muted">›</span></a>'}
-      ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Læg på hjemmeskærmen</span><span class="muted">›</span></a>' : ''}
+      ${!viewing && installHow() ? '<a class="row" href="#" id="installRow"><span class="grow">📲 Hent appen <small class="muted">App Store og Google Play</small></span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="watchRow"><span class="grow">⌚ Ur (Samsung / Wear OS)</span><span class="muted">›</span></a>' : ''}
       ${!viewing && S.realMe?.is_superadmin ? '<a class="row" href="#" id="testAppRow"><span class="grow">🤖 Test-app til Android (QR)</span><span class="muted">›</span></a>' : ''}
       ${viewing ? '' : '<a class="row" href="#/blokerede"><span class="grow">🚫 Blokerede brugere</span><span class="muted">›</span></a>'}
