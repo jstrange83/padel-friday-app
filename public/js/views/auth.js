@@ -2,6 +2,9 @@
 import { sb, S, app, hooks, esc, toast, q, busy, rememberMe } from '../core.js';
 import { landingHtml, bindLanding } from './landing.js';
 
+// Kom man tilbage fra et udløbet eller allerede brugt link i en mail (fx ny adgangskode), så sig det tydeligt
+let linkError = (() => { const m = /error_code=([^&]+)/.exec(location.hash + '&' + location.search); return m ? decodeURIComponent(m[1]) : null; })();
+
 // Padelbane i perspektiv med én bold, der hopper ind (kun ved åbning)
 const court = () => {
   // Banen: fjern baglinje y=24 (x 96–304), nær baglinje y=232 (x 8–392). Linjer interpoleres i dybden.
@@ -77,11 +80,28 @@ export function renderAuth(mode = 'login') {
   const f = document.getElementById('authForm');
   // Husk e-mailen fra sidste login (kun når "Husk mig" er slået til)
   try { const em = localStorage.getItem('fp-email'); if (em && rememberMe() && !f.email.value) f.email.value = em; } catch {}
-  document.getElementById('forgot')?.addEventListener('click', async () => {
+  if (linkError) {
+    const box = document.createElement('div');
+    box.className = 'card warnbox linkerr';
+    box.innerHTML = linkError === 'otp_expired'
+      ? '⚠️ <b>Linket virker ikke længere.</b> Det er enten for gammelt eller allerede brugt. Skriv din e-mail, tryk <b>Glemt adgangskode?</b> én gang, og brug linket i den <b>nyeste</b> mail.'
+      : '⚠️ <b>Linket i mailen virkede ikke.</b> Prøv igen, og brug linket i den nyeste mail.';
+    f.before(box);
+    linkError = null;
+    try { history.replaceState(null, '', location.pathname); } catch {}
+  }
+  let sent = 0;
+  document.getElementById('forgot')?.addEventListener('click', async (e) => {
     const email = f.email.value.trim();
     if (!email) return toast('Skriv din e-mail først', true);
-    await q(sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin }));
-    toast('Vi har sendt en mail med et link til ny adgangskode');
+    // Kun én mail ad gangen: et nyt link gør det forrige ugyldigt
+    if (Date.now() - sent < 60000) return toast('Mailen er sendt. Brug linket i den nyeste mail', true);
+    const b = e.currentTarget; busy(b, true);
+    try {
+      await q(sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin }));
+      sent = Date.now();
+      toast('Vi har sendt en mail med et link til ny adgangskode. Linket virker kun én gang');
+    } catch {} finally { busy(b, false); }
   });
   f.onsubmit = async (e) => {
     e.preventDefault();

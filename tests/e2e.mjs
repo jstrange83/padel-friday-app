@@ -743,6 +743,14 @@ try {
   await page.waitForSelector('.notices-page');
   ok(!(await text()).includes('vil gerne være med'), 'beskeden om Anne forsvinder, når hun er godkendt');
 
+  // Udløbet link til ny adgangskode: tydelig besked i stedet for bare login
+  { const c2 = await browser.newContext({ viewport: { width: 390, height: 844 } }); const p2 = await c2.newPage();
+    p2.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await p2.route('https://cdn.jsdelivr.net/**', (r) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(root, 'tests', 'mock-supabase.js'), 'utf8') }));
+    await p2.goto('http://localhost:8765/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired');
+    await p2.waitForSelector('#authForm');
+    ok((await p2.locator('.linkerr').count()) === 1 && (await p2.locator('.linkerr').innerText()).includes('nyeste'), 'udløbet link til ny adgangskode giver en tydelig besked');
+    await c2.close(); }
   // Hjemmeskærm: på en iPhone vises vejledningen efter login, og den kan springes over
   const iphone = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
