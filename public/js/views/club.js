@@ -1180,7 +1180,8 @@ export function clubTeamsTab() {
         <div class="lbl">Træningstider</div>
         ${ss.map((s) => `<details class="srow"><summary><span class="grow">${WEEKDAY[s.weekday]} ${t5(s.start_time)}–${t5(s.end_time)}${s.place || periodText(s) ? `<small class="muted">${esc([s.place, periodText(s)].filter(Boolean).join(' · '))}</small>` : ''}${byLine(s.created_by, s.created_at)}</span><span class="link sm">Ret</span></summary>${sessForm(s, t.id)}</details>`).join('')}
         <details class="srow new"><summary><span class="grow">➕ Tilføj træningstid</span></summary>${sessForm(null, t.id)}</details>
-        <div class="mact"><button class="link sm" data-trename="${t.id}">Omdøb holdet</button>${admin ? `<button class="link sm dn" data-tarch="${t.id}">Slet holdet</button>` : ''}</div>
+        <form class="frow trename" data-trenamef="${t.id}" hidden><input name="name" class="grow" maxlength="60" required value="${esc(t.name)}" aria-label="Holdets navn"><button class="btn sm primary">Gem navn</button></form>
+        <div class="mact"><button type="button" class="link sm" data-trename="${t.id}">✏️ Omdøb holdet</button>${admin ? `<button class="link sm dn" data-tarch="${t.id}">Slet holdet</button>` : ''}</div>
       </details>`;
     }).join('') || '<div class="card empty"><p class="muted">Ingen hold endnu.</p></div>'}
     <form class="card frow" id="newTeam"><input name="name" class="grow" placeholder="Nyt hold, fx U12 eller Begyndere" maxlength="60" required><button class="btn sm primary">Opret hold</button></form>
@@ -1205,9 +1206,16 @@ export function bindClubTeams(refresh) {
     e.preventDefault();
     try { S.teamOpen = await q(sb.rpc('padel_club_save_team', { p_id: null, g, p_name: nt.name.value, p_archived: false })); toast('Holdet er oprettet. Tilføj træningstider'); await refresh(); } catch {}
   };
-  app.querySelectorAll('[data-trename]').forEach((b) => (b.onclick = async () => {
-    const t = team(b.dataset.trename), n = prompt('Holdets navn', t.name);
-    if (n?.trim()) { try { await q(sb.rpc('padel_club_save_team', { p_id: t.id, g, p_name: n, p_archived: false })); await refresh(); } catch {} }
+  // Omdøb: et felt direkte på holdet (prompt() virker ikke i alle apps og browsere)
+  app.querySelectorAll('[data-trename]').forEach((b) => (b.onclick = () => {
+    const f = app.querySelector(`[data-trenamef="${b.dataset.trename}"]`);
+    f.hidden = !f.hidden;
+    if (!f.hidden) { f.name.focus(); f.name.select(); }
+  }));
+  app.querySelectorAll('[data-trenamef]').forEach((f) => (f.onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = f.querySelector('button'); busy(btn, true);
+    try { await q(sb.rpc('padel_club_save_team', { p_id: f.dataset.trenamef, g, p_name: f.name.value, p_archived: false })); toast('Holdet har fået nyt navn'); await refresh(); } catch { busy(btn, false); }
   }));
   app.querySelectorAll('[data-tarch]').forEach((b) => (b.onclick = async () => {
     const t = team(b.dataset.tarch);

@@ -1552,6 +1552,14 @@ await page.waitForSelector('details.plist'); await page.evaluate(() => document.
   await page.fill('#newTeam input[name=name]', 'U12');
   await page.click('#newTeam button');
   await page.waitForSelector('details.teamcard[open]');
+  // Omdøb holdet med et felt (ikke prompt): først til U12x, så tilbage til U12
+  for (const nm of ['U12x', 'U12']) {
+    await page.click('details.teamcard[open] [data-trename]');
+    await page.fill('details.teamcard[open] [data-trenamef] input[name=name]', nm);
+    await page.click('details.teamcard[open] [data-trenamef] button');
+    await page.waitForFunction((n) => document.querySelector('details.teamcard[open] summary b')?.textContent === n, nm);
+  }
+  ok(true, 'træneren kan omdøbe et hold');
   for (const [i, wd] of dows.entries()) {
     await page.click('details.teamcard[open] details.srow.new summary');
     const f = page.locator('details.teamcard[open] details.srow.new form');
